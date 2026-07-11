@@ -1,0 +1,597 @@
+{
+  "pairwise": [
+    {
+      "left": "ablation_500",
+      "right": "analysis_500",
+      "id_overlap_count": 0,
+      "source_overlap_count": 0,
+      "allowed_overlap": false,
+      "id_overlap": [],
+      "source_overlap": []
+    },
+    {
+      "left": "ablation_500",
+      "right": "dev_tune_200",
+      "id_overlap_count": 0,
+      "source_overlap_count": 0,
+      "allowed_overlap": false,
+      "id_overlap": [],
+      "source_overlap": []
+    },
+    {
+      "left": "ablation_500",
+      "right": "final_test_500",
+      "id_overlap_count": 0,
+      "source_overlap_count": 0,
+      "allowed_overlap": false,
+      "id_overlap": [],
+      "source_overlap": []
+    },
+    {
+      "left": "ablation_500",
+      "right": "final_test_full",
+      "id_overlap_count": 0,
+      "source_overlap_count": 0,
+      "allowed_overlap": false,
+      "id_overlap": [],
+      "source_overlap": []
+    },
+    {
+      "left": "analysis_500",
+      "right": "dev_tune_200",
+      "id_overlap_count": 0,
+      "source_overlap_count": 0,
+      "allowed_overlap": false,
+      "id_overlap": [],
+      "source_overlap": []
+    },
+    {
+      "left": "analysis_500",
+      "right": "final_test_500",
+      "id_overlap_count": 0,
+      "source_overlap_count": 0,
+      "allowed_overlap": false,
+      "id_overlap": [],
+      "source_overlap": []
+    },
+    {
+      "left": "analysis_500",
+      "right": "final_test_full",
+      "id_overlap_count": 0,
+      "source_overlap_count": 0,
+      "allowed_overlap": false,
+      "id_overlap": [],
+      "source_overlap": []
+    },
+    {
+      "left": "dev_tune_200",
+      "right": "final_test_500",
+      "id_overlap_count": 0,
+      "source_overlap_count": 0,
+      "allowed_overlap": false,
+      "id_overlap": [],
+      "source_overlap": []
+    },
+    {
+      "left": "dev_tune_200",
+      "right": "final_test_full",
+      "id_overlap_count": 0,
+      "source_overlap_count": 0,
+      "allowed_overlap": false,
+      "id_overlap": [],
+      "source_overlap": []
+    },
+    {
+      "left": "final_test_500",
+      "right": "final_test_full",
+      "id_overlap_count": 500,
+      "source_overlap_count": 500,
+      "allowed_overlap": true,
+      "id_overlap": [
+        "counterfact_test_1",
+        "counterfact_test_1002",
+        "counterfact_test_1027",
+        "counterfact_test_1033",
+        "counterfact_test_1036",
+        "counterfact_test_1048",
+        "counterfact_test_106",
+        "counterfact_test_1064",
+        "counterfact_test_1065",
+        "counterfact_test_1069",
+        "counterfact_test_107",
+        "counterfact_test_1070",
+        "counterfact_test_1071",
+        "counterfact_test_1074",
+        "counterfact_test_1077",
+        "counterfact_test_1079",
+        "counterfact_test_1084",
+        "counterfact_test_109",
+        "counterfact_test_1098",
+        "counterfact_test_1099",
+        "counterfact_test_1101",
+        "counterfact_test_1104",
+        "counterfact_test_1105",
+        "counterfact_test_1107",
+        "counterfact_test_1112",
+        "counterfact_test_1113",
+        "counterfact_test_1114",
+        "counterfact_test_1119",
+        "counterfact_test_112",
+        "counterfact_test_1124",
+        "counterfact_test_1127",
+        "counterfact_test_1128",
+        "counterfact_test_1146",
+        "counterfact_test_1153",
+        "counterfact_test_1156",
+        "counterfact_test_1170",
+        "counterfact_test_1175",
+        "counterfact_test_1177",
+        "counterfact_test_1178",
+        "counterfact_test_118",
+        "counterfact_test_1182",
+        "counterfact_test_1184",
+        "counterfact_test_1190",
+        "counterfact_test_1198",
+        "counterfact_test_1199",
+        "counterfact_test_1208",
+        "counterfact_test_1210",
+        "counterfact_test_1213",
+        "counterfact_test_1216",
+        "counterfact_test_1220",
+        "counterfact_test_1226",
+        "counterfact_test_1229",
+        "counterfact_test_1230",
+        "counterfact_test_1235",
+        "counterfact_test_1239",
+        "counterfact_test_124",
+        "counterfact_test_1243",
+        "counterfact_test_1245",
+        "counterfact_test_1260",
+        "counterfact_test_1262",
+        "counterfact_test_1263",
+        "counterfact_test_1269",
+        "counterfact_test_1272",
+        "counterfact_test_1277",
+        "counterfact_test_1278",
+        "counterfact_test_1280",
+        "counterfact_test_1285",
+        "counterfact_test_1287",
+        "counterfact_test_1289",
+        "counterfact_test_1292",
+        "counterfact_test_1305",
+        "counterfact_test_1306",
+        "counterfact_test_1307",
+        "counterfact_test_1310",
+        "counterfact_test_1317",
+        "counterfact_test_1318",
+        "counterfact_test_132",
+        "counterfact_test_1322",
+        "counterfact_test_1325",
+        "counterfact_test_1341",
+        "counterfact_test_1351",
+        "counterfact_test_1357",
+        "counterfact_test_1358",
+        "counterfact_test_1359",
+        "counterfact_test_136",
+        "counterfact_test_1362",
+        "counterfact_test_1363",
+        "counterfact_test_1367",
+        "counterfact_test_137",
+        "counterfact_test_1372",
+        "counterfact_test_1378",
+        "counterfact_test_1381",
+        "counterfact_test_1387",
+        "counterfact_test_1389",
+        "counterfact_test_1393",
+        "counterfact_test_1403",
+        "counterfact_test_1405",
+        "counterfact_test_1409",
+        "counterfact_test_141",
+        "counterfact_test_1419"
+      ],
+      "source_overlap": [
+        [
+          "test",
+          1
+        ],
+        [
+          "test",
+          8
+        ],
+        [
+          "test",
+          9
+        ],
+        [
+          "test",
+          24
+        ],
+        [
+          "test",
+          31
+        ],
+        [
+          "test",
+          37
+        ],
+        [
+          "test",
+          39
+        ],
+        [
+          "test",
+          42
+        ],
+        [
+          "test",
+          44
+        ],
+        [
+          "test",
+          47
+        ],
+        [
+          "test",
+          49
+        ],
+        [
+          "test",
+          50
+        ],
+        [
+          "test",
+          51
+        ],
+        [
+          "test",
+          52
+        ],
+        [
+          "test",
+          54
+        ],
+        [
+          "test",
+          55
+        ],
+        [
+          "test",
+          56
+        ],
+        [
+          "test",
+          59
+        ],
+        [
+          "test",
+          60
+        ],
+        [
+          "test",
+          61
+        ],
+        [
+          "test",
+          68
+        ],
+        [
+          "test",
+          80
+        ],
+        [
+          "test",
+          81
+        ],
+        [
+          "test",
+          82
+        ],
+        [
+          "test",
+          87
+        ],
+        [
+          "test",
+          89
+        ],
+        [
+          "test",
+          96
+        ],
+        [
+          "test",
+          106
+        ],
+        [
+          "test",
+          107
+        ],
+        [
+          "test",
+          109
+        ],
+        [
+          "test",
+          112
+        ],
+        [
+          "test",
+          118
+        ],
+        [
+          "test",
+          124
+        ],
+        [
+          "test",
+          132
+        ],
+        [
+          "test",
+          136
+        ],
+        [
+          "test",
+          137
+        ],
+        [
+          "test",
+          141
+        ],
+        [
+          "test",
+          144
+        ],
+        [
+          "test",
+          145
+        ],
+        [
+          "test",
+          147
+        ],
+        [
+          "test",
+          156
+        ],
+        [
+          "test",
+          157
+        ],
+        [
+          "test",
+          163
+        ],
+        [
+          "test",
+          165
+        ],
+        [
+          "test",
+          170
+        ],
+        [
+          "test",
+          175
+        ],
+        [
+          "test",
+          177
+        ],
+        [
+          "test",
+          180
+        ],
+        [
+          "test",
+          190
+        ],
+        [
+          "test",
+          199
+        ],
+        [
+          "test",
+          201
+        ],
+        [
+          "test",
+          213
+        ],
+        [
+          "test",
+          224
+        ],
+        [
+          "test",
+          227
+        ],
+        [
+          "test",
+          229
+        ],
+        [
+          "test",
+          231
+        ],
+        [
+          "test",
+          232
+        ],
+        [
+          "test",
+          236
+        ],
+        [
+          "test",
+          237
+        ],
+        [
+          "test",
+          239
+        ],
+        [
+          "test",
+          240
+        ],
+        [
+          "test",
+          243
+        ],
+        [
+          "test",
+          247
+        ],
+        [
+          "test",
+          249
+        ],
+        [
+          "test",
+          250
+        ],
+        [
+          "test",
+          251
+        ],
+        [
+          "test",
+          252
+        ],
+        [
+          "test",
+          253
+        ],
+        [
+          "test",
+          254
+        ],
+        [
+          "test",
+          263
+        ],
+        [
+          "test",
+          266
+        ],
+        [
+          "test",
+          269
+        ],
+        [
+          "test",
+          271
+        ],
+        [
+          "test",
+          272
+        ],
+        [
+          "test",
+          276
+        ],
+        [
+          "test",
+          280
+        ],
+        [
+          "test",
+          301
+        ],
+        [
+          "test",
+          303
+        ],
+        [
+          "test",
+          304
+        ],
+        [
+          "test",
+          305
+        ],
+        [
+          "test",
+          314
+        ],
+        [
+          "test",
+          316
+        ],
+        [
+          "test",
+          318
+        ],
+        [
+          "test",
+          328
+        ],
+        [
+          "test",
+          330
+        ],
+        [
+          "test",
+          335
+        ],
+        [
+          "test",
+          346
+        ],
+        [
+          "test",
+          348
+        ],
+        [
+          "test",
+          355
+        ],
+        [
+          "test",
+          358
+        ],
+        [
+          "test",
+          362
+        ],
+        [
+          "test",
+          365
+        ],
+        [
+          "test",
+          373
+        ],
+        [
+          "test",
+          374
+        ],
+        [
+          "test",
+          377
+        ],
+        [
+          "test",
+          379
+        ],
+        [
+          "test",
+          383
+        ],
+        [
+          "test",
+          390
+        ],
+        [
+          "test",
+          391
+        ],
+        [
+          "test",
+          392
+        ]
+      ]
+    }
+  ],
+  "has_disallowed_overlap": false
+}

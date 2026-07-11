@@ -1,0 +1,40 @@
+# Python caches
+__pycache__/
+*.py[cod]
+.pycache/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local virtual environments
+.venv/
+venv/
+env/
+
+# OS/editor noise
+.DS_Store
+*.swp
+.ipynb_checkpoints/
+
+# Generated research artifacts
+data/
+
+# Run outputs can be large. Commit only the frozen protocol manifests.
+runs/*
+!runs/counterfact_direction1_v1/
+runs/counterfact_direction1_v1/*
+!runs/counterfact_direction1_v1/protocol/
+runs/counterfact_direction1_v1/protocol/*
+!runs/counterfact_direction1_v1/protocol/*.json
+!runs/counterfact_direction1_v1/protocol/*.jsonl
+
+# Large model/checkpoint artifacts
+*.safetensors
+*.pt
+*.pth
+*.ckpt
+*.bin
+
+# Logs and archives
+*.log
+*.zip
