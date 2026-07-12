@@ -18,28 +18,44 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from scripts.d3_common import D3_PROTOCOL_VERSION, D3_ROOT, auc_score, git_commit, mean, now_utc, read_json, read_jsonl, repo_path, spearman, write_json
-from scripts.train_d3_bridge_controller import FEATURE_NAMES, predict, row_features
+from scripts.train_d3_bridge_controller import (
+    FEATURE_NAMES,
+    array_value,
+    candidate_features,
+    candidate_ids,
+    predict,
+    target_candidate_positions,
+)
 
 
 def candidate_prediction_scores(row: Dict[str, Any], weights: Sequence[float]) -> List[float]:
     scores: List[float] = []
-    for i in range(len(row["top_k_candidate_token_ids"])):
-        pseudo = dict(row)
-        pseudo["base_logits_top_k"] = [row["base_logits_top_k"][i]]
-        pseudo["myopic_scores_top_k"] = [row["myopic_scores_top_k"][i]]
-        pseudo["no_rollout_scores_top_k"] = [row["no_rollout_scores_top_k"][i]]
-        scores.append(predict(weights, row_features(pseudo)))
+    for i in range(len(candidate_ids(row))):
+        scores.append(predict(weights, candidate_features(row, i)))
     return scores
 
 
-def target_rank(scores: Sequence[float]) -> int:
+def target_rank(row: Dict[str, Any], scores: Sequence[float]) -> int:
+    target_positions = set(target_candidate_positions(row))
+    if not target_positions:
+        return len(scores) + 1
     order = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)
-    return order.index(0) + 1
+    for rank, idx in enumerate(order, start=1):
+        if idx in target_positions:
+            return rank
+    return len(scores) + 1
+
+
+def row_target_score(row: Dict[str, Any], scores: Sequence[float]) -> float:
+    positions = target_candidate_positions(row)
+    if not positions:
+        return max(scores) if scores else 0.0
+    return max(scores[idx] for idx in positions)
 
 
 def eval_rows(rows: Sequence[Dict[str, Any]], weights: Sequence[float]) -> Dict[str, Any]:
-    raw_top_scores: List[float] = []
-    pred_top_scores: List[float] = []
+    raw_all_scores: List[float] = []
+    pred_all_scores: List[float] = []
     top1_agreements: List[float] = []
     target_top3: List[float] = []
     gate_labels: List[int] = []
@@ -48,22 +64,25 @@ def eval_rows(rows: Sequence[Dict[str, Any]], weights: Sequence[float]) -> Dict[
 
     for row in rows:
         pred_scores = candidate_prediction_scores(row, weights)
-        raw_scores = row["raw_bridge_scores_top_k"]
+        raw_scores = [
+            array_value(row, ["raw_bridge_scores_top_k", "raw_bridge_scores"], idx)
+            for idx in range(len(pred_scores))
+        ]
         raw_top = max(range(len(raw_scores)), key=lambda i: raw_scores[i])
         pred_top = max(range(len(pred_scores)), key=lambda i: pred_scores[i])
-        raw_top_scores.append(float(raw_scores[0]))
-        pred_top_scores.append(float(pred_scores[0]))
+        raw_all_scores.extend(float(value) for value in raw_scores)
+        pred_all_scores.extend(float(value) for value in pred_scores)
         top1_agreements.append(float(raw_top == pred_top))
-        target_top3.append(float(target_rank(pred_scores) <= 3))
+        target_top3.append(float(target_rank(row, pred_scores) <= 3))
         label = int(row.get("label", 0))
         gate_labels.append(label)
-        gate_scores.append(pred_scores[0])
+        gate_scores.append(row_target_score(row, pred_scores))
         if label == 0:
-            negative_guidance.append(pred_scores[0])
+            negative_guidance.append(row_target_score(row, pred_scores))
 
     return {
         "num_rows": len(rows),
-        "bridge_score_spearman": spearman(raw_top_scores, pred_top_scores),
+        "bridge_score_spearman": spearman(raw_all_scores, pred_all_scores),
         "top1_agreement_with_raw_bridge": mean(top1_agreements),
         "target_token_ranked_top3_rate": mean(target_top3),
         "same_subject_gate_auc": auc_score(gate_labels, gate_scores),

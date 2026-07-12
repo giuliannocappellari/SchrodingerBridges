@@ -24,16 +24,56 @@ from scripts.d3_common import D3_PROTOCOL_VERSION, D3_ROOT, git_commit, mean, no
 FEATURE_NAMES = ["bias", "base", "myopic", "no_rollout", "step", "active_masks", "is_positive_prompt"]
 
 
-def row_features(row: Dict[str, Any]) -> List[float]:
+def squash_signed(value: Any, scale: float = 8.0) -> float:
+    """Bound heterogeneous teacher scores into a stable SGD feature range."""
+
+    x = float(value)
+    if not math.isfinite(x):
+        raise ValueError(f"Non-finite feature value: {value}")
+    transformed = math.copysign(math.log1p(abs(x)), x) / scale
+    return max(-4.0, min(4.0, transformed))
+
+
+def array_value(row: Dict[str, Any], keys: Sequence[str], index: int) -> float:
+    for key in keys:
+        values = row.get(key)
+        if isinstance(values, list) and index < len(values):
+            return float(values[index])
+    raise KeyError(f"Missing candidate score array for keys={keys} index={index}")
+
+
+def candidate_features(row: Dict[str, Any], candidate_index: int) -> List[float]:
     return [
         1.0,
-        float(row["base_logits_top_k"][0]),
-        float(row["myopic_scores_top_k"][0]),
-        float(row["no_rollout_scores_top_k"][0]),
+        squash_signed(array_value(row, ["base_logits_top_k", "base_logits"], candidate_index)),
+        squash_signed(array_value(row, ["myopic_scores_top_k", "myopic_scores"], candidate_index)),
+        squash_signed(array_value(row, ["no_rollout_scores_top_k", "no_rollout_scores"], candidate_index)),
         float(row["step_index"]) / 3.0,
         float(row["active_mask_count"]) / 4.0,
         float(row.get("label", 0)),
     ]
+
+
+def row_features(row: Dict[str, Any]) -> List[float]:
+    return candidate_features(row, 0)
+
+
+def candidate_ids(row: Dict[str, Any]) -> List[int]:
+    values = row.get("top_k_candidate_token_ids") or row.get("top_k_candidate_ids")
+    if not isinstance(values, list):
+        raise KeyError("Missing top-k candidate ids")
+    return [int(value) for value in values]
+
+
+def target_candidate_positions(row: Dict[str, Any]) -> List[int]:
+    targets = {int(value) for value in (row.get("target_token_ids") or [])}
+    return [idx for idx, token_id in enumerate(candidate_ids(row)) if token_id in targets]
+
+
+def candidate_label(row: Dict[str, Any], candidate_index: int) -> float:
+    if int(row.get("label", 0)) != 1:
+        return 0.0
+    return float(candidate_index in target_candidate_positions(row))
 
 
 def sigmoid(x: float) -> float:
@@ -54,13 +94,24 @@ def loss_for_rows(rows: Sequence[Dict[str, Any]], weights: Sequence[float], l2: 
     ranking_terms: List[float] = []
     locality_terms: List[float] = []
     for row in rows:
-        y = float(row.get("final_edit_success") or row.get("label") or 0.0)
-        pred = predict(weights, row_features(row))
-        bce_terms.append(-(y * math.log(pred + eps) + (1.0 - y) * math.log(1.0 - pred + eps)))
-        bridge_target = float(row["raw_bridge_scores_top_k"][0] > max(row["raw_bridge_scores_top_k"][1:]))
-        ranking_terms.append(abs(pred - bridge_target))
+        candidates = candidate_ids(row)
+        pred_scores = [predict(weights, candidate_features(row, idx)) for idx in range(len(candidates))]
+        raw_scores = [
+            array_value(row, ["raw_bridge_scores_top_k", "raw_bridge_scores"], idx)
+            for idx in range(len(candidates))
+        ]
+        raw_top_idx = max(range(len(raw_scores)), key=lambda idx: raw_scores[idx])
+        pred_top_idx = max(range(len(pred_scores)), key=lambda idx: pred_scores[idx])
+        ranking_terms.append(float(raw_top_idx != pred_top_idx))
+        for idx, pred in enumerate(pred_scores):
+            y = candidate_label(row, idx)
+            bce_terms.append(-(y * math.log(pred + eps) + (1.0 - y) * math.log(1.0 - pred + eps)))
         if int(row.get("label", 0)) == 0:
-            locality_terms.append(pred)
+            positions = target_candidate_positions(row)
+            if positions:
+                locality_terms.append(max(pred_scores[idx] for idx in positions))
+            else:
+                locality_terms.append(max(pred_scores))
     l2_term = l2 * sum(w * w for w in weights)
     gate_loss = mean(locality_terms)
     ranking_loss = mean(ranking_terms)
@@ -81,12 +132,13 @@ def train_controller(rows: Sequence[Dict[str, Any]], epochs: int, lr: float) -> 
     history: List[Dict[str, float]] = []
     for epoch in range(epochs):
         for row in rows:
-            features = row_features(row)
-            y = float(row.get("final_edit_success") or row.get("label") or 0.0)
-            pred = predict(weights, features)
-            grad_scale = pred - y
-            for i, feature in enumerate(features):
-                weights[i] -= lr * grad_scale * feature
+            for idx in range(len(candidate_ids(row))):
+                features = candidate_features(row, idx)
+                y = candidate_label(row, idx)
+                pred = predict(weights, features)
+                grad_scale = pred - y
+                for i, feature in enumerate(features):
+                    weights[i] -= lr * grad_scale * feature
         metrics = loss_for_rows(rows, weights)
         metrics["epoch"] = float(epoch)
         history.append(metrics)
