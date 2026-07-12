@@ -396,10 +396,10 @@ def subject_matches_prompt(subject: str, prompt: str) -> bool:
     return re.search(r"\b" + re.escape(subject_norm) + r"\b", prompt_norm) is not None
 
 
-def hybrid_relation_or_gate_should_activate(raw_edit: Dict[str, Any], prompt: str, cfg: RolloutConfig) -> bool:
+def hybrid_relation_gate_scores(raw_edit: Dict[str, Any], prompt: str, cfg: RolloutConfig) -> Tuple[bool, float, float]:
     subject = raw_subject(raw_edit)
     if not subject_matches_prompt(subject, prompt):
-        return False
+        return False, 0.0, 0.0
     prompt_relation = relation_content_text(
         prompt,
         subject=subject,
@@ -412,9 +412,26 @@ def hybrid_relation_or_gate_should_activate(raw_edit: Dict[str, Any], prompt: st
     relation_id = raw_relation_id(raw_edit)
     bank = load_relation_bank(cfg.relation_bank_path)
     bank_sim = max((relation_similarity(prompt_relation, proto) for proto in bank.get(relation_id, [])), default=0.0)
+    return True, float(rewrite_sim), float(bank_sim)
+
+
+def hybrid_relation_or_gate_should_activate(raw_edit: Dict[str, Any], prompt: str, cfg: RolloutConfig) -> bool:
+    subject_match, rewrite_sim, bank_sim = hybrid_relation_gate_scores(raw_edit, prompt, cfg)
+    if not subject_match:
+        return False
     return (
         rewrite_sim >= float(cfg.relation_sim_rewrite_threshold)
         or bank_sim >= float(cfg.relation_sim_bank_threshold)
+    )
+
+
+def hybrid_relation_and_gate_should_activate(raw_edit: Dict[str, Any], prompt: str, cfg: RolloutConfig) -> bool:
+    subject_match, rewrite_sim, bank_sim = hybrid_relation_gate_scores(raw_edit, prompt, cfg)
+    if not subject_match:
+        return False
+    return (
+        rewrite_sim >= float(cfg.relation_sim_rewrite_threshold)
+        and bank_sim >= float(cfg.relation_sim_bank_threshold)
     )
 
 
@@ -441,6 +458,10 @@ def gate_should_activate(
         if cfg is None:
             raise ValueError("hybrid_relation_or gate requires RolloutConfig")
         return hybrid_relation_or_gate_should_activate(raw_edit, prompt, cfg)
+    if gate_mode == "hybrid_relation_and":
+        if cfg is None:
+            raise ValueError("hybrid_relation_and gate requires RolloutConfig")
+        return hybrid_relation_and_gate_should_activate(raw_edit, prompt, cfg)
     template = str(raw_edit.get("rewrite_template") or raw_edit.get("requested_rewrite", {}).get("prompt", ""))
     keywords = relation_keywords(template, subject)
     relation_match = bool(keywords) and any(keyword in prompt_lower for keyword in keywords)

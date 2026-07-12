@@ -1,8 +1,10 @@
 import math
 import os
+import tempfile
 import unittest
 from argparse import Namespace
 
+from scripts.step3e_gate_audit import assert_dev_only_path
 from llada_counterfact_protocol import (
     PROTOCOL_VERSION,
     SimpleWhitespaceTokenizer,
@@ -23,7 +25,11 @@ from llada_runtime_editor_eval import (
     decompose_method,
     enforce_lock_requirements,
     gate_should_activate,
+    load_relation_bank,
+    relation_content_text,
+    relation_text_for_record,
     normalize_method_args,
+    subject_matches_prompt,
     sparse_support_guidance_kl,
     token_f1,
 )
@@ -112,6 +118,85 @@ class CounterFactProtocolTests(unittest.TestCase):
                 cfg,
             )
         )
+
+    def test_gate_hybrid_relation_and_requires_both_branches(self):
+        raw_edit = {
+            "subject": "Ada Lovelace",
+            "relation_id": "P106",
+            "rewrite_template": "The profession of {} is",
+            "target": " mathematician",
+            "old_target": " writer",
+        }
+        with tempfile.NamedTemporaryFile("w", encoding="utf-8", suffix=".jsonl") as f:
+            f.write(
+                '{"subject":"Ada Lovelace","relation_id":"P106",'
+                '"rewrite_template":"The occupation of {} is",'
+                '"target":" mathematician","old_target":" writer"}\n'
+            )
+            f.flush()
+            cfg = RolloutConfig(
+                steps=4,
+                bridge_topk=4,
+                mc_rollouts=2,
+                guidance_scale=1.0,
+                reward_mode="soft_overlap",
+                reward_beta=6.0,
+                target_logit_bias=0.0,
+                gate_mode="hybrid_relation_and",
+                temperature=1.0,
+                relation_sim_rewrite_threshold=0.45,
+                relation_sim_bank_threshold=0.10,
+                relation_bank_path=f.name,
+            )
+            self.assertTrue(
+                gate_should_activate(
+                    raw_edit,
+                    "The profession of Ada Lovelace is",
+                    "hybrid_relation_and",
+                    cfg,
+                )
+            )
+            strict_cfg = RolloutConfig(**{**cfg.__dict__, "relation_sim_bank_threshold": 0.99})
+            self.assertFalse(
+                gate_should_activate(
+                    raw_edit,
+                    "The profession of Ada Lovelace is",
+                    "hybrid_relation_and",
+                    strict_cfg,
+                )
+            )
+
+    def test_gate_helpers_preserve_relation_terms_and_subject_boundaries(self):
+        raw_edit = {
+            "subject": "Ada Lovelace",
+            "relation_id": "P106",
+            "rewrite_template": "{} works as a",
+            "target": " mathematician",
+            "old_target": " writer",
+        }
+        self.assertTrue(subject_matches_prompt("Ada Lovelace", "Ada Lovelace works as a"))
+        self.assertFalse(subject_matches_prompt("Ada Lovelace", "Adalovelace works as a"))
+        self.assertIn("works", relation_content_text("Ada Lovelace works as a", subject="Ada Lovelace"))
+        self.assertIn("works", relation_text_for_record(raw_edit))
+
+    def test_relation_bank_construction_uses_dev_rows(self):
+        with tempfile.NamedTemporaryFile("w", encoding="utf-8", suffix=".jsonl") as f:
+            f.write(
+                '{"subject":"Ada Lovelace","relation_id":"P106",'
+                '"rewrite_template":"{} works as a",'
+                '"target":" mathematician","old_target":" writer"}\n'
+            )
+            f.flush()
+            bank = load_relation_bank(f.name)
+        self.assertIn("P106", bank)
+        self.assertIn("works", bank["P106"][0])
+
+    def test_step3e_local_scripts_reject_locked_split_paths(self):
+        assert_dev_only_path(os.path.join("runs", "counterfact_direction1_v1", "protocol", "dev_tune_200.jsonl"))
+        with self.assertRaises(AssertionError):
+            assert_dev_only_path(os.path.join("runs", "counterfact_direction1_v1", "protocol", "analysis_500.jsonl"))
+        with self.assertRaises(AssertionError):
+            assert_dev_only_path(os.path.join("runs", "counterfact_direction1_v1", "protocol", "final_test_500.jsonl"))
 
     def test_lock_enforcement_for_analysis(self):
         with self.assertRaises(ValueError):
