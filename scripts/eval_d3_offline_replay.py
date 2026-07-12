@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Evaluate fake Direction 3 controller outputs in offline replay."""
+"""Evaluate Direction 3 controller outputs in offline replay.
+
+This script consumes cached teacher rows and controller weights only. It does
+not import or load LLaDA, including when ``--fake_model 0`` is used for a real
+teacher-cache smoke.
+"""
 
 from __future__ import annotations
 
@@ -80,8 +85,6 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    if not bool(args.fake_model):
-        raise SystemExit("Real offline replay requires a trained controller artifact. Re-run with --fake_model 1 locally.")
     repo_path(args.output_dir).mkdir(parents=True, exist_ok=True)
     weights_payload = read_json(args.controller_dir / "controller_weights.json")
     if weights_payload.get("feature_names") != FEATURE_NAMES:
@@ -98,15 +101,19 @@ def main() -> None:
         "same_subject_gate_auc_gt_0_85": val_metrics["same_subject_gate_auc"] > 0.85,
         "locality_negative_average_guidance_lt_0_5": val_metrics["locality_negative_average_guidance"] < 0.5,
     }
+    fake_model = bool(args.fake_model)
+    stage = "Direction 3 fake offline replay" if fake_model else "Direction 3 real-cache offline replay smoke"
     payload = {
         "protocol_version": D3_PROTOCOL_VERSION,
-        "stage": "Direction 3 fake offline replay",
+        "stage": stage,
         "created_at_utc": now_utc(),
         "git_commit": git_commit(),
-        "fake_model": True,
+        "fake_model": fake_model,
         "llada_loaded": False,
         "analysis_500_used": False,
         "final_test_used": False,
+        "teacher_cache_dir": str(args.teacher_cache_dir),
+        "controller_dir": str(args.controller_dir),
         "train_metrics": train_metrics,
         "val_metrics": val_metrics,
         "pass_criteria": pass_criteria,
@@ -117,7 +124,7 @@ def main() -> None:
     }
     write_json(args.output_dir / "offline_replay_metrics.json", payload)
     write_json(args.output_dir / "report_summary.json", payload)
-    print(f"[INFO] Wrote fake Direction 3 offline replay output to {args.output_dir}")
+    print(f"[INFO] Wrote Direction 3 offline replay output to {args.output_dir}")
 
 
 if __name__ == "__main__":

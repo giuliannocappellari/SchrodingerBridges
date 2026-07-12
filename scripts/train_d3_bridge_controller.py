@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Train a tiny fake Direction 3 bridge controller.
+"""Train a tiny Direction 3 bridge controller from cached teacher rows.
 
-This local scaffold intentionally implements only fake mode. It proves the
-training interface, loss accounting, and output summaries without loading
-LLaDA or requiring GPU.
+This script never loads LLaDA. ``--fake_model 1`` means the teacher cache was
+synthetic; ``--fake_model 0`` means the teacher cache came from a real GPU
+teacher-cache smoke and is being consumed offline.
 """
 
 from __future__ import annotations
@@ -62,16 +62,21 @@ def loss_for_rows(rows: Sequence[Dict[str, Any]], weights: Sequence[float], l2: 
         if int(row.get("label", 0)) == 0:
             locality_terms.append(pred)
     l2_term = l2 * sum(w * w for w in weights)
+    gate_loss = mean(locality_terms)
+    ranking_loss = mean(ranking_terms)
+    bridge_loss = mean(bce_terms)
     return {
-        "bridge_distillation_loss": mean(bce_terms),
-        "ranking_loss": mean(ranking_terms),
-        "locality_kl_proxy_loss": mean(locality_terms),
+        "bridge_distillation_loss": bridge_loss,
+        "ranking_loss": ranking_loss,
+        "bridge_ranking_loss": ranking_loss,
+        "locality_kl_proxy_loss": gate_loss,
+        "gate_loss": gate_loss,
         "l2_correction_loss": l2_term,
-        "total_loss": mean(bce_terms) + 0.25 * mean(ranking_terms) + 0.5 * mean(locality_terms) + l2_term,
+        "total_loss": bridge_loss + 0.25 * ranking_loss + 0.5 * gate_loss + l2_term,
     }
 
 
-def train_fake(rows: Sequence[Dict[str, Any]], epochs: int, lr: float) -> Tuple[List[float], List[Dict[str, float]]]:
+def train_controller(rows: Sequence[Dict[str, Any]], epochs: int, lr: float) -> Tuple[List[float], List[Dict[str, float]]]:
     weights = [0.0 for _ in FEATURE_NAMES]
     history: List[Dict[str, float]] = []
     for epoch in range(epochs):
@@ -88,6 +93,10 @@ def train_fake(rows: Sequence[Dict[str, Any]], epochs: int, lr: float) -> Tuple[
     return weights, history
 
 
+def train_fake(rows: Sequence[Dict[str, Any]], epochs: int, lr: float) -> Tuple[List[float], List[Dict[str, float]]]:
+    return train_controller(rows, epochs, lr)
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--teacher_cache_dir", type=Path, default=D3_ROOT / "fake_teacher_cache_v1")
@@ -101,31 +110,39 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    if not bool(args.fake_model):
-        raise SystemExit("Real controller training requires a later approved path. Re-run with --fake_model 1 locally.")
     repo_path(args.output_dir).mkdir(parents=True, exist_ok=True)
     train_rows = read_jsonl(args.teacher_cache_dir / "teacher_states_train.jsonl")
     val_rows = read_jsonl(args.teacher_cache_dir / "teacher_states_val.jsonl")
     if not train_rows or not val_rows:
         raise AssertionError("Teacher cache train/val rows are required")
 
-    weights, history = train_fake(train_rows, args.epochs, args.lr)
+    initial_train_metrics = loss_for_rows(train_rows, [0.0 for _ in FEATURE_NAMES])
+    weights, history = train_controller(train_rows, args.epochs, args.lr)
     val_metrics = loss_for_rows(val_rows, weights)
     train_metrics = history[-1]
+    fake_model = bool(args.fake_model)
+    stage = (
+        "Direction 3 fake bridge controller training"
+        if fake_model
+        else "Direction 3 real-cache bridge controller training smoke"
+    )
     payload = {
         "protocol_version": D3_PROTOCOL_VERSION,
-        "stage": "Direction 3 fake bridge controller training",
+        "stage": stage,
         "created_at_utc": now_utc(),
         "git_commit": git_commit(),
-        "fake_model": True,
+        "fake_model": fake_model,
         "llada_loaded": False,
         "analysis_500_used": False,
         "final_test_used": False,
+        "teacher_cache_dir": str(args.teacher_cache_dir),
         "feature_names": FEATURE_NAMES,
         "weights": weights,
+        "initial_train_metrics": initial_train_metrics,
         "train_metrics": train_metrics,
         "val_metrics": val_metrics,
         "history": history,
+        "loss_decreased": train_metrics["total_loss"] <= initial_train_metrics["total_loss"],
         "artifacts": {
             "controller_weights": str(args.output_dir / "controller_weights.json"),
             "train_metrics": str(args.output_dir / "train_metrics.json"),
@@ -134,7 +151,7 @@ def main() -> None:
     write_json(args.output_dir / "controller_weights.json", {"feature_names": FEATURE_NAMES, "weights": weights})
     write_json(args.output_dir / "train_metrics.json", payload)
     write_json(args.output_dir / "report_summary.json", payload)
-    print(f"[INFO] Wrote fake Direction 3 controller training output to {args.output_dir}")
+    print(f"[INFO] Wrote Direction 3 controller training output to {args.output_dir}")
 
 
 if __name__ == "__main__":
