@@ -32,13 +32,13 @@ def average(values: list[float]) -> float:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data_dir", type=Path, default=T1_ROOT / "gate_data_v1")
+    parser.add_argument("--data_dir", type=Path, default=T1_ROOT / "gate_data_v2")
     parser.add_argument(
         "--checkpoint",
         type=Path,
-        default=T1_ROOT / "gate_train_v1/checkpoints/selected_gate.pt",
+        default=T1_ROOT / "gate_train_v2/checkpoints/selected_gate.pt",
     )
-    parser.add_argument("--output_dir", type=Path, default=T1_ROOT / "runtime_gate_audit_v1")
+    parser.add_argument("--output_dir", type=Path, default=T1_ROOT / "runtime_gate_audit_v2")
     parser.add_argument("--allow_overwrite", type=int, choices=[0, 1], default=0)
     args = parser.parse_args()
     output_dir = repo_path(args.output_dir)

@@ -39,6 +39,14 @@ def test_gate_data_has_required_positive_and_negative_categories() -> None:
     assert "Subject" in same_subject["prompt"]
 
 
+def test_gate_data_separates_qa_from_declarative_paraphrases() -> None:
+    edits = [sample_edit(0, "P1"), sample_edit(1, "P2")]
+    edits[0]["paraphrase_prompts"] = ["What field does Subject 0 work in?"]
+    rows = gate_rows_for_split(edits, "train")
+    qa = [row for row in rows if row["case_id"] == "case-0" and row["label"] == 1]
+    assert {row["prompt_type"] for row in qa} == {"rewrite", "qa_format_generalization"}
+
+
 def test_gate_features_are_fixed_and_runtime_deployable() -> None:
     features = featurize("Ada works in mathematics", "Ada", "{} works in", "P101")
     assert features.shape == (FEATURE_DIM,)

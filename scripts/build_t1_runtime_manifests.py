@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from llada_sb_common import looks_like_qa_prompt
 from scripts.sb_alt_common import COMMON_ROOT, git_commit, now_utc, read_jsonl, write_json, write_jsonl
 
 
@@ -22,14 +23,20 @@ def standard_row(row: dict[str, Any], all_rows: list[dict[str, Any]], index: int
     unrelated = all_rows[(index + 1) % len(all_rows)]
     near_prompts = list(row.get("near_locality_prompts") or [])[:1]
     far_prompts = [unrelated["rewrite_prompt"]]
+    paraphrases = list(row.get("paraphrase_prompts") or [])[:2]
     return {
         **row,
         "protocol_version": "counterfact_learned_gate_raw_bridge_v1",
         "prompt": row["rewrite_prompt"],
         "target": row["target_new"],
         "aliases": [row["target_new"]],
-        "declarative_paraphrase_prompts": list(row.get("paraphrase_prompts") or [])[:2],
-        "qa_paraphrase_prompts": [],
+        "paraphrase_prompts": [],
+        "declarative_paraphrase_prompts": [
+            prompt for prompt in paraphrases if not looks_like_qa_prompt(prompt)
+        ],
+        "qa_paraphrase_prompts": [
+            prompt for prompt in paraphrases if looks_like_qa_prompt(prompt)
+        ],
         "near_locality_cases": [
             {
                 "id": f"{row['case_id']}_near_{prompt_index}",
@@ -69,6 +76,7 @@ def stress_row(edit: dict[str, Any], gate_rows: list[dict[str, Any]]) -> dict[st
         "prompt": stress["prompt"],
         "target": edit["target_new"],
         "aliases": [edit["target_new"]],
+        "paraphrase_prompts": [],
         "declarative_paraphrase_prompts": [],
         "qa_paraphrase_prompts": [],
         "near_locality_cases": [],
@@ -84,8 +92,8 @@ def stress_row(edit: dict[str, Any], gate_rows: list[dict[str, Any]]) -> dict[st
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--common_dir", type=Path, default=COMMON_ROOT)
-    parser.add_argument("--gate_data_dir", type=Path, default=T1_ROOT / "gate_data_v1")
-    parser.add_argument("--output_dir", type=Path, default=T1_ROOT / "runtime_manifests_v1")
+    parser.add_argument("--gate_data_dir", type=Path, default=T1_ROOT / "gate_data_v2")
+    parser.add_argument("--output_dir", type=Path, default=T1_ROOT / "runtime_manifests_v2")
     parser.add_argument("--allow_overwrite", type=int, choices=[0, 1], default=0)
     args = parser.parse_args()
     report_path = args.output_dir / "report_summary.json"
@@ -120,6 +128,8 @@ def main() -> None:
         "final_test_used": False,
         "summaries": summaries,
         "same_subject_target_semantics": "target_new_over_injection",
+        "supersedes_invalid_manifest": "runtime_manifests_v1 (legacy paraphrase fields leaked into stress rows)",
+        "prompt_materialization_repair_used": True,
         "acceptance_pass": summaries["smoke20"]["num_edits"] == 20
         and summaries["confirmation30"]["num_edits"] == 30,
     }

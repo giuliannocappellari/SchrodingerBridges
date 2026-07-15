@@ -41,6 +41,7 @@ T1_ROOT = Path("runs/counterfact_learned_gate_raw_bridge_v1")
 PROMPT_TYPES = (
     "rewrite",
     "declarative_paraphrase",
+    "qa_format_generalization",
     "same_subject_different_relation",
     "near_locality",
     "far_locality",
@@ -259,8 +260,8 @@ def select_threshold(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data_dir", type=Path, default=T1_ROOT / "gate_data_v1")
-    parser.add_argument("--output_dir", type=Path, default=T1_ROOT / "gate_train_v1")
+    parser.add_argument("--data_dir", type=Path, default=T1_ROOT / "gate_data_v2")
+    parser.add_argument("--output_dir", type=Path, default=T1_ROOT / "gate_train_v2")
     parser.add_argument("--epochs", type=int, default=8)
     parser.add_argument("--allow_overwrite", type=int, choices=[0, 1], default=0)
     args = parser.parse_args()
@@ -368,7 +369,7 @@ def main() -> None:
     report = {
         "campaign_protocol": CAMPAIGN_PROTOCOL,
         "track_protocol": "counterfact_learned_gate_raw_bridge_v1",
-        "stage": "T1.2 learned gate training",
+        "stage": "T1.2 learned gate training after allowed prompt-materialization repair",
         "created_at_utc": now_utc(),
         "git_commit": git_commit(),
         "analysis_500_used": False,
@@ -384,6 +385,7 @@ def main() -> None:
         "acceptance_pass": all(checks.values()),
         "bounded_rescue_available": not all(checks.values()),
         "bounded_rescue_used": False,
+        "prompt_materialization_repair_used": True,
     }
     write_json(output_dir / "report_summary.json", report)
     record_stage_event(

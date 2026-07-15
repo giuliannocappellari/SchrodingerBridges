@@ -27,6 +27,7 @@ from scripts.sb_alt_common import (
     write_json,
     write_jsonl,
 )
+from llada_sb_common import looks_like_qa_prompt
 
 
 T1_ROOT = Path("runs/counterfact_learned_gate_raw_bridge_v1")
@@ -55,7 +56,16 @@ def gate_rows_for_split(rows: list[dict[str, Any]], split_role: str) -> list[dic
             ("rewrite", 1, "", edit["rewrite_prompt"], "real_counterfact_rewrite", False),
         ]
         prompts.extend(
-            ("declarative_paraphrase", 1, "", prompt, "real_counterfact_paraphrase", False)
+            (
+                "qa_format_generalization"
+                if looks_like_qa_prompt(prompt)
+                else "declarative_paraphrase",
+                1,
+                "",
+                prompt,
+                "real_counterfact_paraphrase",
+                False,
+            )
             for prompt in edit.get("paraphrase_prompts", [])[:2]
         )
         prompts.extend(
@@ -139,7 +149,7 @@ def gate_rows_for_split(rows: list[dict[str, Any]], split_role: str) -> list[dic
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--common_dir", type=Path, default=COMMON_ROOT)
-    parser.add_argument("--output_dir", type=Path, default=T1_ROOT / "gate_data_v1")
+    parser.add_argument("--output_dir", type=Path, default=T1_ROOT / "gate_data_v2")
     parser.add_argument("--allow_overwrite", type=int, choices=[0, 1], default=0)
     args = parser.parse_args()
     report_path = repo_path(args.output_dir / "report_summary.json")
