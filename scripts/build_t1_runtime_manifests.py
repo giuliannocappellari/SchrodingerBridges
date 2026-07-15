@@ -28,7 +28,6 @@ def standard_row(row: dict[str, Any], all_rows: list[dict[str, Any]], index: int
         "prompt": row["rewrite_prompt"],
         "target": row["target_new"],
         "aliases": [row["target_new"]],
-        "old_target": row["target_true"],
         "declarative_paraphrase_prompts": list(row.get("paraphrase_prompts") or [])[:2],
         "qa_paraphrase_prompts": [],
         "near_locality_cases": [
@@ -59,14 +58,17 @@ def stress_row(edit: dict[str, Any], gate_rows: list[dict[str, Any]]) -> dict[st
         if row["case_id"] == edit["case_id"]
         and row["prompt_type"] == "same_subject_different_relation"
     )
+    stress_id = f"{edit['case_id']}__same_subject_stress"
     return {
         **edit,
+        "id": stress_id,
+        "case_id": stress_id,
+        "original_edit_id": edit["case_id"],
         "protocol_version": "counterfact_learned_gate_raw_bridge_v1",
         "split_role": f"{edit['split_role']}_same_subject_stress",
         "prompt": stress["prompt"],
         "target": edit["target_new"],
         "aliases": [edit["target_new"]],
-        "old_target": edit["target_true"],
         "declarative_paraphrase_prompts": [],
         "qa_paraphrase_prompts": [],
         "near_locality_cases": [],
@@ -100,10 +102,12 @@ def main() -> None:
         stress = [stress_row(row, gate_rows) for row in edits]
         write_jsonl(args.output_dir / f"{split}_standard.jsonl", standard)
         write_jsonl(args.output_dir / f"{split}_same_subject_stress.jsonl", stress)
+        write_jsonl(args.output_dir / f"{split}_combined.jsonl", standard + stress)
         summaries[split] = {
             "num_edits": len(edits),
             "standard_rows": len(standard),
             "stress_rows": len(stress),
+            "combined_rows": len(standard) + len(stress),
             "standard_case_ids": len({row["case_id"] for row in standard}),
             "stress_case_ids": len({row["case_id"] for row in stress}),
         }
