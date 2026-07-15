@@ -24,6 +24,9 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
 import torch
 
+from scripts.t1_gate_model import load_checkpoint as load_t1_gate_checkpoint
+from scripts.t1_gate_model import predict_probability as predict_t1_gate_probability
+
 from llada_counterfact_protocol import PROTOCOL_VERSION, normalize_counterfact_text
 from llada_sb_common import (
     EVAL_BUCKET_ORDER,
@@ -82,6 +85,12 @@ GATED_METHODS = tuple(
 )
 
 SUPPORTED_METHODS = tuple(dict.fromkeys(list(SPRINT1_METHODS) + list(GATED_METHODS)))
+LEARNED_GATE_METHODS = (
+    "learned_gate_myopic",
+    "learned_gate_no_rollout",
+    "learned_gate_mc_bridge",
+)
+SUPPORTED_METHODS = tuple(dict.fromkeys(list(SUPPORTED_METHODS) + list(LEARNED_GATE_METHODS)))
 
 LOCKED_FINAL_ROLES = {"final_test_500", "final_test_full"}
 ANALYSIS_ROLES = {"analysis_500"}
@@ -102,6 +111,10 @@ class RolloutConfig:
     relation_sim_bank_threshold: float = 0.10
     relation_bank_path: str = ""
     relation_bank_source: str = "dev_tune_200_rewrite_templates"
+    learned_gate_checkpoint: str = ""
+    learned_gate_mode: str = "hard"
+    learned_gate_threshold: float = -1.0
+    learned_gate_temperature: float = 1.0
 
 
 def sparse_support_guidance_kl(
@@ -236,6 +249,7 @@ RELATION_GATE_STOPWORDS = {
 }
 
 _RELATION_BANK_CACHE: Dict[str, Dict[str, List[str]]] = {}
+_LEARNED_GATE_CACHE: Dict[str, Tuple[Any, Dict[str, Any]]] = {}
 
 
 def normalize_gate_text(text: str) -> str:
@@ -435,6 +449,33 @@ def hybrid_relation_and_gate_should_activate(raw_edit: Dict[str, Any], prompt: s
     )
 
 
+def learned_gate_score(
+    raw_edit: Dict[str, Any], prompt: str, cfg: RolloutConfig
+) -> Tuple[float, float]:
+    """Return deployable gate probability and frozen threshold."""
+
+    if not cfg.learned_gate_checkpoint:
+        raise ValueError("learned gate requires --learned_gate_checkpoint")
+    checkpoint = os.path.abspath(os.path.expanduser(cfg.learned_gate_checkpoint))
+    if checkpoint not in _LEARNED_GATE_CACHE:
+        _LEARNED_GATE_CACHE[checkpoint] = load_t1_gate_checkpoint(checkpoint, device="cpu")
+    model, schema = _LEARNED_GATE_CACHE[checkpoint]
+    probability = predict_t1_gate_probability(
+        model,
+        prompt=prompt,
+        subject=raw_subject(raw_edit),
+        relation_template=raw_rewrite_template(raw_edit),
+        relation_id=raw_relation_id(raw_edit),
+        temperature=float(cfg.learned_gate_temperature),
+    )
+    threshold = (
+        float(cfg.learned_gate_threshold)
+        if float(cfg.learned_gate_threshold) >= 0.0
+        else float(schema["threshold"])
+    )
+    return probability, threshold
+
+
 def re_find_words(text: str) -> List[str]:
     import re
 
@@ -454,6 +495,11 @@ def gate_should_activate(
     subject_match = subject_matches_prompt(subject, prompt)
     if gate_mode == "subject":
         return subject_match
+    if gate_mode == "learned":
+        if cfg is None:
+            raise ValueError("learned gate requires RolloutConfig")
+        probability, threshold = learned_gate_score(raw_edit, prompt, cfg)
+        return probability >= threshold
     if gate_mode == "hybrid_relation_or":
         if cfg is None:
             raise ValueError("hybrid_relation_or gate requires RolloutConfig")
@@ -475,6 +521,13 @@ def decompose_method(method: str, cfg: RolloutConfig) -> Tuple[str, Optional[str
 
     if method == "raw_bridge_gated":
         return "mc_bridge", cfg.gate_mode, f"raw_bridge_gated_{cfg.gate_mode}"
+    learned_methods = {
+        "learned_gate_myopic": "myopic_score",
+        "learned_gate_no_rollout": "no_rollout_bridge",
+        "learned_gate_mc_bridge": "mc_bridge",
+    }
+    if method in learned_methods:
+        return learned_methods[method], "learned", method
     hybrid_suffix = "_gated_hybrid"
     if method.endswith(hybrid_suffix):
         base_method = method[: -len(hybrid_suffix)]
@@ -623,10 +676,21 @@ def runtime_rollout(
     intervention_method, gate_mode, method_variant = decompose_method(method, cfg)
     effective_method = intervention_method
     gate_active: Optional[bool] = None
+    gate_probability: Optional[float] = None
+    gate_multiplier = 1.0
     if gate_mode is not None:
-        gate_active = gate_should_activate(raw_edit, prompt_text, gate_mode, cfg)
+        if gate_mode == "learned":
+            gate_probability, gate_threshold = learned_gate_score(raw_edit, prompt_text, cfg)
+            gate_active = gate_probability >= gate_threshold
+            if cfg.learned_gate_mode == "soft":
+                gate_multiplier = gate_probability
+            elif cfg.learned_gate_mode != "hard":
+                raise ValueError(f"Unsupported learned_gate_mode: {cfg.learned_gate_mode}")
+        else:
+            gate_active = gate_should_activate(raw_edit, prompt_text, gate_mode, cfg)
     if gate_active is False:
-        effective_method = "base"
+        if gate_mode != "learned" or cfg.learned_gate_mode == "hard":
+            effective_method = "base"
 
     memory_prefix = ""
     if effective_method == "prompt_memory":
@@ -709,7 +773,12 @@ def runtime_rollout(
                     answer_len=answer_len,
                     rel_pos=rel_pos,
                     target_token_lists=target_token_lists,
-                    cfg=cfg,
+                    cfg=RolloutConfig(
+                        **{
+                            **cfg.__dict__,
+                            "guidance_scale": float(cfg.guidance_scale) * gate_multiplier,
+                        }
+                    ),
                     mask_id=mask_id,
                     remaining_steps=remaining_steps,
                 )
@@ -732,6 +801,7 @@ def runtime_rollout(
         "sparse_guidance_kl": float(sparse_kl),
         "effective_method": effective_method,
         "gate_active": gate_active,
+        "gate_probability": gate_probability,
         "gate_mode": gate_mode,
         "method_variant": method_variant,
     }
@@ -852,6 +922,7 @@ def evaluate_case(
     ]
     _, configured_gate_mode, configured_method_variant = decompose_method(method, cfg)
     gate_active_values: List[float] = []
+    gate_probability_values: List[float] = []
 
     for _ in range(samples):
         rollout = runtime_rollout(
@@ -877,6 +948,8 @@ def evaluate_case(
         sample_outputs.append(str(rollout["answer_text"]))
         if rollout.get("gate_active") is not None:
             gate_active_values.append(float(bool(rollout["gate_active"])))
+        if rollout.get("gate_probability") is not None:
+            gate_probability_values.append(float(rollout["gate_probability"]))
 
     greedy_cfg = RolloutConfig(**{**cfg.__dict__, "temperature": 0.0})
     greedy = runtime_rollout(
@@ -915,6 +988,11 @@ def evaluate_case(
         "method_variant": configured_method_variant,
         "gate_mode": configured_gate_mode,
         "gate_activation_rate": gate_activation_rate,
+        "gate_probability": (
+            sum(gate_probability_values) / len(gate_probability_values)
+            if gate_probability_values
+            else None
+        ),
         "edit_id": edit.id,
         "case_id": raw_edit.get("case_id", edit.id),
         "prompt_uid": prompt_uid,
@@ -1057,6 +1135,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--relation_sim_bank_threshold", type=float, default=0.10)
     parser.add_argument("--relation_bank_path", type=str, default="")
     parser.add_argument("--relation_bank_source", type=str, default="dev_tune_200_rewrite_templates")
+    parser.add_argument("--learned_gate_checkpoint", type=str, default="")
+    parser.add_argument("--learned_gate_mode", type=str, choices=("hard", "soft"), default="hard")
+    parser.add_argument("--learned_gate_threshold", type=float, default=-1.0)
+    parser.add_argument("--learned_gate_temperature", type=float, default=1.0)
     parser.add_argument("--skip_candidate_coverage", type=int, default=0)
     parser.add_argument(
         "--coverage_only",
@@ -1079,7 +1161,7 @@ def normalize_method_args(method_args: Sequence[str]) -> List[str]:
 
 def main() -> None:
     args = parse_args()
-    if args.protocol_version != PROTOCOL_VERSION:
+    if args.protocol_version not in {PROTOCOL_VERSION, "counterfact_learned_gate_raw_bridge_v1"}:
         raise ValueError(f"Unsupported protocol_version: {args.protocol_version}")
     args.methods = normalize_method_args(args.methods)
     unknown = [method for method in args.methods if method not in SUPPORTED_METHODS and method != "path_kl_bridge"]
@@ -1124,6 +1206,10 @@ def main() -> None:
         relation_sim_bank_threshold=args.relation_sim_bank_threshold,
         relation_bank_path=args.relation_bank_path,
         relation_bank_source=args.relation_bank_source,
+        learned_gate_checkpoint=args.learned_gate_checkpoint,
+        learned_gate_mode=args.learned_gate_mode,
+        learned_gate_threshold=args.learned_gate_threshold,
+        learned_gate_temperature=args.learned_gate_temperature,
     )
 
     coverage_rows: List[Dict[str, Any]] = []

@@ -26,6 +26,7 @@ from llada_runtime_editor_eval import (
     enforce_lock_requirements,
     gate_should_activate,
     load_relation_bank,
+    learned_gate_score,
     relation_content_text,
     relation_text_for_record,
     normalize_method_args,
@@ -33,6 +34,7 @@ from llada_runtime_editor_eval import (
     sparse_support_guidance_kl,
     token_f1,
 )
+from scripts.t1_gate_model import GateMLP, checkpoint_schema, save_checkpoint
 from llada_sb_common import load_edits
 
 
@@ -164,6 +166,40 @@ class CounterFactProtocolTests(unittest.TestCase):
                     "hybrid_relation_and",
                     strict_cfg,
                 )
+            )
+
+    def test_learned_gate_runtime_matches_checkpoint_model(self):
+        raw_edit = {
+            "subject": "Ada Lovelace",
+            "relation_id": "P106",
+            "rewrite_template": "{} works as a",
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            checkpoint = os.path.join(tmp, "gate.pt")
+            model = GateMLP(0)
+            for parameter in model.parameters():
+                parameter.data.zero_()
+            schema = checkpoint_schema(0, threshold=0.4)
+            save_checkpoint(checkpoint, model, schema)
+            cfg = RolloutConfig(
+                steps=4,
+                bridge_topk=4,
+                mc_rollouts=2,
+                guidance_scale=1.0,
+                reward_mode="soft_overlap",
+                reward_beta=6.0,
+                target_logit_bias=0.0,
+                gate_mode="learned",
+                temperature=1.0,
+                learned_gate_checkpoint=checkpoint,
+            )
+            probability, threshold = learned_gate_score(
+                raw_edit, "Ada Lovelace works as a", cfg
+            )
+            self.assertAlmostEqual(probability, 0.5)
+            self.assertEqual(threshold, 0.4)
+            self.assertTrue(
+                gate_should_activate(raw_edit, "Ada Lovelace works as a", "learned", cfg)
             )
 
     def test_gate_helpers_preserve_relation_terms_and_subject_boundaries(self):

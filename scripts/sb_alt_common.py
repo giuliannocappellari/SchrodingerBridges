@@ -322,6 +322,7 @@ def initialize_campaign_state(config: Mapping[str, Any]) -> None:
         },
         "stage_costs": [],
         "budget_guard_pass": True,
+        "last_budget_epoch": time.time(),
         "updated_at_utc": started,
     }
     write_json(STATE_ROOT / "campaign_state.json", state)
@@ -364,3 +365,141 @@ def initialize_campaign_state(config: Mapping[str, Any]) -> None:
 
 def summarize(values: Iterable[Any]) -> dict[str, int]:
     return dict(sorted(Counter(str(value) for value in values).items()))
+
+
+def read_csv(path: str | Path) -> list[dict[str, str]]:
+    with repo_path(path).open(newline="", encoding="utf-8") as handle:
+        return list(csv.DictReader(handle))
+
+
+def refresh_budget(stage: str, notes: str = "") -> dict[str, Any]:
+    budget = read_json(STATE_ROOT / "budget_state.json")
+    now_epoch = time.time()
+    last_epoch = float(budget.get("last_budget_epoch") or now_epoch)
+    elapsed = max(0.0, now_epoch - last_epoch)
+    stage_cost = elapsed / 3600.0 * float(budget["hourly_rate_usd"])
+    budget["estimated_spend_usd"] = round(
+        float(budget.get("estimated_spend_usd", 0.0)) + stage_cost, 6
+    )
+    budget["remaining_budget_usd"] = round(
+        float(budget["budget_usd"]) - float(budget["estimated_spend_usd"]), 6
+    )
+    budget["last_budget_epoch"] = now_epoch
+    budget["updated_at_utc"] = now_utc()
+    if elapsed > 0.0:
+        budget.setdefault("stage_costs", []).append(
+            {
+                "stage": stage,
+                "running_seconds": round(elapsed, 3),
+                "estimated_cost_usd": round(stage_cost, 6),
+                "notes": notes,
+            }
+        )
+    write_json(STATE_ROOT / "budget_state.json", budget)
+    return budget
+
+
+def budget_guard(track_id: str) -> dict[str, Any]:
+    budget = refresh_budget(f"preflight_{track_id}", "Budget guard refresh.")
+    estimates = {key: float(value) for key, value in budget["pilot_estimates"].items()}
+    untested = list(budget.get("untested_tracks", []))
+    if track_id not in untested:
+        raise RuntimeError(f"Track {track_id} is not pending in the budget ledger")
+    other_reserve = sum(estimates[key] for key in untested if key != track_id)
+    projected = estimates[track_id]
+    required = projected + other_reserve + float(budget["reserve_usd"])
+    passed = required <= float(budget["remaining_budget_usd"]) + 1e-9
+    result = {
+        "track_id": track_id,
+        "estimated_stage_cost_usd": projected,
+        "untested_track_reserve_usd": other_reserve,
+        "terminal_reporting_reserve_usd": float(budget["reserve_usd"]),
+        "required_available_usd": required,
+        "remaining_budget_usd": float(budget["remaining_budget_usd"]),
+        "pass": passed,
+    }
+    if not passed:
+        budget["budget_guard_pass"] = False
+        write_json(STATE_ROOT / "budget_state.json", budget)
+    return result
+
+
+def record_stage_event(
+    *,
+    track: str,
+    stage: str,
+    event: str,
+    status: str,
+    notes: str,
+) -> None:
+    timestamp = now_utc()
+    append_csv(
+        STATE_ROOT / "stage_history.csv",
+        {
+            "timestamp_utc": timestamp,
+            "track": track,
+            "stage": stage,
+            "event": event,
+            "status": status,
+            "notes": notes,
+        },
+        ["timestamp_utc", "track", "stage", "event", "status", "notes"],
+    )
+    append_log(f"[{track}/{stage}] {event}: {status}. {notes}")
+    state = read_json(STATE_ROOT / "campaign_state.json")
+    state["current_track"] = None if track == "campaign" else track
+    state["current_stage"] = stage
+    state["last_event"] = event
+    state["last_stage_status"] = status
+    state["last_git_commit"] = git_commit()
+    state["updated_at_utc"] = timestamp
+    write_json(STATE_ROOT / "campaign_state.json", state)
+
+
+def set_track_status(
+    track_id: str,
+    status: str,
+    *,
+    evidence_path: str = "",
+    rescue_used: bool | None = None,
+) -> None:
+    rows = read_csv(STATE_ROOT / "track_registry.csv")
+    matched = False
+    for row in rows:
+        if row["track_id"] == track_id:
+            row["status"] = status
+            row["evidence_path"] = evidence_path
+            if rescue_used is not None:
+                row["rescue_used"] = str(bool(rescue_used))
+            matched = True
+    if not matched:
+        raise KeyError(track_id)
+    write_csv(STATE_ROOT / "track_registry.csv", rows)
+
+    state = read_json(STATE_ROOT / "campaign_state.json")
+    state["current_track"] = track_id
+    if status in {"pilot_passed", "pilot_failed", "formal_negative", "budget_not_run"}:
+        completed = list(state.get("completed_tracks", []))
+        if track_id not in completed:
+            completed.append(track_id)
+        state["completed_tracks"] = completed
+    if status == "pilot_passed":
+        passed = list(state.get("passed_tracks", []))
+        if track_id not in passed:
+            passed.append(track_id)
+        state["passed_tracks"] = passed
+    if status in {"pilot_failed", "formal_negative"}:
+        failed = list(state.get("failed_tracks", []))
+        if track_id not in failed:
+            failed.append(track_id)
+        state["failed_tracks"] = failed
+    state["updated_at_utc"] = now_utc()
+    write_json(STATE_ROOT / "campaign_state.json", state)
+
+    budget = read_json(STATE_ROOT / "budget_state.json")
+    budget["untested_tracks"] = [key for key in budget.get("untested_tracks", []) if key != track_id]
+    budget["minimum_reserve_for_untested_tracks_usd"] = sum(
+        float(budget["pilot_estimates"][key]) for key in budget["untested_tracks"]
+    )
+    budget["updated_at_utc"] = now_utc()
+    write_json(STATE_ROOT / "budget_state.json", budget)
