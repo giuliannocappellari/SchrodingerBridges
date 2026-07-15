@@ -61,20 +61,16 @@ def main() -> None:
         "analysis_500_used": False,
         "final_test_used": False,
         "authoritative_files": AUTHORITATIVE_FILES,
-        "budget": {
-            "budget_usd": config["budget_usd"],
-            "reserve_usd": config["reserve_usd"],
-            "pilot_estimate_total_usd": config["pilot_estimate_total_usd"],
-            "minimum_untested_track_reserve_usd": config[
-                "minimum_untested_track_reserve_usd"
-            ],
-            "initial_budget_feasible": True,
+        "cost_tracking": {
+            "policy": "informational_only_non_blocking",
+            "hourly_rate_usd": config["hourly_rate_usd"],
+            "budget_guard_enabled": False,
         },
         "locked_manifest_exclusion_audit": exclusions["manifests"],
         "locked_prompt_label_output_metric_fields_used": False,
         "artifacts": {
             "campaign_state": str(STATE_ROOT / "campaign_state.json"),
-            "budget_state": str(STATE_ROOT / "budget_state.json"),
+            "cost_state": str(STATE_ROOT / "cost_state.json"),
             "track_registry": str(STATE_ROOT / "track_registry.csv"),
             "stage_history": str(STATE_ROOT / "stage_history.csv"),
             "autonomous_log": str(STATE_ROOT / "autonomous_log.md"),
@@ -82,7 +78,7 @@ def main() -> None:
     }
     write_json(STATE_ROOT / "bootstrap_report.json", report)
     print("campaign_configuration_pass=True")
-    print(f"pilot_estimate_total_usd={config['pilot_estimate_total_usd']:.2f}")
+    print("budget_guard_enabled=False")
 
 
 if __name__ == "__main__":

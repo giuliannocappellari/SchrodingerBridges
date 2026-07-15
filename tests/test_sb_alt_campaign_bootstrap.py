@@ -56,13 +56,9 @@ def test_common_splits_are_deterministic_and_disjoint() -> None:
         assert {"1", "2"}.issubset(bins)
 
 
-def test_autonomous_environment_rejects_insufficient_budget(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_autonomous_environment_does_not_require_monetary_budget(monkeypatch: pytest.MonkeyPatch) -> None:
     values = {
         "SB_ALT_AUTONOMOUS_MODE": "1",
-        "SB_ALT_AUTONOMOUS_BUDGET_USD": "12",
-        "RUNPOD_HOURLY_RATE_USD": "0.45",
-        "SB_ALT_AUTONOMOUS_BUDGET_RESERVE_USD": "5",
-        "SB_ALT_MIN_UNTESTED_TRACK_RESERVE_USD": "8",
         "RUNPOD_POD_ID": "pod",
         "RUNPOD_SSH_KEY": "/tmp/key",
         "RUNPOD_SSH_USER": "root",
@@ -72,8 +68,9 @@ def test_autonomous_environment_rejects_insufficient_budget(monkeypatch: pytest.
     }
     for key, value in values.items():
         monkeypatch.setenv(key, value)
-    with pytest.raises(RuntimeError, match="estimates plus reserve"):
-        sb_alt_common.require_autonomous_environment()
+    config = sb_alt_common.require_autonomous_environment()
+    assert config["budget_guard_enabled"] is False
+    assert config["hourly_rate_usd"] is None
 
 
 def test_historical_case_namespace_is_source_index_based() -> None:

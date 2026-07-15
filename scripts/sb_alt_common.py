@@ -191,21 +191,10 @@ def env_float(name: str, *, minimum: float = 0.0) -> float:
 def require_autonomous_environment() -> dict[str, Any]:
     if os.environ.get("SB_ALT_AUTONOMOUS_MODE") != "1":
         raise RuntimeError("SB_ALT_AUTONOMOUS_MODE must equal 1")
-    budget = env_float("SB_ALT_AUTONOMOUS_BUDGET_USD", minimum=0.01)
-    rate = env_float("RUNPOD_HOURLY_RATE_USD", minimum=0.0001)
-    reserve = env_float("SB_ALT_AUTONOMOUS_BUDGET_RESERVE_USD", minimum=0.0)
-    min_untested = env_float("SB_ALT_MIN_UNTESTED_TRACK_RESERVE_USD", minimum=0.0)
-    if budget <= reserve:
-        raise RuntimeError("Authorized budget must exceed the terminal reserve")
-    configured_pilot_total = sum(float(track["pilot_estimate_usd"]) for track in TRACKS)
-    if configured_pilot_total + reserve > budget:
-        raise RuntimeError(
-            "Conservative mandatory-pilot estimates plus reserve exceed the authorized budget"
-        )
-    if configured_pilot_total + 1e-9 < min_untested:
-        raise RuntimeError(
-            "Configured pilot estimates do not satisfy SB_ALT_MIN_UNTESTED_TRACK_RESERVE_USD"
-        )
+    raw_rate = os.environ.get("RUNPOD_HOURLY_RATE_USD")
+    rate = float(raw_rate) if raw_rate not in {None, ""} else None
+    if rate is not None and rate <= 0.0:
+        raise RuntimeError("RUNPOD_HOURLY_RATE_USD must be positive when supplied")
     required_strings = [
         "RUNPOD_POD_ID",
         "RUNPOD_SSH_KEY",
@@ -218,11 +207,9 @@ def require_autonomous_environment() -> dict[str, Any]:
     if missing:
         raise RuntimeError(f"Missing RunPod environment variables: {missing}")
     return {
-        "budget_usd": budget,
         "hourly_rate_usd": rate,
-        "reserve_usd": reserve,
-        "minimum_untested_track_reserve_usd": min_untested,
-        "pilot_estimate_total_usd": configured_pilot_total,
+        "cost_tracking_policy": "informational_only_non_blocking",
+        "budget_guard_enabled": False,
         "runpod_pod_id": os.environ["RUNPOD_POD_ID"],
         "runpod_ssh_host": os.environ["RUNPOD_SSH_HOST"],
         "runpod_ssh_port": int(os.environ["RUNPOD_SSH_PORT"]),
@@ -303,30 +290,19 @@ def initialize_campaign_state(config: Mapping[str, Any]) -> None:
         "remote_repo_dir": config["remote_repo_dir"],
         "updated_at_utc": started,
     }
-    budget = {
+    cost = {
         "campaign_protocol": CAMPAIGN_PROTOCOL,
-        "budget_usd": config["budget_usd"],
         "hourly_rate_usd": config["hourly_rate_usd"],
-        "reserve_usd": config["reserve_usd"],
-        "configured_minimum_untested_track_reserve_usd": config[
-            "minimum_untested_track_reserve_usd"
-        ],
+        "cost_tracking_policy": "informational_only_non_blocking",
+        "budget_guard_enabled": False,
         "estimated_spend_usd": 0.0,
-        "remaining_budget_usd": config["budget_usd"],
-        "untested_tracks": [track["id"] for track in TRACKS],
-        "minimum_reserve_for_untested_tracks_usd": sum(
-            float(track["pilot_estimate_usd"]) for track in TRACKS
-        ),
-        "pilot_estimates": {
-            track["id"]: track["pilot_estimate_usd"] for track in TRACKS
-        },
+        "pod_running_seconds": 0.0,
         "stage_costs": [],
-        "budget_guard_pass": True,
-        "last_budget_epoch": time.time(),
+        "last_cost_epoch": time.time(),
         "updated_at_utc": started,
     }
     write_json(STATE_ROOT / "campaign_state.json", state)
-    write_json(STATE_ROOT / "budget_state.json", budget)
+    write_json(STATE_ROOT / "cost_state.json", cost)
     write_csv(
         STATE_ROOT / "track_registry.csv",
         [
@@ -372,56 +348,69 @@ def read_csv(path: str | Path) -> list[dict[str, str]]:
         return list(csv.DictReader(handle))
 
 
-def refresh_budget(stage: str, notes: str = "") -> dict[str, Any]:
-    budget = read_json(STATE_ROOT / "budget_state.json")
+def refresh_cost(stage: str, notes: str = "") -> dict[str, Any]:
+    cost_path = STATE_ROOT / "cost_state.json"
+    if repo_path(cost_path).exists():
+        cost = read_json(cost_path)
+    else:
+        raw_rate = os.environ.get("RUNPOD_HOURLY_RATE_USD")
+        cost = {
+            "campaign_protocol": CAMPAIGN_PROTOCOL,
+            "hourly_rate_usd": float(raw_rate) if raw_rate not in {None, ""} else None,
+            "cost_tracking_policy": "informational_only_non_blocking",
+            "budget_guard_enabled": False,
+            "estimated_spend_usd": 0.0,
+            "pod_running_seconds": 0.0,
+            "stage_costs": [],
+            "last_cost_epoch": time.time(),
+        }
     now_epoch = time.time()
-    last_epoch = float(budget.get("last_budget_epoch") or now_epoch)
+    last_epoch = float(cost.get("last_cost_epoch") or now_epoch)
     elapsed = max(0.0, now_epoch - last_epoch)
-    stage_cost = elapsed / 3600.0 * float(budget["hourly_rate_usd"])
-    budget["estimated_spend_usd"] = round(
-        float(budget.get("estimated_spend_usd", 0.0)) + stage_cost, 6
+    rate = cost.get("hourly_rate_usd")
+    stage_cost = elapsed / 3600.0 * float(rate) if rate not in {None, ""} else None
+    cost["pod_running_seconds"] = round(
+        float(cost.get("pod_running_seconds", 0.0)) + elapsed, 3
     )
-    budget["remaining_budget_usd"] = round(
-        float(budget["budget_usd"]) - float(budget["estimated_spend_usd"]), 6
-    )
-    budget["last_budget_epoch"] = now_epoch
-    budget["updated_at_utc"] = now_utc()
+    if stage_cost is not None:
+        cost["estimated_spend_usd"] = round(
+            float(cost.get("estimated_spend_usd", 0.0)) + stage_cost, 6
+        )
+    cost["last_cost_epoch"] = now_epoch
+    cost["updated_at_utc"] = now_utc()
     if elapsed > 0.0:
-        budget.setdefault("stage_costs", []).append(
+        cost.setdefault("stage_costs", []).append(
             {
                 "stage": stage,
                 "running_seconds": round(elapsed, 3),
-                "estimated_cost_usd": round(stage_cost, 6),
+                "estimated_cost_usd": round(stage_cost, 6) if stage_cost is not None else None,
                 "notes": notes,
             }
         )
-    write_json(STATE_ROOT / "budget_state.json", budget)
-    return budget
+    write_json(cost_path, cost)
+    return cost
+
+
+def refresh_budget(stage: str, notes: str = "") -> dict[str, Any]:
+    """Compatibility alias for historical reporters; never blocks execution."""
+
+    cost = refresh_cost(stage, notes)
+    return {
+        **cost,
+        "remaining_budget_usd": None,
+        "budget_guard_pass": True,
+    }
 
 
 def budget_guard(track_id: str) -> dict[str, Any]:
-    budget = refresh_budget(f"preflight_{track_id}", "Budget guard refresh.")
-    estimates = {key: float(value) for key, value in budget["pilot_estimates"].items()}
-    untested = list(budget.get("untested_tracks", []))
-    if track_id not in untested:
-        raise RuntimeError(f"Track {track_id} is not pending in the budget ledger")
-    other_reserve = sum(estimates[key] for key in untested if key != track_id)
-    projected = estimates[track_id]
-    required = projected + other_reserve + float(budget["reserve_usd"])
-    passed = required <= float(budget["remaining_budget_usd"]) + 1e-9
-    result = {
+    cost = refresh_cost(f"preflight_{track_id}", "Non-blocking cost refresh.")
+    return {
         "track_id": track_id,
-        "estimated_stage_cost_usd": projected,
-        "untested_track_reserve_usd": other_reserve,
-        "terminal_reporting_reserve_usd": float(budget["reserve_usd"]),
-        "required_available_usd": required,
-        "remaining_budget_usd": float(budget["remaining_budget_usd"]),
-        "pass": passed,
+        "pass": True,
+        "budget_guard_enabled": False,
+        "cost_tracking_policy": "informational_only_non_blocking",
+        "estimated_spend_usd": cost.get("estimated_spend_usd"),
     }
-    if not passed:
-        budget["budget_guard_pass"] = False
-        write_json(STATE_ROOT / "budget_state.json", budget)
-    return result
 
 
 def record_stage_event(
@@ -496,10 +485,9 @@ def set_track_status(
     state["updated_at_utc"] = now_utc()
     write_json(STATE_ROOT / "campaign_state.json", state)
 
-    budget = read_json(STATE_ROOT / "budget_state.json")
-    budget["untested_tracks"] = [key for key in budget.get("untested_tracks", []) if key != track_id]
-    budget["minimum_reserve_for_untested_tracks_usd"] = sum(
-        float(budget["pilot_estimates"][key]) for key in budget["untested_tracks"]
-    )
-    budget["updated_at_utc"] = now_utc()
-    write_json(STATE_ROOT / "budget_state.json", budget)
+    cost_path = repo_path(STATE_ROOT / "cost_state.json")
+    if cost_path.exists():
+        cost = read_json(cost_path)
+        cost["last_track_status"] = {"track_id": track_id, "status": status}
+        cost["updated_at_utc"] = now_utc()
+        write_json(STATE_ROOT / "cost_state.json", cost)
