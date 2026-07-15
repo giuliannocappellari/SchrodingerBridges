@@ -12,7 +12,7 @@ T4 — unbalanced / partial categorical Schrödinger bridge
 T5 — parameter-space Schrödinger bridge over low-rank adapter latents
 ```
 
-The campaign is a bounded, breadth-first state machine. Every track receives a mandatory pilot before any track receives expensive scale-up. A track failure does not end the campaign. The Pod remains running until all tracks are terminal and the final cross-track package is complete, or until the budget/infrastructure makes continuation impossible.
+The campaign is a bounded, breadth-first state machine. Every track receives a mandatory pilot before any track receives scale-up. A track failure does not end the campaign. The Pod remains running until all tracks are terminal and the final cross-track package is complete. The only early Pod shutdown condition is an unrecoverable Pod/infrastructure issue after the allowed retries. A scientific or data-integrity failure must first be converted into the required formal terminal package; only then is the campaign goal considered complete and the Pod stopped.
 
 ---
 
@@ -71,7 +71,7 @@ No track enters scale-up or common dev_tune_200 until all five mandatory pilots 
   pilot_passed,
   pilot_failed,
   formal_negative,
-  or budget_not_run.
+  or infrastructure_blocked.
 ```
 
 A track may use one explicitly listed rescue during its pilot. After rescue failure, write its stop package and continue.
@@ -156,7 +156,7 @@ sb_alt_train_1000
 sb_alt_val_200
 ```
 
-Do not invent smaller common split sizes without a formal budget/protocol stop.
+Do not invent smaller common split sizes unless an explicit per-track protocol/data-capacity fallback is already predeclared.
 
 `sb_alt_smoke_50` is split before inspection into:
 
@@ -343,23 +343,24 @@ A pilot may receive a yellow diagnostic status under a looser track-specific thr
 
 ## A.1 State initialization
 
-Create:
+Create only when absent; otherwise read, preserve, and migrate in place without resetting completed stages:
 
 ```text
 runs/counterfact_sb_alternatives_campaign_v1/autonomous_campaign_v1/
   campaign_state.json
-  budget_state.json
   track_registry.csv
   stage_history.csv
   autonomous_log.md
+  cost_state.json  # optional, informational only
 ```
+
+If state already exists, append a migration event recording that the old monetary budget guard was superseded. Existing validated outputs, completed stages, track terminal states, and rescues already used remain authoritative.
 
 Record:
 
 ```text
 current Git commit
-Pod ID/GPU/hourly rate
-authorized budget
+Pod ID/GPU and optional hourly rate for informational cost reporting
 historical terminal states
 all five pending tracks
 analysis/final lock state
@@ -369,7 +370,6 @@ Acceptance:
 
 ```text
 SB_ALT_AUTONOMOUS_MODE = 1
-budget variables parse
 all required plans exist
 ACTIVE_RESEARCH_CAMPAIGN.json matches this campaign
 analysis_500_used = false
@@ -391,19 +391,19 @@ persistent storage mounted
 
 After A.2, keep the Pod running until campaign terminal completion.
 
-## A.3 Budget feasibility
+## A.3 Resume after the superseded budget stop
 
-Create a conservative pilot estimate for every track before launching the first scientific job.
-
-The budget must reserve at least:
+If existing campaign state says `budget_exhausted`, `budget_completion`, `budget_not_run`, `pilot_passed_scale_not_run_budget`, or another monetary-budget stop:
 
 ```text
-next mandatory pilot estimate
-+ minimum reserve for every still-untested track
-+ final reporting reserve
+preserve that state as historical evidence;
+mark the budget stop as superseded_by_no_budget_guard;
+identify the first incomplete mandatory stage;
+do not rerun already validated stages;
+resume execution automatically.
 ```
 
-If the total budget cannot support all mandatory pilots, write configuration-level budget completion before consuming significant compute.
+Monetary cost must not block or reorder the science. Optional cost reporting may continue in `cost_state.json`, but it is informational only.
 
 ---
 
@@ -556,7 +556,7 @@ pilot evidence paths
 rescue used
 scientific failure type
 whether scale-up is allowed
-projected scale-up cost
+projected scale-up compute and runtime
 ```
 
 Only `pilot_passed` tracks may enter Phase C.
@@ -575,19 +575,13 @@ For each passed track:
 4. Run the common `dev_tune_200` method selection stage.
 5. Nominate at most one frozen candidate.
 
-Budget rule:
+Scale rule:
 
 ```text
-If multiple tracks pass, scale each passed track only after verifying the remaining budget can still execute a bounded scale stage for every other passed track and preserve analysis/final/reporting reserve.
+After all five mandatory pilots are terminal, execute the bounded scale plan for every pilot-passed track.
 ```
 
-If a track cannot be scaled for budget reasons after passing its pilot, mark:
-
-```text
-pilot_passed_scale_not_run_budget
-```
-
-Do not label it scientifically failed.
+No passed track may be skipped because of monetary cost. If a Pod hardware-capacity or infrastructure limitation blocks a scale stage, apply the track's predeclared capacity fallback when one exists; otherwise write an infrastructure-blocked package and continue with the other tracks when safe.
 
 ---
 
@@ -681,13 +675,13 @@ Final package methods:
 base
 common runtime baselines
 primary method
-all precommitted analysis-passed secondary track candidates if budget permits
+all precommitted analysis-passed secondary track candidates
 key ablations precommitted before analysis
 ```
 
 No rerun for tuning.
 
-`final_test_full` is optional secondary replication only if precommitted and budget permits.
+`final_test_full` is optional secondary replication only if it was precommitted before final-test inspection; monetary cost is not a reason to skip a precommitted run.
 
 ---
 
@@ -729,7 +723,7 @@ The final report must answer:
 Which tracks were technically implemented?
 Which completed a scientific pilot?
 Which passed scale/dev?
-Which were protocol-infeasible, scientifically negative, or budget-not-run?
+Which were protocol-infeasible, scientifically negative, or infrastructure-blocked?
 Did any SB-specific component beat its direct/non-SB ablation?
 What is the strongest defensible paper claim?
 What evidence remains limited by missing raw artifacts or small sample size?
@@ -740,7 +734,7 @@ After validation:
 ```text
 mark campaign terminal
 update ACTIVE_RESEARCH_CAMPAIGN.json or terminal status artifact
-record total spend
+record total spend when available as informational reporting only
 verify no GPU processes remain
 stop the Pod
 provide one final user-facing summary
@@ -793,7 +787,6 @@ offline_scientific_failed
 actual_decode_failed
 generalization_failed
 compute_or_storage_failed
-budget_not_run
 ```
 
 Do not describe an unrun track as scientifically failed.

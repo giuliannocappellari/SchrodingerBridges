@@ -16,48 +16,48 @@
       "plan": "LEARNED_GATE_RAW_BRIDGE_PLAN.md",
       "priority": 1,
       "risk": "low_to_medium",
-      "expected_cost": "low",
-      "primary_question": "Can a learned relation-aware gate safely activate raw myopic, no-rollout, or MC bridge guidance?"
+      "primary_question": "Can a learned relation-aware gate safely activate raw myopic, no-rollout, or MC bridge guidance?",
+      "expected_compute": "low"
     },
     {
       "id": "T2",
       "protocol": "counterfact_activation_space_sb_v1",
-      "name": "Activation-space Schrödinger bridge",
+      "name": "Activation-space Schr\u00f6dinger bridge",
       "plan": "ACTIVATION_SPACE_SB_PLAN.md",
       "priority": 2,
       "risk": "medium",
-      "expected_cost": "medium",
-      "primary_question": "Can minimum-transport control in frozen LLaDA hidden space edit facts with better locality than direct activation shifts?"
+      "primary_question": "Can minimum-transport control in frozen LLaDA hidden space edit facts with better locality than direct activation shifts?",
+      "expected_compute": "medium"
     },
     {
       "id": "T3",
       "protocol": "counterfact_conditional_answer_span_csbm_v1",
-      "name": "Conditional answer-span categorical Schrödinger bridge matching",
+      "name": "Conditional answer-span categorical Schr\u00f6dinger bridge matching",
       "plan": "CONDITIONAL_ANSWER_SPAN_CSBM_PLAN.md",
       "priority": 3,
       "risk": "high",
-      "expected_cost": "high",
-      "primary_question": "Can reciprocal bridge-state sampling and bidirectional D-IMF outperform ordinary target-conditioned answer-span denoising?"
+      "primary_question": "Can reciprocal bridge-state sampling and bidirectional D-IMF outperform ordinary target-conditioned answer-span denoising?",
+      "expected_compute": "high"
     },
     {
       "id": "T4",
       "protocol": "counterfact_unbalanced_partial_csbm_v1",
-      "name": "Unbalanced or partial categorical Schrödinger bridge",
+      "name": "Unbalanced or partial categorical Schr\u00f6dinger bridge",
       "plan": "UNBALANCED_PARTIAL_CSBM_PLAN.md",
       "priority": 4,
       "risk": "high",
-      "expected_cost": "medium_to_high",
-      "primary_question": "Can learned transported mass improve the efficacy-locality trade-off relative to balanced CSBM and an external gate?"
+      "primary_question": "Can learned transported mass improve the efficacy-locality trade-off relative to balanced CSBM and an external gate?",
+      "expected_compute": "medium_to_high"
     },
     {
       "id": "T5",
       "protocol": "counterfact_parameter_space_sb_v1",
-      "name": "Parameter-space Schrödinger bridge over low-rank adapter latents",
+      "name": "Parameter-space Schr\u00f6dinger bridge over low-rank adapter latents",
       "plan": "PARAMETER_SPACE_SB_PLAN.md",
       "priority": 5,
       "risk": "very_high",
-      "expected_cost": "high",
-      "primary_question": "Can an SB in compact adapter space generate useful edit-specific parameter updates better than direct conditional adapter generators?"
+      "primary_question": "Can an SB in compact adapter space generate useful edit-specific parameter updates better than direct conditional adapter generators?",
+      "expected_compute": "high"
     }
   ],
   "historical_protocols": {
@@ -82,5 +82,10 @@
       ">=4"
     ],
     "silent_bin_substitution_forbidden": true
-  }
+  },
+  "budget_guard_enabled": false,
+  "cost_tracking_policy": "informational_only_non_blocking",
+  "all_mandatory_pilots_must_run": true,
+  "all_pilot_passed_tracks_must_scale": true,
+  "pod_stop_policy": "only_after_entire_goal_or_unrecoverable_pod_infrastructure_issue"
 }

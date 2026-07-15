@@ -88,7 +88,7 @@ single-token primary
 identity negatives for every edit where available
 ```
 
-If budget allows and data exists, add 50 multi-token training edits and 20 multi-token validation edits as diagnostic, not as a hard pilot requirement.
+If the required legal data exists, add 50 multi-token training edits and 20 multi-token validation edits as a diagnostic; monetary cost must not be used as a reason to skip this predeclared diagnostic.
 
 Outputs:
 
@@ -279,7 +279,7 @@ same-subject budget passes
 If pilot passes:
 
 ```text
-train 1000/200 or budget fallback 500/100
+train 1000/200; use the predeclared 500/100 fallback only for documented data feasibility or Pod hardware-capacity constraints, never for monetary budget reasons
 single-token and multi-token >=2 represented
 outer iterations fixed from pilot
 epsilon fixed from pilot

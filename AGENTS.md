@@ -35,7 +35,7 @@ edit_access = given_at_edit_time
 historical_protocols = counterfact_direction1_v1,counterfact_direction2_bridge_adapter_v1,counterfact_direction3_controller_v1
 analysis_500 = locked confirmation only
 final_test_500 = locked final evaluation only
-final_test_full = optional secondary replication only if precommitted and budget allows
+final_test_full = optional secondary replication only if precommitted by the campaign plan
 ```
 
 Track protocol names:
@@ -73,7 +73,7 @@ UNBALANCED_PARTIAL_CSBM_PLAN.md
 PARAMETER_SPACE_SB_PLAN.md
 ```
 
-`ACTIVE_RESEARCH_CAMPAIGN.json` is the authority on the active campaign. Codex must refuse to resume a historical direction or create a new protocol unless the file and master plan explicitly permit it.
+`ACTIVE_RESEARCH_CAMPAIGN.json` is the authority on which umbrella campaign is active. The persisted campaign state under `runs/counterfact_sb_alternatives_campaign_v1/autonomous_campaign_v1/` is the authority on completed stages and track progress. Codex must not reset completed stages from root-file defaults. It must refuse to resume a historical direction or create a new protocol unless the active file and master plan explicitly permit it.
 
 ---
 
@@ -83,18 +83,16 @@ Autonomous execution is enabled only when:
 
 ```bash
 export SB_ALT_AUTONOMOUS_MODE=1
-export SB_ALT_AUTONOMOUS_BUDGET_USD="<total authorized budget>"
-export RUNPOD_HOURLY_RATE_USD="<current hourly rate>"
 ```
 
-Recommended variables:
+Recommended control variables:
 
 ```bash
-export SB_ALT_AUTONOMOUS_BUDGET_RESERVE_USD="5"
 export SB_ALT_AUTONOMOUS_MAX_INFRA_RETRIES="3"
 export SB_ALT_AUTONOMOUS_MAX_SCIENTIFIC_RESCUES_PER_TRACK="1"
-export SB_ALT_MIN_UNTESTED_TRACK_RESERVE_USD="8"
 ```
+
+There is no monetary budget guard. Cost information may be recorded for reporting, but missing, high, or unexpected cost must not block a planned stage, skip a track, or stop the campaign.
 
 When `SB_ALT_AUTONOMOUS_MODE=1`, the user grants one-time approval for Codex to execute every task explicitly listed in the master and track plans without requesting per-stage, per-command, or per-GPU-job approval.
 
@@ -112,11 +110,13 @@ stop the Pod merely because one track fails
 
 When autonomous mode is disabled, normal approval rules apply for paid GPU work.
 
+When autonomous mode is enabled, any prior campaign stop caused only by a budget guard is superseded. Codex must resume from the first incomplete stage recorded in the persisted campaign state, preserve all already validated artifacts, and continue without requesting a budget increase.
+
 ---
 
 ## 3. Campaign completion definition
 
-The campaign reaches a terminal state only after every track has a terminal status or the budget/infrastructure makes further execution impossible.
+The campaign reaches a terminal state only after every track has a terminal status and the final cross-track package is complete, or an unrecoverable Pod/infrastructure or global data-integrity issue makes safe continuation impossible.
 
 ### Positive completion
 
@@ -138,15 +138,6 @@ The campaign reaches a terminal state only after every track has a terminal stat
 - each failed track has a formal stop package;
 - a cross-track negative-result package is generated;
 - no unjustified final-test run occurs;
-- the Pod is stopped.
-```
-
-### Budget completion
-
-```text
-- the remaining budget cannot cover the next required stage plus the reserve for all untested tracks;
-- completed and untested work is documented;
-- no partially hidden scientific claim is made;
 - the Pod is stopped.
 ```
 
@@ -203,13 +194,13 @@ When autonomous mode is enabled:
 The Pod may be stopped only when:
 
 ```text
-all five tracks and the final cross-track package are complete;
-the campaign reaches a formal scientific negative completion;
-the budget is exhausted or insufficient for the next required stage;
-an unrecoverable infrastructure/data-integrity failure remains after retries.
+all five tracks and the final cross-track package are complete, whether the scientific result is positive, mixed, or formally negative;
+an unrecoverable Pod/infrastructure failure remains after retries.
 ```
 
 Never terminate/delete a Pod unless the user explicitly authorizes deletion.
+
+A Pod/infrastructure issue means a failure such as: the configured Pod cannot start, no GPU is allocated after retries, SSH cannot be restored, the persistent `/workspace` volume is unavailable, or repeated CUDA/runtime crashes prevent the planned job from running. Scientific or data-integrity failures must first produce their required formal terminal package; after that validation, the Pod may be stopped under the completed-goal condition.
 
 ---
 
@@ -240,53 +231,44 @@ If SSH host/port changes after Pod restart, Codex should refresh it through conf
 
 ---
 
-## 7. Budget guard and breadth-first testing rule
+## 7. Non-blocking cost logging and breadth-first testing rule
 
-Required budget state:
+There is no monetary budget gate and no budget-based campaign completion.
+
+Optional informational cost state:
 
 ```text
-runs/counterfact_sb_alternatives_campaign_v1/autonomous_campaign_v1/budget_state.json
+runs/counterfact_sb_alternatives_campaign_v1/autonomous_campaign_v1/cost_state.json
 ```
 
-Track the following:
+When cost information is available, Codex may record:
 
 ```json
 {
-  "budget_usd": 0.0,
-  "hourly_rate_usd": 0.0,
-  "reserve_usd": 0.0,
-  "estimated_spend_usd": 0.0,
-  "remaining_budget_usd": 0.0,
-  "untested_tracks": [],
-  "minimum_reserve_for_untested_tracks_usd": 0.0,
+  "hourly_rate_usd": null,
+  "estimated_spend_usd": null,
+  "pod_running_seconds": null,
   "stage_costs": []
 }
 ```
 
-Cost-source priority:
-
-1. RunPod API/account usage when available.
-2. Actual Pod running duration multiplied by hourly rate.
-3. Conservative stage-runtime estimate.
-
-Before each expensive stage, Codex must verify:
+Cost reporting is informational only. It must never be used to:
 
 ```text
-estimated_stage_cost
-  <= remaining_budget
-     - reserve
-     - minimum_reserve_for_all_untested_tracks
+skip a mandatory track;
+block a planned pilot, scale-up, dev, analysis, final, or reporting stage;
+mark a track budget_not_run;
+ask the user for a top-up;
+stop the Pod or campaign.
 ```
 
 Breadth-first rule:
 
 ```text
-No track may enter its expensive scale-up phase until every other track has completed its mandatory minimum pilot or has a formal pilot-level negative result.
+No track may enter its scale-up phase until every other track has completed its mandatory minimum pilot or has a formal pilot-level scientific/protocol result.
 ```
 
-This prevents an early promising track from consuming the budget before all alternatives are tested.
-
-If the budget cannot cover the next mandatory untested-track pilot, end as budget completion. Do not ask for a budget top-up.
+This preserves fair coverage of all five alternatives. After all mandatory pilots are terminal, every pilot-passed track must execute its bounded scale plan. A previous `budget_exhausted`, `budget_completion`, or `budget_not_run` state is superseded by this file: mark it as historical, resume from the first incomplete scientifically valid stage, and do not repeat already validated stages.
 
 ---
 
@@ -302,7 +284,6 @@ Required files:
 
 ```text
 campaign_state.json
-budget_state.json
 track_registry.csv
 stage_history.csv
 autonomous_log.md
@@ -340,21 +321,20 @@ analysis_passed
 analysis_failed
 final_reported
 formal_negative
-budget_not_run
+infrastructure_blocked
 ```
 
 For every stage:
 
 1. Read master plan, track plan, and current state.
 2. Run preflight checks and tests.
-3. Estimate budget and reserve untested tracks.
-4. Execute the stage.
-5. Validate every acceptance criterion.
-6. Write versioned artifacts, validation report, log, and exit code.
-7. Update campaign, track, and budget state.
-8. Apply only the bounded rescue listed in the track plan.
-9. Mark the track terminal at the appropriate level.
-10. Continue to the next track without stopping the Pod.
+3. Execute the stage.
+4. Validate every acceptance criterion.
+5. Write versioned artifacts, validation report, log, and exit code.
+6. Update campaign and track state; update optional cost reporting when available.
+7. Apply only the bounded rescue listed in the track plan.
+8. Mark the track terminal at the appropriate level.
+9. Continue to the next track without stopping the Pod.
 
 ---
 
@@ -594,7 +574,7 @@ top_k
 steps and schedule
 span policy
 normalization
-metrics and budgets
+metrics and scientific constraint thresholds
 report-script commit
 ```
 
@@ -669,7 +649,7 @@ At major checkpoints, mirror compact summaries, manifests, hashes, and reports t
 
 ## 16. Required track stop package
 
-Every failed or budget-not-run track must write:
+Every failed or protocol/infrastructure-blocked track must write:
 
 ```text
 report_summary.json
@@ -688,7 +668,7 @@ protocol infeasibility
 offline scientific failure
 actual-decode failure
 generalization failure
-budget-not-run
+infrastructure-blocked
 ```
 
 Do not call an untested hypothesis a failed method.
@@ -738,7 +718,7 @@ parameter-space editing claim
 diagnostic/negative result
 ```
 
-The claim must follow the evidence. The final report must state which hypotheses were supported, rejected, protocol-infeasible, budget-not-run, or left untested.
+The claim must follow the evidence. The final report must state which hypotheses were supported, rejected, protocol-infeasible, infrastructure-blocked, or left untested for a scientifically valid reason.
 
 ---
 
@@ -749,7 +729,7 @@ Codex must:
 - read all authoritative files before acting;
 - execute every mandatory track pilot before scaling any track;
 - continue automatically between tracks;
-- keep RunPod running until campaign terminal completion or budget/infrastructure stop;
+- keep RunPod running until the entire campaign goal is terminally complete or an unrecoverable Pod/infrastructure issue requires shutdown;
 - preserve historical campaigns;
 - use tests, versioned artifacts, explicit acceptance reports, and split locks;
 - stop only at a campaign-level terminal state;
@@ -764,4 +744,4 @@ Codex must not:
 - invent experiments or rescues;
 - tune on analysis/final;
 - overwrite historical artifacts;
-- silently skip a track without recording `budget_not_run` or a formal reason.
+- silently skip a track; every mandatory alternative must receive its planned pilot unless an unrecoverable Pod/infrastructure or global data-integrity issue prevents safe execution.
