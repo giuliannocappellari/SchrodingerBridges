@@ -1,172 +1,170 @@
 # AGENTS.md
 
-Operational and scientific rules for Codex in the LLaDA / CounterFact model-editing repository.
+Operational and scientific rules for Codex in the LLaDA / CounterFact Schrödinger-bridge model-editing repository.
 
-The latest research program is **Direction 3: learned edit-conditioned bridge controller** under `counterfact_direction3_controller_v1`. Its autonomous v1 campaign is now closed with a bounded negative result.
-
-Historical status:
+The repository contains three completed historical campaigns and one new active autonomous campaign.
 
 ```text
-Direction 1 = closed; blocked under tested rule-based runtime gates
-Direction 2 v1 = closed; protocol-infeasible before adapter science
-Direction 2 v2 = not created and must not be created automatically
-Direction 3 v1 = closed; offline hard criteria failed after the one allowed bounded rescue
+Direction 1 = closed; runtime bridge signal was useful, but tested rule-based gates failed same-subject locality.
+Direction 2 v1 = closed; protocol-infeasible before adapter science.
+Direction 3 v1 = closed; bounded negative result because the learned value controller used a target-token shortcut.
+Active campaign = counterfact_sb_alternatives_campaign_v1.
 ```
 
-Direction 1 and Direction 2 v1 artifacts are immutable historical evidence. They may be read for provenance, baselines, code reuse, or reporting, but must not be overwritten, deleted, resumed, or used to change locked split policy.
+The active campaign tests five new alternatives:
+
+```text
+T1 = learned edit-intent gate + raw runtime bridge
+T2 = activation-space Schrödinger bridge
+T3 = conditional answer-span categorical Schrödinger bridge matching
+T4 = unbalanced / partial categorical Schrödinger bridge
+T5 = parameter-space Schrödinger bridge over low-rank adapter latents
+```
+
+All historical Direction 1, Direction 2 v1, and Direction 3 v1 artifacts are immutable evidence. They may be read, but must not be overwritten, deleted, or silently resumed.
 
 ---
 
 ## 0. Active project identity
 
 ```text
-active_protocol_version = counterfact_direction3_controller_v1
-active_direction = none; Direction 3 v1 completed negative
-active_campaign_file = ACTIVE_RESEARCH_CAMPAIGN.json
-authoritative_plan = DIRECTION3_AUTONOMOUS_RESEARCH_PLAN.md
-historical_protocols = counterfact_direction1_v1,counterfact_direction2_bridge_adapter_v1
+campaign_protocol = counterfact_sb_alternatives_campaign_v1
 base_model = GSAI-ML/LLaDA-8B-Base
 theta0 = frozen
-trained_parameters = controller_and_gate_only
-base_model_weight_update = none
 edit_access = given_at_edit_time
-training_access = controller_train_only
-current_stage = complete_negative
+historical_protocols = counterfact_direction1_v1,counterfact_direction2_bridge_adapter_v1,counterfact_direction3_controller_v1
+analysis_500 = locked confirmation only
+final_test_500 = locked final evaluation only
+final_test_full = optional secondary replication only if precommitted and budget allows
 ```
 
-Direction 3 trains a small deployable controller and edit-intent gate over frozen LLaDA representations. The intended runtime form is:
+Track protocol names:
 
 ```text
-edited_logits(v)
-  = base_logits(v)
-  + guidance_scale
-    * gate(prompt, edit)
-    * controller_advantage(v, state, step, edit)
+counterfact_learned_gate_raw_bridge_v1
+counterfact_activation_space_sb_v1
+counterfact_conditional_answer_span_csbm_v1
+counterfact_unbalanced_partial_csbm_v1
+counterfact_parameter_space_sb_v1
 ```
-
-Canonical split roles:
-
-```text
-controller_train_* = controller/gate training only
-controller_val_*   = controller/gate validation, early stopping, calibration, threshold selection
-dev_smoke_50       = bounded integration smoke; split once into smoke20 + confirmation30
-dev_tune_200       = only split for final D3 method/hyperparameter selection
-ablation_500       = frozen, pre-planned ablations only; cannot affect selection
-analysis_500       = locked proceed/stop confirmation only
-final_test_500     = primary locked final result
-final_test_full    = optional secondary replication only if pre-committed and budget allows
-```
-
-The scarce target-length-bin-2 examples already assigned to Direction 3 train/validation must be preserved when scaled splits are built. Scaled Direction 3 splits extend the existing D3 train/validation splits; they do not exclude their own seed records.
 
 ---
 
-## 1. Authoritative autonomous plan and instruction precedence
+## 1. Authoritative files and read order
 
-Codex must read these files before acting, in this order:
+Before acting, Codex must read these files in order:
 
 ```text
 1. AGENTS.md
 2. ACTIVE_RESEARCH_CAMPAIGN.json
-3. DIRECTION3_AUTONOMOUS_RESEARCH_PLAN.md
-4. existing autonomous campaign state under runs/
+3. ALTERNATIVE_PROTOCOL_REGISTRY.json
+4. SB_ALTERNATIVES_AUTONOMOUS_RESEARCH_PLAN.md
+5. the relevant per-track plan file
+6. existing campaign state under runs/counterfact_sb_alternatives_campaign_v1/
 ```
 
-If the files conflict, the earlier item in the list takes precedence. Codex must stop with `campaign_configuration_conflict` rather than guessing.
-
-The authoritative execution plan is:
+Per-track plans:
 
 ```text
-DIRECTION3_AUTONOMOUS_RESEARCH_PLAN.md
+LEARNED_GATE_RAW_BRIDGE_PLAN.md
+ACTIVATION_SPACE_SB_PLAN.md
+CONDITIONAL_ANSWER_SPAN_CSBM_PLAN.md
+UNBALANCED_PARTIAL_CSBM_PLAN.md
+PARAMETER_SPACE_SB_PLAN.md
 ```
 
-The active campaign marker is:
+`ACTIVE_RESEARCH_CAMPAIGN.json` is the authority on the active campaign. Codex must refuse to resume a historical direction or create a new protocol unless the file and master plan explicitly permit it.
 
-```text
-ACTIVE_RESEARCH_CAMPAIGN.json
-```
+---
 
-When autonomous mode is enabled, the user grants one-time approval for Codex to execute every task explicitly listed in the Direction 3 plan without requesting per-stage, per-command, or per-GPU-job approval.
+## 2. Autonomous mode
 
-Autonomous mode is enabled only when:
+Autonomous execution is enabled only when:
 
 ```bash
-export D3_AUTONOMOUS_MODE=1
-export D3_AUTONOMOUS_BUDGET_USD="<total authorized budget>"
+export SB_ALT_AUTONOMOUS_MODE=1
+export SB_ALT_AUTONOMOUS_BUDGET_USD="<total authorized budget>"
 export RUNPOD_HOURLY_RATE_USD="<current hourly rate>"
 ```
 
-Recommended additional variables:
+Recommended variables:
 
 ```bash
-export D3_AUTONOMOUS_BUDGET_RESERVE_USD="5"
-export D3_AUTONOMOUS_MAX_INFRA_RETRIES="3"
-export D3_AUTONOMOUS_MAX_SCIENTIFIC_RESCUES_PER_STAGE="1"
+export SB_ALT_AUTONOMOUS_BUDGET_RESERVE_USD="5"
+export SB_ALT_AUTONOMOUS_MAX_INFRA_RETRIES="3"
+export SB_ALT_AUTONOMOUS_MAX_SCIENTIFIC_RESCUES_PER_TRACK="1"
+export SB_ALT_MIN_UNTESTED_TRACK_RESERVE_USD="8"
 ```
 
-If `D3_AUTONOMOUS_MODE != 1`, use normal approval rules and do not start paid GPU work without explicit approval.
-
-If autonomous mode is enabled, Codex must not pause for routine approval between planned stages. It must follow the state machine, acceptance criteria, budget guard, bounded rescues, split locks, and stop conditions in the plan.
+When `SB_ALT_AUTONOMOUS_MODE=1`, the user grants one-time approval for Codex to execute every task explicitly listed in the master and track plans without requesting per-stage, per-command, or per-GPU-job approval.
 
 Codex must not:
 
 ```text
-switch to Direction 2 v2 automatically
-resume Direction 2 v1
-lower hard acceptance thresholds
-invent extra rescue attempts
-expand the hyperparameter grids
-use teacher-derived runtime inputs
-use analysis/final data for tuning
+ask for approval between planned stages
+change protocols during execution
+lower hard acceptance criteria after seeing results
+invent unplanned rescues
+add teacher-only fields as runtime inputs
+tune on analysis_500 or final_test_500
+stop the Pod merely because one track fails
 ```
 
-### 1.1 Codex interaction mode
-
-For the autonomous campaign, use **Goal mode** (`/goal`), not Plan mode. The research plan, constraints, state machine, and completion criteria already exist in repository files.
-
-Use `/plan` only when the user explicitly wants to redesign or amend the research protocol before execution. A plan-mode session must not start RunPod or execute science unless it is later converted into a separately approved goal.
-
-Goal mode must treat the repository plan and active-campaign file as the completion contract.
+When autonomous mode is disabled, normal approval rules apply for paid GPU work.
 
 ---
 
-## 2. Autonomous campaign completion definition
+## 3. Campaign completion definition
 
-The Direction 3 campaign is complete when either:
+The campaign reaches a terminal state only after every track has a terminal status or the budget/infrastructure makes further execution impossible.
 
 ### Positive completion
 
 ```text
-- a locked D3 configuration passes analysis_500,
-- final_test_500 is executed once,
-- final tables/plots/reproducibility artifacts are generated,
-- the strongest defensible claim is classified and documented.
+- all five tracks have completed their mandatory bounded pilot;
+- every passed track has completed its planned dev evaluation;
+- one primary method is selected on dev before analysis;
+- the primary method passes analysis_500;
+- final_test_500 is executed exactly once for the frozen final package;
+- cross-track reports, tables, plots, failure cases, and reproducibility artifacts validate;
+- the Pod is stopped.
 ```
 
-### Negative completion
+### Scientific negative completion
 
 ```text
-- a bounded scientific stop criterion in the plan is reached,
-- no further planned rescue remains,
-- no unjustified analysis/final run is performed,
-- a formal Direction 3 stop checkpoint and negative-result report are generated.
+- all five tracks have completed their mandatory bounded pilot;
+- no track satisfies the predeclared dev eligibility criteria, or the dev-selected primary fails locked analysis;
+- each failed track has a formal stop package;
+- a cross-track negative-result package is generated;
+- no unjustified final-test run occurs;
+- the Pod is stopped.
 ```
 
 ### Budget completion
 
 ```text
-- remaining authorized budget cannot cover the next required stage plus reserve,
-- a budget-exhaustion checkpoint records completed evidence and unrun stages,
+- the remaining budget cannot cover the next required stage plus the reserve for all untested tracks;
+- completed and untested work is documented;
+- no partially hidden scientific claim is made;
 - the Pod is stopped.
 ```
 
-All three are valid research completions.
+### Infrastructure/data-integrity completion
+
+```text
+- an unrecoverable infrastructure, split-leakage, artifact-corruption, or credential failure remains after allowed retries;
+- a formal infrastructure/data-integrity stop package is written;
+- the Pod is stopped when possible.
+```
+
+A single track failure is not campaign completion. Codex must continue to the next untested track.
 
 ---
 
-## 3. Local MacBook Python environment
+## 4. Local and RunPod Python environments
 
-Outside an active RunPod campaign, the MacBook/local environment must use `uv`.
+Outside the autonomous campaign, local MacBook Python work must use `uv`:
 
 ```bash
 uv sync
@@ -174,19 +172,9 @@ uv run pytest tests -q
 uv run python scripts/<script_name>.py
 ```
 
-Rules:
+Do not use `pip install` directly in the local project environment.
 
-- Prefer `uv run ...` for every local Python command.
-- Use `uv sync` for dependency installation.
-- Do not use `pip install` directly in the local project environment.
-- Do not manually activate `.venv` unless explicitly required.
-- If `pyproject.toml` or `uv.lock` changes, inspect and report the diff.
-
----
-
-## 4. RunPod Python environment
-
-On RunPod, use the Python environment available in the selected PyTorch/CUDA image unless a custom environment already exists in the repo.
+During the autonomous campaign, `/workspace/SB` on RunPod is the authoritative worktree. Use the Python available in the RunPod image:
 
 ```bash
 python --version
@@ -195,52 +183,37 @@ python -m pytest tests -q
 python scripts/<script_name>.py
 ```
 
-Rules:
-
-- Do not require `uv` on RunPod.
-- Do not assume `.venv` exists.
-- Prefer `python -m pip` if a dependency is missing.
-- Record the Python executable and package versions in every GPU run summary.
-- Never install packages from untrusted sources.
+Do not require `uv` on RunPod. Record Python, PyTorch, Transformers, bitsandbytes, CUDA, GPU, model, and tokenizer versions in GPU-stage summaries.
 
 ---
 
-## 5. Normal task routing
+## 5. RunPod task routing and retention
 
-When autonomous mode is disabled:
+When autonomous mode is enabled:
 
-| Task | Default environment |
-|---|---|
-| Code editing/refactoring | MacBook |
-| Unit tests/fake-model tests | MacBook |
-| CSV/JSON/report aggregation | MacBook |
-| Cached-state training/replay | MacBook unless too slow |
-| Frozen-LLaDA feature extraction | RunPod |
-| Teacher-cache generation | RunPod |
-| Actual LLaDA decoding | RunPod |
-| analysis_500/final_test_500 | RunPod after locks |
+1. Start the existing configured Pod at campaign start if it is stopped.
+2. Use `/workspace/SB` as the authoritative campaign worktree.
+3. Run CPU and GPU campaign tasks on the Pod to avoid synchronization pauses.
+4. Use `tmux` and explicit exit-code files for long jobs.
+5. Commit and push code checkpoints after tests pass; never commit large artifacts.
+6. Keep the Pod running between all tracks and between CPU/GPU stages.
+7. Do not stop the Pod after an individual track fails or finishes.
+8. Immediately continue to the next planned track after validating the current track.
 
----
+The Pod may be stopped only when:
 
-## 6. Autonomous task routing
+```text
+all five tracks and the final cross-track package are complete;
+the campaign reaches a formal scientific negative completion;
+the budget is exhausted or insufficient for the next required stage;
+an unrecoverable infrastructure/data-integrity failure remains after retries.
+```
 
-When `D3_AUTONOMOUS_MODE=1`:
-
-1. Start the existing configured RunPod Pod at campaign start if it is stopped.
-2. Use `/workspace/SB` as the authoritative worktree for the remainder of the campaign.
-3. Run both CPU and GPU campaign tasks on the Pod so the campaign can progress without waiting for local synchronization.
-4. Use the remote system Python for tests, training, reports, and decoding.
-5. Commit/push code checkpoints after tests pass; do not commit large artifacts.
-6. Keep the Pod running between stages, including CPU-only stages.
-7. Do not stop the Pod merely because a GPU job ended.
-
-The Pod must remain running until one of the campaign stop conditions in Section 9 occurs.
+Never terminate/delete a Pod unless the user explicitly authorizes deletion.
 
 ---
 
-## 7. Required RunPod variables
-
-Before autonomous campaign start, these must be configured:
+## 6. Required RunPod variables
 
 ```bash
 export RUNPOD_POD_ID="<existing pod id>"
@@ -251,75 +224,31 @@ export RUNPOD_SSH_PORT="<current port>"
 export REMOTE_REPO_DIR="/workspace/SB"
 ```
 
-Also configure `runpodctl` with a RunPod API key.
+`runpodctl` must already be configured with the RunPod API key.
 
-Codex must never print private keys, API keys, Hugging Face tokens, or OpenAI credentials.
+Codex must never print or commit:
 
-If SSH host/port changes after a restart, Codex should refresh connection details using the configured RunPod tooling/API available in the environment. Do not guess values.
+```text
+private SSH keys
+RunPod API keys
+Hugging Face tokens
+OpenAI credentials
+other secrets
+```
 
-If connection details cannot be refreshed after the configured infrastructure retry limit, mark the campaign `infrastructure_blocked`, write a checkpoint, and stop the Pod to protect the budget.
+If SSH host/port changes after Pod restart, Codex should refresh it through configured tooling/API. Do not guess. Retry only up to the configured infrastructure limit.
 
 ---
 
-## 8. RunPod lifecycle in autonomous mode
+## 7. Budget guard and breadth-first testing rule
 
-### Start
-
-```bash
-runpodctl pod start "$RUNPOD_POD_ID"
-runpodctl pod list
-```
-
-After start, verify:
+Required budget state:
 
 ```text
-- desired status is RUNNING,
-- at least one GPU is allocated,
-- SSH works,
-- nvidia-smi works,
-- /workspace/SB exists or can be cloned.
+runs/counterfact_sb_alternatives_campaign_v1/autonomous_campaign_v1/budget_state.json
 ```
 
-### Keep running
-
-During the autonomous campaign:
-
-- Do not stop the Pod between plan stages.
-- Do not stop after teacher-cache generation, feature extraction, training, replay, smoke decoding, dev tuning, analysis, or final reporting if another planned task remains.
-- If no GPU process is active, immediately continue to the next CPU/report/training task on the same Pod.
-- Use `tmux` for long jobs.
-
-### Stop
-
-Stop the Pod only when:
-
-1. the complete Direction 3 research campaign finishes positively;
-2. the Direction 3 campaign finishes with a formal negative stop checkpoint;
-3. the autonomous budget is exhausted or insufficient for the next stage;
-4. an unrecoverable infrastructure failure remains after all allowed retries;
-5. a data-integrity or split-leakage failure makes further execution unsafe.
-
-Stop command:
-
-```bash
-runpodctl pod stop "$RUNPOD_POD_ID"
-```
-
-Never terminate/delete the Pod unless the user explicitly requests deletion.
-
----
-
-## 9. Budget guard
-
-The campaign must track cost continuously.
-
-Required state file:
-
-```text
-runs/counterfact_direction3_controller_v1/autonomous_campaign_v1/budget_state.json
-```
-
-It must contain:
+Track the following:
 
 ```json
 {
@@ -328,109 +257,364 @@ It must contain:
   "reserve_usd": 0.0,
   "estimated_spend_usd": 0.0,
   "remaining_budget_usd": 0.0,
-  "campaign_start_utc": "",
-  "last_updated_utc": "",
+  "untested_tracks": [],
+  "minimum_reserve_for_untested_tracks_usd": 0.0,
   "stage_costs": []
 }
 ```
 
-Cost source priority:
+Cost-source priority:
 
-1. RunPod API/account usage if available;
-2. actual Pod running duration multiplied by `RUNPOD_HOURLY_RATE_USD`;
-3. conservative stage-runtime estimate.
+1. RunPod API/account usage when available.
+2. Actual Pod running duration multiplied by hourly rate.
+3. Conservative stage-runtime estimate.
 
-Before every expensive stage, Codex must estimate stage cost.
-
-Proceed only if:
+Before each expensive stage, Codex must verify:
 
 ```text
-estimated_stage_cost <= remaining_budget - reserve
+estimated_stage_cost
+  <= remaining_budget
+     - reserve
+     - minimum_reserve_for_all_untested_tracks
 ```
 
-If not, Codex must:
+Breadth-first rule:
 
 ```text
-- not start the stage,
-- write a budget-exhaustion checkpoint,
-- summarize completed science and missing work,
-- stop the Pod.
+No track may enter its expensive scale-up phase until every other track has completed its mandatory minimum pilot or has a formal pilot-level negative result.
 ```
 
-Codex must not request a budget top-up during autonomous execution.
+This prevents an early promising track from consuming the budget before all alternatives are tested.
+
+If the budget cannot cover the next mandatory untested-track pilot, end as budget completion. Do not ask for a budget top-up.
 
 ---
 
-## 10. Campaign state machine
+## 8. Campaign state machine
 
-Required campaign directory:
-
-```text
-runs/counterfact_direction3_controller_v1/autonomous_campaign_v1/
-```
-
-Before creating or resuming that directory, Codex must validate `ACTIVE_RESEARCH_CAMPAIGN.json`:
+Required directory:
 
 ```text
-active_protocol = counterfact_direction3_controller_v1
-active_direction = direction3
-campaign_status = active
-analysis_500_locked = true
-final_test_locked = true
+runs/counterfact_sb_alternatives_campaign_v1/autonomous_campaign_v1/
 ```
-
-If an old Direction 2 campaign state exists, preserve it as historical and do not reuse its state, budget, locks, or current-stage fields.
 
 Required files:
 
 ```text
 campaign_state.json
 budget_state.json
+track_registry.csv
 stage_history.csv
 autonomous_log.md
 ```
 
-`campaign_state.json` must contain:
+`campaign_state.json` must include:
 
 ```json
 {
-  "protocol_version": "counterfact_direction3_controller_v1",
+  "campaign_protocol": "counterfact_sb_alternatives_campaign_v1",
   "autonomous_mode": true,
-  "current_stage": "",
-  "current_stage_status": "pending",
-  "next_stage": "",
   "campaign_status": "running",
-  "scientific_claim_status": "undetermined",
+  "current_track": "",
+  "current_stage": "",
   "analysis_500_used": false,
   "final_test_used": false,
-  "last_git_commit": "",
-  "completed_stages": [],
-  "failed_stages": [],
-  "rescues_used": {}
+  "completed_tracks": [],
+  "failed_tracks": [],
+  "passed_tracks": [],
+  "rescues_used": {},
+  "last_git_commit": ""
 }
 ```
 
-For each stage:
+Track statuses:
 
-1. Read the plan and current campaign state.
-2. Run preflight checks.
-3. Run tests.
-4. Estimate budget.
-5. Execute the stage.
-6. Validate all acceptance criteria.
-7. Write versioned artifacts and report summary.
-8. Update campaign and budget state.
-9. Advance automatically if passed.
-10. Apply at most the bounded rescue specified in the plan if failed.
-11. If no rescue remains, finish as a negative result.
+```text
+pending
+running
+pilot_passed
+pilot_failed
+scaled_dev_passed
+scaled_dev_failed
+analysis_passed
+analysis_failed
+final_reported
+formal_negative
+budget_not_run
+```
 
-Codex must not invent unplanned experiments or expand hyperparameter grids beyond the plan.
+For every stage:
+
+1. Read master plan, track plan, and current state.
+2. Run preflight checks and tests.
+3. Estimate budget and reserve untested tracks.
+4. Execute the stage.
+5. Validate every acceptance criterion.
+6. Write versioned artifacts, validation report, log, and exit code.
+7. Update campaign, track, and budget state.
+8. Apply only the bounded rescue listed in the track plan.
+9. Mark the track terminal at the appropriate level.
+10. Continue to the next track without stopping the Pod.
 
 ---
 
-## 11. Git and code rules
+## 9. Historical evidence and immutability
 
-Code moves through Git. Large artifacts do not.
+These directories are immutable:
+
+```text
+runs/counterfact_direction1_v1/
+runs/counterfact_direction2_bridge_adapter_v1/
+runs/counterfact_direction3_controller_v1/
+```
+
+They may be read for:
+
+```text
+historical baselines
+frozen manifests and fingerprints
+reusable code
+teacher/checkpoint initialization only when explicitly permitted
+scientific comparison
+```
+
+They must not be:
+
+```text
+overwritten
+deleted
+silently resumed
+used as hidden evaluation training data
+reported as new results
+```
+
+Direction 2 v1 remains protocol-infeasible, not adapter-failed. Direction 3 v1 remains a bounded negative value-controller result with a promising learned gate.
+
+---
+
+## 10. Common data and split policy
+
+The common campaign source is the official CounterFact train split.
+
+Locked manifests may be read for ID/source-index/fingerprint exclusion only until their evaluation stage is legally unlocked.
+
+Training pool rules:
+
+```text
+Exclude from training:
+- dev_tune_200
+- ablation_500
+- analysis_500
+- final_test_500
+- final_test_full
+- all evaluation-only same-subject stress prompts
+
+Allow as training rows:
+- legal CounterFact train rows previously used for historical controller training,
+  provided historical teacher outputs/checkpoints are not silently reused;
+- explicit reusable training-only prompt augmentations;
+- real prompt fields from allowed train rows.
+```
+
+Evaluation ladder:
+
+```text
+track_train / track_val = method training and early stopping
+track_smoke_20 = integration and bounded calibration
+track_confirmation_30 = untouched confirmation; no tuning
+common dev_tune_200 = final method/hyperparameter selection
+ablation_500 = frozen preplanned ablations only
+analysis_500 = locked proceed/stop confirmation
+final_test_500 = primary locked result
+```
+
+Target-length policy:
+
+```text
+Primary training strata = single-token (length 1) and multi-token (length >=2).
+Always report exact bins 1,2,3,>=4.
+Do not require bin 2 in every split when the legal pool cannot support it.
+Never silently substitute bin 3 for bin 2; report exact composition and effective sample size.
+```
+
+Prompt provenance:
+
+```text
+Prefer real rewrite, paraphrase, locality, generation, and attribute prompts.
+Synthetic fallback must be tagged and reported.
+No official evaluation paraphrase/locality/stress prompt may be used for training the same edit.
+```
+
+---
+
+## 11. Common baselines and metrics
+
+Every actual-decode track must compare against applicable baselines:
+
+```text
+base
+target_logit_bias
+prompt_memory
+myopic_score
+no_rollout_bridge
+mc_bridge
+best historical raw bridge configuration
+```
+
+Additional track-specific baselines are defined in each track plan.
+
+Common metrics:
+
+```text
+rewrite exact
+declarative paraphrase exact
+target-token F1
+old-target suppression
+near/far locality exact
+self-normalized locality
+same-subject target false-positive rate
+generation target false-positive rate
+malformed-span rate
+sparse-support guidance KL or intervention cost
+model evaluations per edit
+GPU minutes per edit
+training GPU minutes per edit
+storage bytes per edit when applicable
+paired bootstrap by edit_id
+exact target-length breakdown
+relation breakdown
+```
+
+Common hard constraints for a viable runtime candidate:
+
+```text
+same_subject_tfpr <= base_same_subject_tfpr + 0.03
+near_tfpr <= base_near_tfpr + 0.03
+far_tfpr <= base_far_tfpr + 0.03
+malformed_rate <= 0.05
+gpu_minutes_per_edit <= 2.0 unless the track plan declares a stricter bound
+```
+
+Primary feasible selection score:
+
+```text
+maximize harmonic_mean(rewrite_exact,
+                       declarative_paraphrase_exact,
+                       clipped_self_normalized_locality)
+subject to all hard constraints.
+```
+
+Report compute-quality and guidance-cost Pareto curves. Do not call sparse-support KL full path KL.
+
+---
+
+## 12. Runtime deployability and leakage
+
+Runtime inputs must exist during real inference.
+
+Teacher-only fields may be labels but never runtime inputs:
+
+```text
+raw bridge scores
+MC rollout rewards
+myopic/no-rollout teacher scores
+teacher chosen token
+future final success/locality outcomes
+completed-trajectory cost
+```
+
+Forbidden shortcuts:
+
+```text
+prompt_type
+negative_type
+evaluation bucket identity
+split label
+case ID as a learned feature
+final outcome labels
+```
+
+Every learned checkpoint must serialize its runtime feature schema and pass a leakage audit.
+
+Track-specific scientific shortcut audits are mandatory where defined.
+
+---
+
+## 13. Bounded rescue rules
+
+Each track gets only the rescue explicitly declared in its plan.
+
+Global limits:
+
+```text
+one scientific rescue per track by default
+no architecture expansion after a track confirmation split
+no rescue after common dev selection
+no rescue after analysis_500
+no final-test rerun for tuning
+```
+
+Codex must never:
+
+```text
+lower acceptance thresholds
+add evaluation prompts to training
+add teacher-only runtime inputs
+expand grids beyond the plan
+use analysis/final data for rescue
+reinterpret a failed track as passed
+```
+
+A failed track must write a formal track stop package, then the campaign continues.
+
+---
+
+## 14. Cross-track selection and locked evaluation
+
+All five mandatory pilots must finish before any track scale-up.
+
+After scale-up, each passed track may nominate at most one frozen dev candidate.
+
+Before `analysis_500`, write:
+
+```text
+runs/counterfact_sb_alternatives_campaign_v1/cross_track_dev_lock.json
+```
+
+It must freeze:
+
+```text
+primary candidate selected on dev
+all frozen secondary track candidates
+checkpoints and hashes
+training split fingerprints
+method-specific hyperparameters
+gate/transport thresholds
+top_k
+steps and schedule
+span policy
+normalization
+metrics and budgets
+report-script commit
+```
+
+The primary candidate must be selected on dev before analysis. Analysis cannot change the primary.
+
+After the lock validates, set:
+
+```bash
+export DEV_METHOD_LOCKED=1
+```
+
+`analysis_500` may run all frozen passed-track candidates and baselines once. It is confirmation only.
+
+If the primary fails analysis, the campaign ends negatively. Do not promote a secondary after inspecting analysis unless that fallback rule was precommitted in the lock.
+
+If analysis passes, write `analysis_confirmation_lock.json`, set `FINAL_METHOD_LOCKED=1`, and run final evaluation exactly once.
+
+---
+
+## 15. Git, storage, and long-job rules
 
 Before each stage:
 
@@ -449,52 +633,18 @@ git status
 python -m pytest tests -q
 ```
 
-Commit only after tests pass.
-
-Do not commit:
-
-```text
-.env
-private keys
-tokens
-RunPod API keys
-model weights
-large run artifacts
-*.safetensors
-*.pt
-*.ckpt
-```
-
-The `.gitignore` should include:
-
-```text
-.env
-runs/
-.cache/
-*.pt
-*.pth
-*.safetensors
-*.ckpt
-__pycache__/
-.ipynb_checkpoints/
-```
-
----
-
-## 12. Storage and artifact rules
+Commit code only after tests pass. Do not commit secrets, model weights, checkpoints, safetensors, or large run artifacts.
 
 Authoritative remote paths:
 
 ```text
 /workspace/SB
 /workspace/SB/runs
-/workspace/.cache/huggingface
 /workspace/SB/logs
+/workspace/.cache/huggingface
 ```
 
-Every stage must use a new versioned output directory. Never overwrite a completed run by default.
-
-Every stage must write:
+Every stage must use a versioned output directory and write:
 
 ```text
 report_summary.json
@@ -504,7 +654,7 @@ log file
 exit-code file for long jobs
 ```
 
-Long job pattern:
+Long job template:
 
 ```bash
 tmux new -d -s "<stage_name>" \
@@ -513,368 +663,105 @@ tmux new -d -s "<stage_name>" \
    code=${PIPESTATUS[0]}; echo "$code" > logs/<stage_name>.exitcode; exit "$code"'
 ```
 
-Large artifacts remain on `/workspace`. At major checkpoints, copy summaries and small reports to a durable backup. Do not stop the campaign solely for backup synchronization.
+At major checkpoints, mirror compact summaries, manifests, hashes, and reports to durable storage. Keep the Pod running; do not stop merely for synchronization.
 
 ---
 
-## 13. Split locks and scientific safety
+## 16. Required track stop package
 
-Direction 1 and Direction 2 v1 protocol directories are read-only historical evidence.
-
-Direction 2 v1 ended before adapter science because all 284 legal target-length-bin-2 training examples were consumed by the predeclared Direction 1 and Direction 3 reservations. It must not be resumed. Direction 2 v2 requires an explicit new protocol and is outside this autonomous campaign.
-
-For Direction 3 scaled split construction:
-
-```text
-controller_train_1000 must be a deterministic superset of controller_train_100
-controller_val_200 must be a deterministic superset of controller_val_50
-dev_smoke_50 remains held out and is never absorbed into training
-existing D3 target-length-bin-2 train/val records must be preserved
-no new requirement may demand additional bin-2 cases beyond those legally available
-bin-2 scarcity must be reported in every scaled summary
-```
-
-No script may use `analysis_500` or final-test splits unless the relevant lock exists.
-
-### Analysis lock
-
-Required file:
-
-```text
-runs/counterfact_direction3_controller_v1/dev_method_lock.json
-```
-
-Only after that file validates may Codex set:
-
-```bash
-export DEV_METHOD_LOCKED=1
-```
-
-### Final lock
-
-Required file:
-
-```text
-runs/counterfact_direction3_controller_v1/analysis_confirmation_lock.json
-```
-
-Only after analysis passes may Codex set:
-
-```bash
-export FINAL_METHOD_LOCKED=1
-```
-
-Every split-capable script must enforce:
-
-```python
-import os
-
-if split_role == "analysis_500":
-    assert os.environ.get("DEV_METHOD_LOCKED") == "1"
-
-if split_role.startswith("final_test"):
-    assert os.environ.get("FINAL_METHOD_LOCKED") == "1"
-```
-
-After inspecting `analysis_500`, do not change:
-
-```text
-controller architecture
-controller checkpoint
-gate checkpoint
-gate threshold
-guidance scale
-top_k
-steps
-schedule
-span policy
-normalization
-metrics
-budgets
-filtering
-random seeds
-```
-
-If analysis fails, mark `counterfact_direction3_controller_v1` failed. Do not tune on analysis.
-
----
-
-## 14. Feature leakage and deployability rules
-
-Runtime controller/gate inputs must be available during actual inference.
-
-Forbidden runtime inputs include:
-
-```text
-raw_bridge_scores_top_k
-mc_rollout_rewards_top_k
-myopic/no_rollout scores or margins
-teacher chosen token
-final decoded output
-final edit/locality success
-malformed outcome
-completed-trajectory KL
-prompt_type
-negative_type
-split label
-case/edit identifiers as semantic features
-```
-
-Teacher-derived fields may be labels/targets only.
-
-Every controller-training stage must write a feature schema and pass an actual-tensor leakage audit with:
-
-```text
-num_leaked_runtime_features = 0
-feature_leakage_audit_pass = true
-```
-
-No actual decoding is allowed if leakage audit fails.
-
----
-
-## 15. Direction 3 scientific integrity rules
-
-The controller must be evaluated groupwise over each top-k candidate group. Do not use flattened global correlation as the primary ranking metric.
-
-Primary offline value metrics:
-
-```text
-macro groupwise Spearman
-Kendall tau
-NDCG@8
-pairwise ranking accuracy
-teacher top-1 agreement
-teacher top-3 overlap
-target top-3 improvement over base
-```
-
-Primary gate metrics:
-
-```text
-ROC-AUC
-PR-AUC
-rewrite activation
-paraphrase activation
-same-subject activation
-near/far locality activation
-```
-
-Primary safety metric:
-
-```text
-negative_guidance_ratio
-same_subject_target_advantage_vs_base
-```
-
-Target-indicator-only and representation-shuffle ablations are mandatory before actual decoding.
-
----
-
-## 16. Retry policy
-
-### Infrastructure retries
-
-Use up to `D3_AUTONOMOUS_MAX_INFRA_RETRIES` for:
-
-```text
-SSH disconnect
-transient package/download error
-RunPod restart/capacity issue
-single-process crash without data corruption
-```
-
-Resume from checkpoints when possible.
-
-### Scientific rescues
-
-Use at most the rescue explicitly defined for the stage in the plan, normally one.
-
-Do not:
-
-```text
-run unbounded sweeps
-add teacher-derived runtime features
-change locked splits
-reuse analysis/final for tuning
-silently lower acceptance criteria
-```
-
-If the bounded rescue fails, finish the Direction 3 campaign as a negative result.
-
----
-
-## 17. Reporting rules
-
-Every `report_summary.json` must include at least:
-
-```json
-{
-  "protocol_version": "counterfact_direction3_controller_v1",
-  "stage": "",
-  "git_commit": "",
-  "split_role": "",
-  "analysis_500_used": false,
-  "final_test_used": false,
-  "llada_loaded": false,
-  "actual_decode_performed": false,
-  "acceptance_pass": false,
-  "acceptance_failures": [],
-  "artifacts": {}
-}
-```
-
-Every GPU report must additionally record:
-
-```text
-model_id
-dtype
-use_4bit
-device_map
-Python executable/version
-GPU name
-CUDA version
-torch version
-transformers version
-bitsandbytes version
-wall time
-model evaluation count
-estimated cost
-```
-
----
-
-## 18. Direction 3 final claim classification
-
-At campaign completion, classify the strongest defensible result as exactly one of:
-
-### Strong method claim
-
-```text
-D3-gated beats myopic/no-rollout/raw bridge baselines on the stress-aware aggregate,
-controls same-subject TFPR,
-uses less compute than MC bridge,
-and survives analysis and final test.
-```
-
-### Efficiency/amortization claim
-
-```text
-D3-gated matches MC bridge within confidence intervals
-while using substantially fewer model evaluations and GPU time.
-```
-
-### Safety/evaluation claim
-
-```text
-D3 does not win overall,
-but learned edit-intent control materially improves same-subject safety
-and exposes a central failure mode of diffusion-LM runtime editing.
-```
-
-### Negative result
-
-```text
-Deployable controller/gate behavior fails offline or actual decoding
-under the bounded plan.
-```
-
-Never overstate the claim.
-
----
-
-## 19. Autonomous stop checkpoint
-
-When the campaign stops for scientific failure or budget exhaustion, write:
-
-```text
-runs/counterfact_direction3_controller_v1/direction3_stop_checkpoint_v1/
-```
-
-with:
+Every failed or budget-not-run track must write:
 
 ```text
 report_summary.json
-direction3_stop_checkpoint.md
-direction3_evidence_table.csv
-remaining_unrun_stages.csv
-budget_summary.json
-paper_claim_recommendation.md
+track_stop_checkpoint.md
+negative_result_report.md
+track_evidence_table.csv
+artifact_availability_manifest.json
+next_recommendation.md
 ```
 
-Then stop the Pod.
+The report must distinguish:
+
+```text
+implementation failure
+protocol infeasibility
+offline scientific failure
+actual-decode failure
+generalization failure
+budget-not-run
+```
+
+Do not call an untested hypothesis a failed method.
 
 ---
 
-## 20. Final completion package
+## 17. Final campaign package
 
-When final_test_500 completes, write:
+Required directory:
 
 ```text
-runs/counterfact_direction3_controller_v1/final_research_package_v1/
+runs/counterfact_sb_alternatives_campaign_v1/final_research_package_v1/
 ```
 
-with:
+Required files:
 
 ```text
 report_summary.json
-main_results_table.csv
+cross_track_status_table.csv
+cross_track_main_results.csv
 same_subject_stress_table.csv
 target_length_table.csv
-compute_table.csv
+relation_table.csv
+compute_storage_table.csv
 paired_bootstrap.csv
-pareto_plot.png
+rewrite_locality_pareto.png
+aggregate_compute_pareto.png
 same_subject_plot.png
-target_length_plot.png
 failure_cases.csv
+artifact_availability_manifest.json
 reproducibility_manifest.json
 final_research_report.md
-paper_claim_recommendation.md
+paper_claim_matrix.md
+next_research_recommendation.md
 ```
 
-Only after this package validates is positive campaign completion reached. Then stop the Pod.
+Claim categories:
+
+```text
+strong SB editing method claim
+efficiency/amortization claim
+edit-intent localization claim
+activation-space transport claim
+categorical CSBM claim
+partial/unbalanced transport claim
+parameter-space editing claim
+diagnostic/negative result
+```
+
+The claim must follow the evidence. The final report must state which hypotheses were supported, rejected, protocol-infeasible, budget-not-run, or left untested.
 
 ---
 
-## 21. Codex behavior expectations
+## 18. Codex behavior expectations
 
 Codex must:
 
-- Read `AGENTS.md`, `ACTIVE_RESEARCH_CAMPAIGN.json`, and the autonomous Direction 3 plan.
-- Follow the stage state machine without asking for approval when autonomous mode is enabled.
-- Keep the existing RunPod Pod running between stages.
-- Maintain budget and campaign state.
-- Run tests before every stage.
-- Preserve old artifacts.
-- Use versioned outputs.
-- Stop automatically only at campaign completion, budget exhaustion, or unrecoverable safety/infrastructure failure.
-- Report uncertainty and scientific failures honestly.
+- read all authoritative files before acting;
+- execute every mandatory track pilot before scaling any track;
+- continue automatically between tracks;
+- keep RunPod running until campaign terminal completion or budget/infrastructure stop;
+- preserve historical campaigns;
+- use tests, versioned artifacts, explicit acceptance reports, and split locks;
+- stop only at a campaign-level terminal state;
+- provide the user with one final cross-track results report at the end.
 
 Codex must not:
 
-- Ask for routine stage approval in autonomous mode.
-- Stop the Pod between planned stages.
-- Create or delete Pods.
-- Tune on `analysis_500` or final-test splits.
-- Reintroduce teacher-derived runtime features.
-- Lower acceptance thresholds to manufacture a pass.
-- Run experiments outside the autonomous plan.
-- Create Direction 2 v2 or switch research directions without an explicit user-authored protocol change.
-- Reuse Direction 2 autonomous state as Direction 3 state.
-
-
----
-
-## 22. Goal-mode completion contract
-
-When the campaign is launched with `/goal`, Codex must continue until exactly one terminal state is written and validated:
-
-```text
-positive_complete
-negative_complete
-budget_complete
-infrastructure_blocked
-unsafe_data_integrity_stop
-```
-
-A goal is not complete merely because one command or one stage finishes. It is complete only after the appropriate final or stop package exists, campaign/budget state is updated, durable summaries are preserved, and the Pod is stopped.
+- ask for stage-by-stage approval in autonomous mode;
+- create or delete a Pod;
+- stop the Pod after an individual track;
+- guess missing secrets;
+- invent experiments or rescues;
+- tune on analysis/final;
+- overwrite historical artifacts;
+- silently skip a track without recording `budget_not_run` or a formal reason.

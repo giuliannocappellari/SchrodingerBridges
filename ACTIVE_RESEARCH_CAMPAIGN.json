@@ -1,77 +1,65 @@
 {
-  "schema_version": 1,
-  "updated_at_utc": "2026-07-15T00:30:52.662038+00:00",
-  "active_direction": "direction3",
-  "active_protocol": "counterfact_direction3_controller_v1",
-  "active_plan": "DIRECTION3_AUTONOMOUS_RESEARCH_PLAN.md",
-  "instruction_file": "AGENTS.md",
+  "campaign_protocol": "counterfact_sb_alternatives_campaign_v1",
+  "campaign_status": "configured_not_started",
   "execution_mode": "autonomous_goal",
-  "campaign_status": "completed_negative",
-  "resume_from_existing_artifacts": true,
-  "current_stage": "complete_negative",
-  "next_stage_on_pass": null,
+  "active_plan": "SB_ALTERNATIVES_AUTONOMOUS_RESEARCH_PLAN.md",
+  "current_phase": "bootstrap",
+  "current_track": null,
+  "current_stage": "campaign_preflight",
   "historical_protocols": {
     "counterfact_direction1_v1": {
-      "status": "closed_blocked_under_tested_rule_based_runtime_gates",
-      "immutable": true,
+      "status": "closed_blocked_under_tested_rule_based_gates",
       "resume_allowed": false
     },
     "counterfact_direction2_bridge_adapter_v1": {
       "status": "closed_protocol_infeasible",
-      "failure_type": "target_length_bin2_exhaustion_after_predeclared_exclusions",
       "adapter_science_executed": false,
-      "immutable": true,
-      "resume_allowed": false,
-      "audit": "runs/counterfact_direction2_bridge_adapter_v1/direction2_bin2_exclusion_audit_v1/report_summary.json"
+      "resume_allowed": false
+    },
+    "counterfact_direction3_controller_v1": {
+      "status": "closed_bounded_negative",
+      "learned_gate_promising": true,
+      "value_controller_failed_representation_use": true,
+      "resume_allowed": false
     }
   },
-  "future_protocols": {
-    "counterfact_direction2_bridge_adapter_v2": {
-      "status": "not_created",
-      "may_create_automatically": false
+  "tracks": {
+    "learned_gate_raw_bridge": {
+      "protocol": "counterfact_learned_gate_raw_bridge_v1",
+      "plan": "LEARNED_GATE_RAW_BRIDGE_PLAN.md",
+      "status": "pending",
+      "priority": 1
+    },
+    "activation_space_sb": {
+      "protocol": "counterfact_activation_space_sb_v1",
+      "plan": "ACTIVATION_SPACE_SB_PLAN.md",
+      "status": "pending",
+      "priority": 2
+    },
+    "conditional_answer_span_csbm": {
+      "protocol": "counterfact_conditional_answer_span_csbm_v1",
+      "plan": "CONDITIONAL_ANSWER_SPAN_CSBM_PLAN.md",
+      "status": "pending",
+      "priority": 3
+    },
+    "unbalanced_partial_csbm": {
+      "protocol": "counterfact_unbalanced_partial_csbm_v1",
+      "plan": "UNBALANCED_PARTIAL_CSBM_PLAN.md",
+      "status": "pending",
+      "priority": 4
+    },
+    "parameter_space_sb": {
+      "protocol": "counterfact_parameter_space_sb_v1",
+      "plan": "PARAMETER_SPACE_SB_PLAN.md",
+      "status": "pending",
+      "priority": 5
     }
   },
-  "direction3_state": {
-    "teacher_cache_train100_val50": "complete",
-    "teacher_cache_audit": "complete",
-    "deployable_scalar_v2": "complete_but_not_final",
-    "metric_audit": "complete",
-    "frozen_deployable_feature_extraction": "complete",
-    "feature_integrity_alignment_leakage": "passed",
-    "representation_aware_v3": "failed_after_bounded_rescue",
-    "stage_2a": "not_run_blocked_by_offline_hard_criteria",
-    "terminal_package_validation": "passed_with_raw_source_rederivation_unavailable"
-  },
-  "split_locks": {
-    "dev_tune_200": "tuning_only",
-    "ablation_500": "frozen_preplanned_ablations_only",
-    "analysis_500_locked": true,
-    "final_test_500_locked": true,
-    "final_test_full_locked": true
-  },
-  "autonomous_policy": {
-    "requires_per_stage_approval": false,
-    "requires_per_gpu_job_approval": false,
-    "keep_runpod_running_between_stages": true,
-    "stop_only_on_terminal_state_or_budget": true,
-    "may_switch_direction": false,
-    "may_lower_acceptance_thresholds": false,
-    "may_expand_unplanned_grids": false
-  },
-  "budget_environment": {
-    "mode_variable": "D3_AUTONOMOUS_MODE",
-    "budget_variable": "D3_AUTONOMOUS_BUDGET_USD",
-    "hourly_rate_variable": "RUNPOD_HOURLY_RATE_USD",
-    "reserve_variable": "D3_AUTONOMOUS_BUDGET_RESERVE_USD"
-  },
-  "terminal_states": [
-    "positive_complete",
-    "negative_complete",
-    "budget_complete",
-    "infrastructure_blocked",
-    "unsafe_data_integrity_stop"
-  ],
-  "terminal_state": "formal_negative_completion",
-  "terminal_package": "runs/counterfact_direction3_controller_v1/direction3_autonomous_stop_checkpoint_v1",
-  "terminal_package_validation": "runs/counterfact_direction3_controller_v1/direction3_autonomous_stop_checkpoint_v1/terminal_package_validation.json"
+  "breadth_first_pilots_required": true,
+  "analysis_500_locked": true,
+  "final_test_500_locked": true,
+  "final_test_full_locked": true,
+  "pod_retention_until_campaign_terminal": true,
+  "new_protocol_creation_allowed": false,
+  "user_notification_policy": "final_campaign_report_only"
 }
