@@ -5,7 +5,9 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.metadata
 import math
+import platform
 import sys
 import time
 from collections import Counter
@@ -35,6 +37,8 @@ from scripts.sb_alt_common import (
     read_jsonl,
     record_stage_event,
     repo_path,
+    sha256_file,
+    write_csv,
     write_json,
     write_jsonl,
 )
@@ -102,7 +106,11 @@ def endpoint_specs(rows: Sequence[Mapping[str, Any]], split: str) -> list[dict[s
             synthetic = True
         elif negative_type == "near_locality":
             prompt = (edit.get("near_locality_prompts") or [unrelated["rewrite_prompt"]])[0]
-            provenance = "real_counterfact_neighborhood"
+            provenance = (
+                "real_counterfact_neighborhood"
+                if edit.get("near_locality_prompts")
+                else "synthetic_fallback"
+            )
             synthetic = not bool(edit.get("near_locality_prompts"))
         elif negative_type == "far_locality":
             prompt = unrelated["rewrite_prompt"]
@@ -204,6 +212,8 @@ def collect_real(
     values: dict[tuple[int, str], tuple[torch.Tensor, torch.Tensor, float]] = {}
     pad_id = int(getattr(tokenizer, "pad_token_id", 0) or 0)
     for start in range(0, len(jobs), batch_size):
+        if start == 0 or start % (batch_size * 100) == 0:
+            print(f"[collect] jobs={start}/{len(jobs)}", flush=True)
         batch = jobs[start : start + batch_size]
         width = max(len(job["ids"]) for job in batch)
         input_ids = torch.full((len(batch), width), pad_id, dtype=torch.long, device=device)
@@ -228,6 +238,7 @@ def collect_real(
                 final_value,
                 target_logit,
             )
+    print(f"[collect] jobs={len(jobs)}/{len(jobs)}", flush=True)
 
     tensors: dict[str, list[Any]] = {
         "h0_middle": [],
@@ -265,11 +276,42 @@ def validate(specs: Sequence[Mapping[str, Any]], tensors: Mapping[str, torch.Ten
         "num_rows": len(specs),
         "num_edits": len({spec["edit_id"] for spec in specs}),
         "prompt_type_histogram": dict(sorted(Counter(str(spec["prompt_type"]) for spec in specs).items())),
+        "prompt_provenance_histogram": dict(
+            sorted(Counter(str(spec["prompt_provenance"]) for spec in specs).items())
+        ),
+        "target_length_histogram": dict(
+            sorted(Counter(str(spec.get("target_length", "unknown")) for spec in specs).items())
+        ),
+        "synthetic_rows": sum(bool(spec.get("synthetic_from_metadata")) for spec in specs),
         "positive_rows": int(positive.sum()),
         "identity_rows": int(identity.sum()),
         "all_vectors_finite": all(torch.isfinite(value).all().item() for value in tensors.values()),
         "positive_nonidentical_rate": float((delta[positive] > 1e-6).float().mean()) if positive.any() else 0.0,
         "identity_max_delta_norm": float(delta[identity].max()) if identity.any() else math.inf,
+    }
+
+
+def package_version(name: str) -> str | None:
+    try:
+        return importlib.metadata.version(name)
+    except importlib.metadata.PackageNotFoundError:
+        return None
+
+
+def environment_versions(model: Any, tokenizer: Any) -> dict[str, Any]:
+    gpu_name = torch.cuda.get_device_name(0) if torch.cuda.is_available() else None
+    return {
+        "python": platform.python_version(),
+        "torch": torch.__version__,
+        "transformers": package_version("transformers"),
+        "accelerate": package_version("accelerate"),
+        "bitsandbytes": package_version("bitsandbytes"),
+        "safetensors": package_version("safetensors"),
+        "cuda_available": torch.cuda.is_available(),
+        "cuda_runtime": torch.version.cuda,
+        "gpu_name": gpu_name,
+        "model_class": type(model).__name__ if model is not None else None,
+        "tokenizer_class": type(tokenizer).__name__ if tokenizer is not None else None,
     }
 
 
@@ -303,6 +345,29 @@ def main() -> None:
     if args.max_val_edits:
         split_rows["val"] = split_rows["val"][: args.max_val_edits]
     all_specs = {split: endpoint_specs(rows, split) for split, rows in split_rows.items()}
+    source_hashes = {
+        split: sha256_file(args.input_dir / f"sb_alt_{'train_2000' if split == 'train' else 'val_300'}.jsonl")
+        for split in split_rows
+    }
+    run_config = {
+        "campaign_protocol": CAMPAIGN_PROTOCOL,
+        "track_protocol": "counterfact_activation_space_sb_v1",
+        "stage": "T2.1 activation endpoint collection",
+        "input_dir": str(args.input_dir),
+        "output_dir": str(args.output_dir),
+        "model_id": args.model_id,
+        "dtype": args.dtype,
+        "use_4bit": bool(args.use_4bit),
+        "device_map": args.device_map,
+        "batch_size": args.batch_size,
+        "fake_model": bool(args.fake_model),
+        "max_train_edits": args.max_train_edits,
+        "max_val_edits": args.max_val_edits,
+        "source_manifest_sha256": source_hashes,
+        "analysis_500_used": False,
+        "final_test_used": False,
+    }
+    write_json(output_dir / "run_config.json", run_config)
     started = time.perf_counter()
     model = tokenizer = None
     if not args.fake_model:
@@ -312,6 +377,8 @@ def main() -> None:
             use_4bit=bool(args.use_4bit),
             device_map=args.device_map,
         )
+        model.eval()
+        model.requires_grad_(False)
     summaries = {}
     index_rows: list[dict[str, Any]] = []
     for split, specs in all_specs.items():
@@ -341,6 +408,20 @@ def main() -> None:
             {"rewrite", "paraphrase", *IDENTITY_TYPES}.issubset(summary["prompt_type_histogram"])
             for summary in summaries.values()
         ),
+        "positive_prompt_provenance_real": all(
+            spec["prompt_provenance"] == "real_counterfact_train_prompt"
+            for specs in all_specs.values()
+            for spec in specs
+            if spec["positive"]
+        ),
+        "synthetic_fallback_tagged": all(
+            bool(spec.get("synthetic_from_metadata"))
+            == (spec["prompt_provenance"] in {"synthetic_fallback", "composed_from_real_train_relation_template"})
+            for specs in all_specs.values()
+            for spec in specs
+        ),
+        "base_model_parameters_frozen": bool(args.fake_model)
+        or all(not parameter.requires_grad for parameter in model.parameters()),
         "runtime_features_exclude_teacher_outcomes": True,
         "analysis_final_unused": True,
     }
@@ -365,7 +446,26 @@ def main() -> None:
         "forbidden_runtime_fields": ["prompt_type", "positive", "identity", "split"],
     }
     write_json(output_dir / "schema.json", schema)
-    write_json(output_dir / "leakage_audit.json", {"checks": checks, "pass": checks["runtime_features_exclude_teacher_outcomes"]})
+    write_json(
+        output_dir / "leakage_audit.json",
+        {
+            "checks": checks,
+            "runtime_feature_fields": schema["runtime_conditioning_fields"],
+            "forbidden_runtime_fields": schema["forbidden_runtime_fields"],
+            "pass": checks["runtime_features_exclude_teacher_outcomes"],
+        },
+    )
+    write_json(output_dir / "validation_report.json", {"checks": checks, "pass": all(checks.values())})
+    write_csv(
+        output_dir / "endpoint_quality.csv",
+        [
+            {
+                "split": split,
+                **summary,
+            }
+            for split, summary in summaries.items()
+        ],
+    )
     report = {
         "campaign_protocol": CAMPAIGN_PROTOCOL,
         "track_protocol": "counterfact_activation_space_sb_v1",
@@ -377,8 +477,21 @@ def main() -> None:
         "analysis_500_used": False,
         "final_test_used": False,
         "model_id": args.model_id,
+        "environment_versions": environment_versions(model, tokenizer),
+        "run_config_path": str(args.output_dir / "run_config.json"),
+        "source_manifest_sha256": source_hashes,
         "summaries": summaries,
         "runtime_seconds": time.perf_counter() - started,
+        "model_forward_batches": {
+            split: math.ceil(
+                (
+                    len(specs)
+                    + sum(bool(spec["positive"]) for spec in specs)
+                )
+                / args.batch_size
+            )
+            for split, specs in all_specs.items()
+        },
         "budget_guard": guard,
         "acceptance_checks": checks,
         "acceptance_pass": all(checks.values()),

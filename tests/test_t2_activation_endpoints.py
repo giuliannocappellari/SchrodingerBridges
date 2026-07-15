@@ -46,3 +46,9 @@ def test_t2_fake_endpoint_cache_has_identity_and_trajectory_shape() -> None:
         "attribute",
         "unrelated",
     }.issubset(summary["prompt_type_histogram"])
+    assert summary["prompt_provenance_histogram"]["real_counterfact_train_prompt"] > 0
+    assert all(
+        bool(spec["synthetic_from_metadata"])
+        == (spec["prompt_provenance"] in {"synthetic_fallback", "composed_from_real_train_relation_template"})
+        for spec in specs
+    )
