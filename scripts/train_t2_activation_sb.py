@@ -51,6 +51,76 @@ def apply_ridge(inputs: torch.Tensor, weights: torch.Tensor) -> torch.Tensor:
     return torch.cat([inputs, bias], dim=1) @ weights
 
 
+def bridge_features(
+    state: torch.Tensor, condition: torch.Tensor, time_value: float
+) -> torch.Tensor:
+    time_features = torch.tensor(
+        [
+            time_value,
+            time_value * time_value,
+            math.sin(math.pi * time_value),
+            1.0 - time_value,
+        ],
+        device=state.device,
+        dtype=state.dtype,
+    ).expand(len(state), -1)
+    return torch.cat([state, condition, time_features], dim=1)
+
+
+def brownian_bridge_training_rows(
+    z0: torch.Tensor,
+    z1: torch.Tensor,
+    condition: torch.Tensor,
+    *,
+    steps: int = 4,
+    sigma: float = 0.10,
+    seed: int = 1729,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Sample reciprocal Brownian bridge states and their endpoint drifts."""
+
+    if steps < 2:
+        raise ValueError("Bridge matching requires at least two timesteps")
+    generator = torch.Generator(device=z0.device).manual_seed(seed)
+    features: list[torch.Tensor] = []
+    targets: list[torch.Tensor] = []
+    for step_index in range(steps):
+        time_value = step_index / steps
+        noise_scale = sigma * math.sqrt(time_value * (1.0 - time_value))
+        noise = torch.randn(
+            z0.shape,
+            generator=generator,
+            device=z0.device,
+            dtype=z0.dtype,
+        ) * noise_scale
+        state = (1.0 - time_value) * z0 + time_value * z1 + noise
+        endpoint_drift = (z1 - state) / max(1.0 - time_value, 1e-6)
+        features.append(bridge_features(state, condition, time_value))
+        targets.append(endpoint_drift)
+    return torch.cat(features, dim=0), torch.cat(targets, dim=0)
+
+
+def integrate_bridge_drift(
+    z0: torch.Tensor,
+    condition: torch.Tensor,
+    weights: torch.Tensor,
+    *,
+    steps: int = 4,
+    energy_mask: torch.Tensor | None = None,
+) -> tuple[torch.Tensor, float]:
+    """Integrate the learned time-dependent bridge drift from the base state."""
+
+    state = z0.clone()
+    energy = torch.zeros(len(z0), device=z0.device, dtype=z0.dtype)
+    dt = 1.0 / steps
+    for step_index in range(steps):
+        time_value = step_index / steps
+        drift = apply_ridge(bridge_features(state, condition, time_value), weights)
+        energy = energy + dt * drift.square().sum(dim=1)
+        state = state + dt * drift
+    selected_energy = energy[energy_mask] if energy_mask is not None else energy
+    return state - z0, float(selected_energy.mean())
+
+
 def condition_matrix(rows: Sequence[Mapping[str, Any]], device: torch.device) -> torch.Tensor:
     values = []
     for row in rows:
@@ -93,6 +163,7 @@ def prediction_metrics(
     z1: torch.Tensor,
     predicted_delta: torch.Tensor,
     positive: torch.Tensor,
+    transport_energy: float | None = None,
 ) -> dict[str, float]:
     endpoint = z0 + predicted_delta
     identity = ~positive
@@ -109,7 +180,11 @@ def prediction_metrics(
         "identity_drift_norm": float(identity_norm),
         "positive_transport_norm": float(positive_norm),
         "identity_to_positive_drift_ratio": float(identity_norm / positive_norm),
-        "transport_energy": float(predicted_delta[positive].square().sum(1).mean()),
+        "transport_energy": (
+            float(transport_energy)
+            if transport_energy is not None
+            else float(predicted_delta[positive].square().sum(1).mean())
+        ),
     }
 
 
@@ -120,11 +195,29 @@ def main() -> None:
     )
     parser.add_argument("--output_dir", type=Path, default=T2_ROOT / "activation_sb_offline_v1")
     parser.add_argument("--allow_overwrite", type=int, choices=[0, 1], default=0)
+    parser.add_argument("--bridge_steps", type=int, default=4)
+    parser.add_argument("--brownian_sigma", type=float, default=0.10)
     args = parser.parse_args()
     output_dir = repo_path(args.output_dir)
     if (output_dir / "report_summary.json").exists() and not args.allow_overwrite:
         raise FileExistsError(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
+    write_json(
+        output_dir / "run_config.json",
+        {
+            "campaign_protocol": CAMPAIGN_PROTOCOL,
+            "track_protocol": "counterfact_activation_space_sb_v1",
+            "cache_dir": str(args.cache_dir),
+            "output_dir": str(args.output_dir),
+            "latent_dims": [128, 256],
+            "reference_process": "brownian_reciprocal_bridge",
+            "bridge_steps": args.bridge_steps,
+            "brownian_sigma": args.brownian_sigma,
+            "ridge_alpha": 1.0,
+            "analysis_500_used": False,
+            "final_test_used": False,
+        },
+    )
     cache_dir = repo_path(args.cache_dir)
     train_tensors = {key: value.float() for key, value in load_file(cache_dir / "train.safetensors").items()}
     val_tensors = {key: value.float() for key, value in load_file(cache_dir / "val.safetensors").items()}
@@ -166,10 +259,21 @@ def main() -> None:
         direct_delta = mean_delta.expand_as(z0_val)
         relation_weights = ridge(cond_train, delta_train, alpha=1.0)
         linear_delta = apply_ridge(cond_val, relation_weights)
-        sb_inputs_train = torch.cat([z0_train, cond_train], dim=1)
-        sb_inputs_val = torch.cat([z0_val, cond_val], dim=1)
-        sb_weights = ridge(sb_inputs_train, delta_train, alpha=1.0)
-        sb_delta = apply_ridge(sb_inputs_val, sb_weights)
+        bridge_inputs_train, bridge_targets_train = brownian_bridge_training_rows(
+            z0_train,
+            z1_train,
+            cond_train,
+            steps=args.bridge_steps,
+            sigma=args.brownian_sigma,
+        )
+        sb_weights = ridge(bridge_inputs_train, bridge_targets_train, alpha=1.0)
+        sb_delta, sb_path_energy = integrate_bridge_drift(
+            z0_val,
+            cond_val,
+            sb_weights,
+            steps=args.bridge_steps,
+            energy_mask=positive_val,
+        )
 
         relation_means: dict[str, torch.Tensor] = {}
         for relation_id in sorted({str(row["relation_id"]) for row in train_rows}):
@@ -186,12 +290,22 @@ def main() -> None:
 
         permutation = list(range(len(val_rows)))
         random.Random(1729).shuffle(permutation)
-        shuffled_inputs = torch.cat([z0_val, cond_val[permutation]], dim=1)
-        shuffled_delta = apply_ridge(shuffled_inputs, sb_weights)
+        shuffled_delta, _ = integrate_bridge_drift(
+            z0_val,
+            cond_val[permutation],
+            sb_weights,
+            steps=args.bridge_steps,
+        )
         direct_metrics = prediction_metrics(z0_val, z1_val, direct_delta, positive_val)
         linear_metrics = prediction_metrics(z0_val, z1_val, linear_delta, positive_val)
         ot_metrics = prediction_metrics(z0_val, z1_val, ot_delta, positive_val)
-        sb_metrics = prediction_metrics(z0_val, z1_val, sb_delta, positive_val)
+        sb_metrics = prediction_metrics(
+            z0_val,
+            z1_val,
+            sb_delta,
+            positive_val,
+            transport_energy=sb_path_energy,
+        )
         shuffled_metrics = prediction_metrics(z0_val, z1_val, shuffled_delta, positive_val)
 
         logit_targets_train = (
@@ -217,6 +331,10 @@ def main() -> None:
             "relation_shuffle_endpoint_cosine_drop": relation_drop,
             "negative_target_logit_change": negative_logit_mean,
             "energy_le_direct_at_endpoint": energy_pass,
+            "reference_process": "brownian_reciprocal_bridge",
+            "bridge_steps": args.bridge_steps,
+            "brownian_sigma": args.brownian_sigma,
+            "bridge_training_rows": len(bridge_inputs_train),
         }
         item["offline_pass"] = (
             sb_metrics["endpoint_cosine"] >= 0.70
@@ -242,6 +360,9 @@ def main() -> None:
                     "pca_components": components.cpu(),
                     "sb_weights": sb_weights.cpu(),
                     "condition_dim": cond_train.shape[1],
+                    "reference_process": "brownian_reciprocal_bridge",
+                    "bridge_steps": args.bridge_steps,
+                    "brownian_sigma": args.brownian_sigma,
                     "metrics": item,
                 },
             )
@@ -304,6 +425,9 @@ def main() -> None:
         "analysis_500_used": False,
         "final_test_used": False,
         "selected_latent_dim": selected["latent_dim"],
+        "reference_process": selected["reference_process"],
+        "bridge_steps": selected["bridge_steps"],
+        "brownian_sigma": selected["brownian_sigma"],
         "selected_metrics": selected_metrics,
         "acceptance_checks": checks,
         "acceptance_pass": all(checks.values()),
