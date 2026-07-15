@@ -9,6 +9,7 @@ from scripts.train_t5_direct_adapters import (
     optimize_adapter,
     project_residual,
 )
+from scripts.train_t5_parameter_sb import decode, encode, pca_fit
 
 
 def test_rank_two_answer_position_adapter_shapes_and_storage() -> None:
@@ -47,3 +48,13 @@ def test_sparse_endpoint_adapter_optimization_is_finite() -> None:
     assert left.shape == right.shape == (16, 2)
     assert all(math.isfinite(value) for value in losses)
     assert losses[-1] < losses[0]
+
+
+def test_parameter_adapter_pca_uses_train_rank_ceiling() -> None:
+    torch.manual_seed(11)
+    train = torch.randn(6, 20)
+    mean, components, retained = pca_fit(train, nominal_dim=64)
+    assert components.shape == (20, 5)
+    reconstructed = decode(encode(train, mean, components), mean, components)
+    assert reconstructed.shape == train.shape
+    assert 0.0 < retained <= 1.000001
