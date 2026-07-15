@@ -34,4 +34,16 @@ def test_reference_next_step_and_sampling_are_deterministic() -> None:
         epsilon=0.05,
     )
     assert math.isclose(sum(distribution.values()), 1.0)
+    assert all(math.isfinite(value) and value >= 0.0 for value in distribution.values())
     assert seeded_sample(distribution, 7) == seeded_sample(distribution, 7)
+
+
+def test_identity_bridge_stays_endpoint_consistent() -> None:
+    start = reciprocal_bridge_distribution(
+        x0=7, xT=7, mask_id=99, support=[7, 8, 99], time=0.0, epsilon=0.01
+    )
+    end = reciprocal_bridge_distribution(
+        x0=7, xT=7, mask_id=99, support=[7, 8, 99], time=1.0, epsilon=0.01
+    )
+    assert start[7] == 1.0
+    assert end[7] > 0.98

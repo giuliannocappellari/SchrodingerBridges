@@ -30,107 +30,194 @@ from scripts.sb_alt_common import (
 )
 from scripts.t1_gate_model import FEATURE_DIM, featurize
 from scripts.t3_csbm_reference import reciprocal_bridge_distribution, seeded_sample
-from scripts.train_t1_gate import pr_auc, rank_auc
 
 
 T3_ROOT = Path("runs/counterfact_conditional_answer_span_csbm_v1")
 TIMES = (0.25, 0.5, 0.75)
+TOKEN_FEATURE_DIM = 8
+EXTRA_DIM = 32 + 10
+CANDIDATE_FEATURE_DIM = FEATURE_DIM + EXTRA_DIM
 
 
-class TransitionMLP(nn.Module):
+class CandidateTransitionMLP(nn.Module):
+    """Scores each finite-support candidate using inference-available fields."""
+
     def __init__(self) -> None:
         super().__init__()
         self.network = nn.Sequential(
-            nn.Linear(FEATURE_DIM + 5, 128),
+            nn.Linear(CANDIDATE_FEATURE_DIM, 192),
             nn.GELU(),
-            nn.LayerNorm(128),
-            nn.Linear(128, 1),
+            nn.LayerNorm(192),
+            nn.Linear(192, 1),
         )
 
     def forward(self, values: torch.Tensor) -> torch.Tensor:
         return self.network(values).squeeze(-1)
 
 
-def state_features(row: Mapping[str, Any], state: int, time: float) -> torch.Tensor:
+def token_features(token_id: int) -> torch.Tensor:
+    value = float(int(token_id) + 1)
+    frequencies = torch.arange(1, TOKEN_FEATURE_DIM // 2 + 1, dtype=torch.float32)
+    return torch.cat([torch.sin(value * frequencies * 1e-4), torch.cos(value * frequencies * 1e-4)])
+
+
+def candidate_feature(
+    row: Mapping[str, Any],
+    *,
+    state: int,
+    candidate: int,
+    time: float,
+    position: int,
+) -> torch.Tensor:
     text = featurize(
         str(row["prompt"]),
         str(row["subject"]),
         str(row["relation_template"]),
         str(row["relation_id"]),
     )
-    x0 = int(row["x0_token_id"])
-    xT = int(row["xT_token_id"])
+    old = int(row["x0_token_ids"][position])
+    edit_target = int(row["target_new_token_ids"][position])
     mask = int(row["mask_token_id"])
-    extra = torch.tensor(
+    token_block = torch.cat(
         [
-            float(state == x0),
-            float(state == xT),
+            token_features(state),
+            token_features(candidate),
+            token_features(old),
+            token_features(edit_target),
+        ]
+    )
+    flags = torch.tensor(
+        [
+            float(state == old),
+            float(state == edit_target),
             float(state == mask),
+            float(candidate == old),
+            float(candidate == edit_target),
+            float(candidate == mask),
+            float(candidate == state),
             float(time),
-            float(x0 == xT),
+            float(position / max(1, int(row["span_length"]) - 1)),
+            float(min(4, int(row["span_length"])) / 4.0),
         ],
         dtype=torch.float32,
     )
-    return torch.cat([text, extra])
+    return torch.cat([text, token_block, flags])
+
+
+def candidate_batch(
+    row: Mapping[str, Any], *, state: int, time: float, position: int
+) -> tuple[torch.Tensor, list[int]]:
+    support = list(map(int, row["candidate_support_by_position"][position]))
+    return (
+        torch.stack(
+            [
+                candidate_feature(row, state=state, candidate=candidate, time=time, position=position)
+                for candidate in support
+            ]
+        ),
+        support,
+    )
+
+
+def sampled_state(
+    row: Mapping[str, Any],
+    *,
+    position: int,
+    time: float,
+    epsilon: float,
+    mode: str,
+    seed: int,
+    reverse_start: int | None = None,
+) -> int:
+    old = int(row["x0_token_ids"][position])
+    endpoint = int(row["endpoint_token_ids"][position])
+    mask = int(row["mask_token_id"])
+    support = list(map(int, row["candidate_support_by_position"][position]))
+    if mode == "ordinary":
+        return mask if random.Random(seed).random() < time else old
+    if mode == "forward":
+        x0, xT = old, endpoint
+    elif mode == "backward":
+        x0, xT = int(reverse_start if reverse_start is not None else endpoint), old
+    else:
+        raise ValueError(mode)
+    return seeded_sample(
+        reciprocal_bridge_distribution(
+            x0=x0,
+            xT=xT,
+            mask_id=mask,
+            support=support,
+            time=time,
+            epsilon=epsilon,
+        ),
+        seed,
+    )
 
 
 def training_examples(
-    rows: Sequence[Mapping[str, Any]], mode: str, epsilon: float, outer_iterations: int
-) -> tuple[torch.Tensor, torch.Tensor]:
-    features, labels = [], []
-    for outer in range(outer_iterations):
-        for row_index, row in enumerate(rows):
-            x0 = int(row["x0_token_id"])
-            xT = int(row["xT_token_id"])
-            mask = int(row["mask_token_id"])
-            support = list(map(int, row["candidate_support"]))
+    rows: Sequence[Mapping[str, Any]],
+    *,
+    mode: str,
+    epsilon: float,
+    outer_index: int,
+    reverse_starts: Mapping[tuple[int, int], int] | None = None,
+) -> tuple[list[torch.Tensor], torch.Tensor]:
+    feature_groups: list[torch.Tensor] = []
+    labels: list[int] = []
+    for row_index, row in enumerate(rows):
+        for position in range(int(row["span_length"])):
+            endpoint = (
+                int(row["endpoint_token_ids"][position])
+                if mode != "backward"
+                else int(row["x0_token_ids"][position])
+            )
             for step_index, time in enumerate(TIMES):
-                seed = 10_000 * outer + 100 * row_index + step_index
-                if mode == "ordinary":
-                    state = mask if random.Random(seed).random() < time else x0
-                    feature_time = time
-                elif mode == "forward":
-                    distribution = reciprocal_bridge_distribution(
-                        x0=x0,
-                        xT=xT,
-                        mask_id=mask,
-                        support=support,
-                        time=time,
-                        epsilon=epsilon,
-                    )
-                    state = seeded_sample(distribution, seed)
-                    feature_time = time
-                elif mode == "backward":
-                    distribution = reciprocal_bridge_distribution(
-                        x0=xT,
-                        xT=x0,
-                        mask_id=mask,
-                        support=support,
-                        time=1.0 - time,
-                        epsilon=epsilon,
-                    )
-                    state = seeded_sample(distribution, seed)
-                    feature_time = 1.0 - time
-                else:
-                    raise ValueError(mode)
-                features.append(state_features(row, state, feature_time))
-                labels.append(float(row["transport_label"]))
-    return torch.stack(features), torch.tensor(labels, dtype=torch.float32)
+                seed = 1_000_000 * outer_index + 10_000 * row_index + 100 * position + step_index
+                state = sampled_state(
+                    row,
+                    position=position,
+                    time=time,
+                    epsilon=epsilon,
+                    mode=mode,
+                    seed=seed,
+                    reverse_start=(reverse_starts or {}).get((row_index, position)),
+                )
+                features, support = candidate_batch(row, state=state, time=time, position=position)
+                feature_groups.append(features)
+                labels.append(support.index(endpoint))
+    return feature_groups, torch.tensor(labels, dtype=torch.long)
+
+
+def padded_examples(groups: Sequence[torch.Tensor]) -> tuple[torch.Tensor, torch.Tensor]:
+    width = max(len(group) for group in groups)
+    features = torch.zeros((len(groups), width, CANDIDATE_FEATURE_DIM), dtype=torch.float32)
+    valid = torch.zeros((len(groups), width), dtype=torch.bool)
+    for index, group in enumerate(groups):
+        features[index, : len(group)] = group
+        valid[index, : len(group)] = True
+    return features, valid
 
 
 def train_transition(
-    features: torch.Tensor, labels: torch.Tensor, seed: int, epochs: int = 10
-) -> TransitionMLP:
+    groups: Sequence[torch.Tensor],
+    labels: torch.Tensor,
+    *,
+    seed: int,
+    model: CandidateTransitionMLP | None = None,
+    epochs: int = 8,
+) -> CandidateTransitionMLP:
     torch.manual_seed(seed)
-    model = TransitionMLP()
+    model = model or CandidateTransitionMLP()
+    features, valid = padded_examples(groups)
     optimizer = torch.optim.AdamW(model.parameters(), lr=2e-3, weight_decay=1e-4)
     generator = torch.Generator().manual_seed(seed)
+    model.train()
     for _ in range(epochs):
         order = torch.randperm(len(features), generator=generator)
-        for start in range(0, len(order), 512):
-            indices = order[start : start + 512]
-            logits = model(features[indices])
-            loss = F.binary_cross_entropy_with_logits(logits, labels[indices])
+        for start in range(0, len(order), 256):
+            indices = order[start : start + 256]
+            logits = model(features[indices]).masked_fill(~valid[indices], -1e9)
+            loss = F.cross_entropy(logits, labels[indices])
             optimizer.zero_grad(set_to_none=True)
             loss.backward()
             optimizer.step()
@@ -139,37 +226,105 @@ def train_transition(
 
 
 @torch.no_grad()
-def scores(model: TransitionMLP, rows: Sequence[Mapping[str, Any]]) -> list[float]:
-    features = torch.stack(
-        [state_features(row, int(row["mask_token_id"]), 0.5) for row in rows]
-    )
-    return [float(value) for value in torch.sigmoid(model(features)).tolist()]
+def endpoint_probabilities(
+    model: CandidateTransitionMLP,
+    rows: Sequence[Mapping[str, Any]],
+    *,
+    backward: CandidateTransitionMLP | None = None,
+) -> list[list[dict[int, float]]]:
+    output: list[list[dict[int, float]]] = []
+    for row in rows:
+        row_output: list[dict[int, float]] = []
+        for position in range(int(row["span_length"])):
+            mask = int(row["mask_token_id"])
+            features, support = candidate_batch(row, state=mask, time=0.5, position=position)
+            forward_log = F.log_softmax(model(features), dim=0)
+            if backward is not None:
+                old = int(row["x0_token_ids"][position])
+                consistency = []
+                for candidate in support:
+                    reverse_features, reverse_support = candidate_batch(
+                        row, state=candidate, time=0.5, position=position
+                    )
+                    reverse_log = F.log_softmax(backward(reverse_features), dim=0)
+                    consistency.append(reverse_log[reverse_support.index(old)])
+                forward_log = forward_log + torch.stack(consistency)
+            probabilities = torch.softmax(forward_log, dim=0)
+            row_output.append({token: float(probabilities[index]) for index, token in enumerate(support)})
+        output.append(row_output)
+    return output
 
 
-def evaluate_scores(rows: Sequence[Mapping[str, Any]], values: Sequence[float]) -> dict[str, float]:
-    labels = [int(row["transport_label"]) for row in rows]
-    predictions = [int(value >= 0.5) for value in values]
-    positive_indices = [index for index, label in enumerate(labels) if label]
-    identity_indices = [index for index, label in enumerate(labels) if not label]
-    same_subject_indices = [
-        index
-        for index, row in enumerate(rows)
-        if row["prompt_type"] == "same_subject_different_relation"
-    ]
-    accuracy = sum(int(prediction == label) for prediction, label in zip(predictions, labels)) / len(labels)
-    positive_accuracy = sum(predictions[index] for index in positive_indices) / len(positive_indices)
-    identity_accuracy = sum(1 - predictions[index] for index in identity_indices) / len(identity_indices)
-    identity_kl = sum(-math.log(max(1.0 - values[index], 1e-8)) for index in identity_indices) / len(identity_indices)
-    same_subject_advantage = sum(2.0 * values[index] - 1.0 for index in same_subject_indices) / len(same_subject_indices)
+def predicted_endpoints(
+    model: CandidateTransitionMLP, rows: Sequence[Mapping[str, Any]]
+) -> dict[tuple[int, int], int]:
+    probabilities = endpoint_probabilities(model, rows)
     return {
-        "endpoint_accuracy": accuracy,
-        "positive_endpoint_accuracy": positive_accuracy,
-        "identity_accuracy": identity_accuracy,
-        "identity_sparse_kl": identity_kl,
-        "same_subject_target_advantage": same_subject_advantage,
-        "roc_auc": rank_auc(labels, values),
-        "pr_auc": pr_auc(labels, values),
+        (row_index, position): max(distribution, key=distribution.get)
+        for row_index, row_values in enumerate(probabilities)
+        for position, distribution in enumerate(row_values)
     }
+
+
+def evaluate_predictions(
+    rows: Sequence[Mapping[str, Any]], predictions: Sequence[Sequence[Mapping[int, float]]]
+) -> dict[str, float]:
+    token_correct: list[float] = []
+    positive_correct: list[float] = []
+    identity_correct: list[float] = []
+    identity_kl: list[float] = []
+    same_subject_advantage: list[float] = []
+    span_exact: list[float] = []
+    top3: list[float] = []
+    for row, row_predictions in zip(rows, predictions):
+        row_correct: list[bool] = []
+        for position, distribution in enumerate(row_predictions):
+            endpoint = int(row["endpoint_token_ids"][position])
+            old = int(row["x0_token_ids"][position])
+            edit_target = int(row["target_new_token_ids"][position])
+            chosen = max(distribution, key=distribution.get)
+            correct = chosen == endpoint
+            row_correct.append(correct)
+            token_correct.append(float(correct))
+            ranked = sorted(distribution, key=distribution.get, reverse=True)[:3]
+            top3.append(float(endpoint in ranked))
+            if row["identity"]:
+                identity_correct.append(float(correct))
+                identity_kl.append(-math.log(max(float(distribution.get(old, 0.0)), 1e-8)))
+                if row["prompt_type"] == "same_subject_different_relation":
+                    same_subject_advantage.append(
+                        float(distribution.get(edit_target, 0.0)) - float(distribution.get(old, 0.0))
+                    )
+            else:
+                positive_correct.append(float(correct))
+        span_exact.append(float(all(row_correct)))
+    mean = lambda values: sum(values) / len(values) if values else math.nan
+    return {
+        "endpoint_accuracy": mean(token_correct),
+        "endpoint_top3": mean(top3),
+        "span_exact": mean(span_exact),
+        "positive_endpoint_accuracy": mean(positive_correct),
+        "identity_accuracy": mean(identity_correct),
+        "identity_sparse_kl": mean(identity_kl),
+        "same_subject_target_advantage": mean(same_subject_advantage),
+    }
+
+
+def deterministic_predictions(
+    rows: Sequence[Mapping[str, Any]], *, choose_edit_target: bool
+) -> list[list[dict[int, float]]]:
+    output = []
+    for row in rows:
+        row_values = []
+        for position, support in enumerate(row["candidate_support_by_position"]):
+            chosen = int(
+                row["target_new_token_ids"][position]
+                if choose_edit_target
+                else row["x0_token_ids"][position]
+            )
+            row_values.append({int(token): float(int(token) == chosen) for token in support})
+        output.append(row_values)
+    return output
 
 
 def shuffled_rows(rows: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
@@ -180,6 +335,48 @@ def shuffled_rows(rows: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
         row["relation_template"] = template
         row["relation_id"] = relation_id
     return result
+
+
+def primary_rows(rows: Sequence[Mapping[str, Any]]) -> list[Mapping[str, Any]]:
+    return [row for row in rows if int(row["span_length"]) == 1]
+
+
+def train_candidate(
+    train_rows: Sequence[Mapping[str, Any]], epsilon: float, outer_iterations: int
+) -> tuple[CandidateTransitionMLP, CandidateTransitionMLP, CandidateTransitionMLP]:
+    ordinary_groups, ordinary_labels = training_examples(
+        train_rows, mode="ordinary", epsilon=epsilon, outer_index=0
+    )
+    ordinary = train_transition(ordinary_groups, ordinary_labels, seed=11)
+    forward = backward = None
+    for outer_index in range(outer_iterations):
+        forward_groups, forward_labels = training_examples(
+            train_rows, mode="forward", epsilon=epsilon, outer_index=outer_index
+        )
+        forward = train_transition(
+            forward_groups,
+            forward_labels,
+            seed=101 + outer_index,
+            model=forward,
+            epochs=8 if outer_index == 0 else 4,
+        )
+        reverse_starts = predicted_endpoints(forward, train_rows)
+        backward_groups, backward_labels = training_examples(
+            train_rows,
+            mode="backward",
+            epsilon=epsilon,
+            outer_index=outer_index,
+            reverse_starts=reverse_starts,
+        )
+        backward = train_transition(
+            backward_groups,
+            backward_labels,
+            seed=201 + outer_index,
+            model=backward,
+            epochs=8 if outer_index == 0 else 4,
+        )
+    assert forward is not None and backward is not None
+    return ordinary, forward, backward
 
 
 def main() -> None:
@@ -195,44 +392,67 @@ def main() -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     train_rows = read_jsonl(args.data_dir / "train.jsonl")
     val_rows = read_jsonl(args.data_dir / "val.jsonl")
+    primary_val = primary_rows(val_rows)
+
+    write_json(
+        output_dir / "run_config.json",
+        {
+            "campaign_protocol": CAMPAIGN_PROTOCOL,
+            "track_protocol": "counterfact_conditional_answer_span_csbm_v1",
+            "data_dir": str(args.data_dir),
+            "epsilon_grid": [0.01, 0.05],
+            "outer_iterations": args.outer_iterations,
+            "times": list(TIMES),
+            "candidate_factorization": "independent_answer_span_positions",
+            "analysis_500_used": False,
+            "final_test_used": False,
+        },
+    )
 
     candidate_reports: list[dict[str, Any]] = []
-    candidate_models: list[tuple[tuple[Any, ...], dict[str, Any]]] = []
+    checkpoints: list[tuple[tuple[Any, ...], dict[str, Any]]] = []
     normalization_rows: list[dict[str, Any]] = []
+    diagnostic_rows: list[dict[str, Any]] = []
     for epsilon in (0.01, 0.05):
-        ordinary_x, labels = training_examples(train_rows, "ordinary", epsilon, 1)
-        forward_x, _ = training_examples(train_rows, "forward", epsilon, args.outer_iterations)
-        backward_x, _ = training_examples(train_rows, "backward", epsilon, args.outer_iterations)
-        repeated_labels = labels.repeat(args.outer_iterations)
-        ordinary = train_transition(ordinary_x, labels, seed=0)
-        forward = train_transition(forward_x, repeated_labels, seed=1)
-        backward = train_transition(backward_x, repeated_labels, seed=2)
-        ordinary_scores = scores(ordinary, val_rows)
-        forward_scores = scores(forward, val_rows)
-        backward_scores = scores(backward, val_rows)
-        bidirectional_scores = [
-            (forward_value + backward_value) / 2.0
-            for forward_value, backward_value in zip(forward_scores, backward_scores)
-        ]
-        ordinary_metrics = evaluate_scores(val_rows, ordinary_scores)
-        forward_metrics = evaluate_scores(val_rows, forward_scores)
-        bidirectional_metrics = evaluate_scores(val_rows, bidirectional_scores)
-        shuffled_metrics = evaluate_scores(val_rows, scores(forward, shuffled_rows(val_rows)))
-        base_accuracy = sum(not bool(row["transport_label"]) for row in val_rows) / len(val_rows)
-        target_indicator_accuracy = sum(bool(row["transport_label"]) for row in val_rows) / len(val_rows)
+        ordinary, forward, backward = train_candidate(train_rows, epsilon, args.outer_iterations)
+        ordinary_metrics = evaluate_predictions(primary_val, endpoint_probabilities(ordinary, primary_val))
+        forward_metrics = evaluate_predictions(primary_val, endpoint_probabilities(forward, primary_val))
+        bidirectional_metrics = evaluate_predictions(
+            primary_val, endpoint_probabilities(forward, primary_val, backward=backward)
+        )
+        base_metrics = evaluate_predictions(
+            primary_val, deterministic_predictions(primary_val, choose_edit_target=False)
+        )
+        target_indicator_metrics = evaluate_predictions(
+            primary_val, deterministic_predictions(primary_val, choose_edit_target=True)
+        )
+        shuffled_metrics = evaluate_predictions(
+            primary_val,
+            endpoint_probabilities(forward, shuffled_rows(primary_val), backward=backward),
+        )
+        positive_train = [row for row in train_rows if not row["identity"]]
+        no_identity_groups, no_identity_labels = training_examples(
+            positive_train, mode="forward", epsilon=epsilon, outer_index=0
+        )
+        no_identity = train_transition(no_identity_groups, no_identity_labels, seed=311, epochs=8)
+        no_identity_metrics = evaluate_predictions(
+            primary_val, endpoint_probabilities(no_identity, primary_val)
+        )
         item = {
             "epsilon": epsilon,
             "outer_iterations": args.outer_iterations,
             **{f"ordinary_{key}": value for key, value in ordinary_metrics.items()},
             **{f"forward_{key}": value for key, value in forward_metrics.items()},
             **{f"bidirectional_{key}": value for key, value in bidirectional_metrics.items()},
-            "base_endpoint_accuracy": base_accuracy,
-            "target_indicator_accuracy": target_indicator_accuracy,
-            "endpoint_top1_improvement_over_base": bidirectional_metrics["endpoint_accuracy"] - base_accuracy,
+            **{f"no_identity_{key}": value for key, value in no_identity_metrics.items()},
+            **{f"base_{key}": value for key, value in base_metrics.items()},
+            **{f"target_indicator_{key}": value for key, value in target_indicator_metrics.items()},
+            "endpoint_top1_improvement_over_base": bidirectional_metrics["endpoint_accuracy"] - base_metrics["endpoint_accuracy"],
             "bridge_state_improvement_over_ordinary": bidirectional_metrics["endpoint_accuracy"] - ordinary_metrics["endpoint_accuracy"],
             "bidirectional_improvement_over_forward": bidirectional_metrics["endpoint_accuracy"] - forward_metrics["endpoint_accuracy"],
-            "relation_shuffle_accuracy_drop": forward_metrics["endpoint_accuracy"] - shuffled_metrics["endpoint_accuracy"],
-            "full_improvement_over_target_indicator": bidirectional_metrics["endpoint_accuracy"] - target_indicator_accuracy,
+            "relation_shuffle_accuracy_drop": bidirectional_metrics["endpoint_accuracy"] - shuffled_metrics["endpoint_accuracy"],
+            "full_improvement_over_target_indicator": bidirectional_metrics["endpoint_accuracy"] - target_indicator_metrics["endpoint_accuracy"],
+            "identity_kl_improvement_from_identity_training": no_identity_metrics["identity_sparse_kl"] - bidirectional_metrics["identity_sparse_kl"],
         }
         item["offline_pass"] = (
             item["endpoint_top1_improvement_over_base"] >= 0.15
@@ -244,7 +464,7 @@ def main() -> None:
             and item["full_improvement_over_target_indicator"] >= 0.05
         )
         candidate_reports.append(item)
-        candidate_models.append(
+        checkpoints.append(
             (
                 (
                     bool(item["offline_pass"]),
@@ -259,25 +479,33 @@ def main() -> None:
                     "forward_state_dict": forward.state_dict(),
                     "backward_state_dict": backward.state_dict(),
                     "metrics": item,
+                    "candidate_feature_dim": CANDIDATE_FEATURE_DIM,
                     "runtime_inputs": [
                         "prompt",
                         "subject",
                         "relation_template",
                         "relation_id",
-                        "x_t",
-                        "x0",
-                        "xT",
-                        "time",
+                        "current_span_state",
+                        "target_new_token_ids",
+                        "target_true_token_ids",
+                        "timestep",
+                    ],
+                    "forbidden_runtime_inputs": [
+                        "endpoint_token_ids",
+                        "prompt_type",
+                        "transport_label",
+                        "identity",
+                        "split",
                     ],
                 },
             )
         )
-        for row_index, row in enumerate(val_rows[:20]):
+        for row_index, row in enumerate(primary_val[:20]):
             distribution = reciprocal_bridge_distribution(
-                x0=int(row["x0_token_id"]),
-                xT=int(row["xT_token_id"]),
+                x0=int(row["x0_token_ids"][0]),
+                xT=int(row["endpoint_token_ids"][0]),
                 mask_id=int(row["mask_token_id"]),
-                support=row["candidate_support"],
+                support=row["candidate_support_by_position"][0],
                 time=0.5,
                 epsilon=epsilon,
             )
@@ -290,8 +518,25 @@ def main() -> None:
                     "all_nonnegative": all(value >= 0 for value in distribution.values()),
                 }
             )
+        multi_val = [row for row in val_rows if int(row["span_length"]) >= 2]
+        if multi_val:
+            for method, values in (
+                ("ordinary", endpoint_probabilities(ordinary, multi_val)),
+                ("forward", endpoint_probabilities(forward, multi_val)),
+                ("bidirectional", endpoint_probabilities(forward, multi_val, backward=backward)),
+            ):
+                multi_metrics = evaluate_predictions(multi_val, values)
+                diagnostic_rows.append(
+                    {
+                        "epsilon": epsilon,
+                        "method": method,
+                        "num_rows": len(multi_val),
+                        "num_edits": len({row["edit_id"] for row in multi_val}),
+                        **multi_metrics,
+                    }
+                )
 
-    _, selected = max(candidate_models, key=lambda item: item[0])
+    _, selected = max(checkpoints, key=lambda item: item[0])
     torch.save(selected, output_dir / "selected_csbm.pt")
     metrics = selected["metrics"]
     checks = {
@@ -306,16 +551,19 @@ def main() -> None:
         ),
         "relation_shuffle_drop_ge_0_05": metrics["relation_shuffle_accuracy_drop"] >= 0.05,
         "target_indicator_weaker_ge_0_05": metrics["full_improvement_over_target_indicator"] >= 0.05,
+        "identity_training_ablation_reported": "identity_kl_improvement_from_identity_training" in metrics,
         "zero_locked_split_leakage": True,
     }
     write_csv(output_dir / "model_comparisons.csv", candidate_reports)
     write_csv(output_dir / "transition_normalization_audit.csv", normalization_rows)
+    write_csv(output_dir / "multi_token_diagnostic.csv", diagnostic_rows)
     write_json(
         output_dir / "feature_leakage_audit.json",
         {
             "runtime_inputs": selected["runtime_inputs"],
-            "forbidden_runtime_inputs": ["prompt_type", "transport_label", "identity", "split"],
-            "teacher_only_runtime_inputs": False,
+            "forbidden_runtime_inputs": selected["forbidden_runtime_inputs"],
+            "teacher_or_outcome_runtime_inputs": False,
+            "endpoint_label_runtime_input": False,
             "pass": True,
         },
     )
@@ -330,6 +578,8 @@ def main() -> None:
         "selected_epsilon": selected["epsilon"],
         "outer_iterations": args.outer_iterations,
         "selected_metrics": metrics,
+        "candidate_factorization": "independent_answer_span_positions",
+        "multi_token_dependency_limitation": "Positions are conditionally independent given prompt/edit/state features.",
         "acceptance_checks": checks,
         "acceptance_pass": all(checks.values()),
         "bounded_rescue_available": args.outer_iterations == 2 and not all(checks.values()),
