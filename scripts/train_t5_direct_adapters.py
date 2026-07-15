@@ -367,6 +367,26 @@ def main() -> None:
     guard = budget_guard("T5")
     train_path = repo_path(args.input_dir / "sb_alt_train_2000.jsonl")
     val_path = repo_path(args.input_dir / "sb_alt_val_300.jsonl")
+    config = {
+        "campaign_protocol": CAMPAIGN_PROTOCOL,
+        "track_protocol": "counterfact_parameter_space_sb_v1",
+        "stage": "T5.1 direct endpoint adapter viability",
+        "input_dir": str(args.input_dir),
+        "model_id": args.model_id,
+        "dtype": args.dtype,
+        "use_4bit": bool(args.use_4bit),
+        "device_map": args.device_map,
+        "rank": args.rank,
+        "train_edits": args.train_edits,
+        "val_edits": args.val_edits,
+        "optimization_steps": args.optimization_steps,
+        "top_k_training_support": args.top_k,
+        "adapter_location": "post-final-layernorm answer-position residual before tied output head",
+        "source_manifest_sha256": {"train": sha256_file(train_path), "val": sha256_file(val_path)},
+        "analysis_500_used": False,
+        "final_test_used": False,
+    }
+    write_json(output_dir / "run_config.json", config)
     train_pool = read_jsonl(train_path)
     val_pool = read_jsonl(val_path)
     model, tokenizer = load_llada_model_and_tokenizer(
@@ -524,26 +544,6 @@ def main() -> None:
         "model_class": type(model).__name__,
         "tokenizer_class": type(tokenizer).__name__,
     }
-    config = {
-        "campaign_protocol": CAMPAIGN_PROTOCOL,
-        "track_protocol": "counterfact_parameter_space_sb_v1",
-        "stage": "T5.1 direct endpoint adapter viability",
-        "input_dir": str(args.input_dir),
-        "model_id": args.model_id,
-        "dtype": args.dtype,
-        "use_4bit": bool(args.use_4bit),
-        "device_map": args.device_map,
-        "rank": args.rank,
-        "train_edits": args.train_edits,
-        "val_edits": args.val_edits,
-        "optimization_steps": args.optimization_steps,
-        "top_k_training_support": args.top_k,
-        "adapter_location": "post-final-layernorm answer-position residual before tied output head",
-        "source_manifest_sha256": {"train": sha256_file(train_path), "val": sha256_file(val_path)},
-        "analysis_500_used": False,
-        "final_test_used": False,
-    }
-    write_json(output_dir / "run_config.json", config)
     write_csv(output_dir / "direct_adapter_metrics.csv", [{**metrics, "adapter_bytes_per_edit": adapter_bytes, "gpu_minutes_per_edit": gpu_minutes_per_edit}])
     write_json(
         output_dir / "prompt_provenance_audit.json",
