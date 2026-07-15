@@ -28,6 +28,20 @@ runs/counterfact_direction1_v1/protocol/*
 !runs/counterfact_direction1_v1/protocol/*.json
 !runs/counterfact_direction1_v1/protocol/*.jsonl
 
+# Preserve only the small, terminal Direction 3 campaign summaries.
+!runs/counterfact_direction3_controller_v1/
+runs/counterfact_direction3_controller_v1/*
+!runs/counterfact_direction3_controller_v1/autonomous_campaign_v1/
+runs/counterfact_direction3_controller_v1/autonomous_campaign_v1/*
+!runs/counterfact_direction3_controller_v1/autonomous_campaign_v1/*.json
+!runs/counterfact_direction3_controller_v1/autonomous_campaign_v1/*.csv
+!runs/counterfact_direction3_controller_v1/autonomous_campaign_v1/*.md
+!runs/counterfact_direction3_controller_v1/direction3_autonomous_stop_checkpoint_v1/
+runs/counterfact_direction3_controller_v1/direction3_autonomous_stop_checkpoint_v1/*
+!runs/counterfact_direction3_controller_v1/direction3_autonomous_stop_checkpoint_v1/*.json
+!runs/counterfact_direction3_controller_v1/direction3_autonomous_stop_checkpoint_v1/*.csv
+!runs/counterfact_direction3_controller_v1/direction3_autonomous_stop_checkpoint_v1/*.md
+
 # Large model/checkpoint artifacts
 *.safetensors
 *.pt

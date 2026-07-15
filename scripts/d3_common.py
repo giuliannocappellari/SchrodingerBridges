@@ -95,7 +95,7 @@ def write_csv(path: str | Path, rows: Sequence[Mapping[str, Any]], fieldnames: O
                     keys.append(key)
         fieldnames = keys
     with full.open("w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=list(fieldnames))
+        writer = csv.DictWriter(f, fieldnames=list(fieldnames), lineterminator="\n")
         writer.writeheader()
         for row in rows:
             writer.writerow({key: row.get(key, "") for key in fieldnames})
@@ -282,4 +282,3 @@ def spearman(xs: Sequence[float], ys: Sequence[float]) -> float:
 
 def summarize_counter(rows: Iterable[Any]) -> Dict[str, int]:
     return dict(sorted(Counter(rows).items()))
-

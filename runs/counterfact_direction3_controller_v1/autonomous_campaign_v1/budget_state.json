@@ -1,0 +1,30 @@
+{
+  "autonomous_mode": true,
+  "budget_guard_pass": true,
+  "budget_usd": 15.0,
+  "campaign_start_utc": "2026-07-14T00:42:03.643898+00:00",
+  "estimated_spend_usd": 0.435788,
+  "hourly_rate_usd": 0.45,
+  "last_budget_check_utc": "2026-07-15T00:30:52.662038+00:00",
+  "last_updated_utc": "2026-07-15T00:30:52.662038+00:00",
+  "protocol_version": "counterfact_direction3_controller_v1",
+  "remaining_budget_usd": 14.564212,
+  "reserve_usd": 5.0,
+  "runpod_allowed_next": false,
+  "runpod_pod_id": "dbsjvi6dzv1ew3",
+  "spend_basis": "bounded_campaign_wall_clock_plus_terminal_resume_pod_wall_clock",
+  "pod_status": "EXITED",
+  "terminal_state": "formal_negative_completion",
+  "stage_costs": [
+    {
+      "stage": "stage_1b4a_through_formal_negative_completion",
+      "running_seconds": 3062.651,
+      "estimated_cost_usd": 0.382831
+    },
+    {
+      "stage": "terminal_resume_integrity_audit",
+      "running_seconds": 423.656,
+      "estimated_cost_usd": 0.052957
+    }
+  ]
+}

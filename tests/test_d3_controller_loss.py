@@ -3,6 +3,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import csv
 from pathlib import Path
 
 from scripts.build_d3_controller_splits import build_splits, write_protocol_docs
@@ -105,6 +106,26 @@ class Direction3ControllerLossTests(unittest.TestCase):
             self.assertFalse(train_summary["llada_loaded"])
             self.assertFalse(replay_summary["llada_loaded"])
             self.assertIn("loss_decreased", train_summary)
+            for artifact_name in [
+                "offline_replay_metrics.csv",
+                "gate_threshold_sweep.csv",
+                "controller_candidate_agreement.csv",
+                "negative_guidance_diagnostics.csv",
+                "target_token_ranking.csv",
+            ]:
+                self.assertTrue((replay / artifact_name).exists(), artifact_name)
+            with (replay / "offline_replay_metrics.csv").open(newline="") as f:
+                rows = list(csv.DictReader(f))
+            self.assertTrue(rows)
+            metric_row = rows[0]
+            for key in [
+                "bridge_score_spearman",
+                "target_token_top3_improvement_over_base",
+                "same_subject_gate_auc",
+                "locality_negative_average_guidance",
+            ]:
+                self.assertIn(key, metric_row)
+                self.assertTrue(math.isfinite(float(metric_row[key])))
 
 
 if __name__ == "__main__":

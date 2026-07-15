@@ -1,0 +1,55 @@
+{
+  "analysis_500_used": false,
+  "autonomous_mode": true,
+  "campaign_start_utc": "2026-07-14T00:42:03.643898+00:00",
+  "campaign_status": "formal_negative_completion",
+  "completed_historical_stages": [
+    "direction1_stop_checkpoint",
+    "direction3_scaffold",
+    "controller_train_100_val_50_splits",
+    "teacher_cache_train100_val50_v1",
+    "teacher_cache_audit",
+    "deployable_scalar_v2",
+    "metric_audit_v2",
+    "deployable_feature_cache_train100_val50_v1"
+  ],
+  "current_stage": "complete_negative",
+  "final_test_used": false,
+  "git_commit": "8f4c2b569ea7224b50bb84c42d38e580a5419dcf",
+  "last_completed_stage": "direction3_autonomous_stop_checkpoint_v1",
+  "last_event": "terminal_package_validated_and_pod_stopped",
+  "last_stage_status": "terminal",
+  "last_updated_utc": "2026-07-15T00:30:52.662038+00:00",
+  "protocol_version": "counterfact_direction3_controller_v1",
+  "remote_repo_dir": "/workspace/SB",
+  "runpod_pod_id": "dbsjvi6dzv1ew3",
+  "runpod_ssh_host": "69.30.85.19",
+  "runpod_ssh_port": "22142",
+  "stage": "stage_1b4_v3_training",
+  "stage_1b4_rescue_attempts_used": 1,
+  "stage_1b4_scientific_rescue_used": true,
+  "stage_2a_allowed": false,
+  "status": "complete_negative",
+  "stop_checkpoint_dir": "runs/counterfact_direction3_controller_v1/direction3_autonomous_stop_checkpoint_v1",
+  "updated_at_utc": "2026-07-15T00:30:52.662038+00:00",
+  "current_stage_status": "completed",
+  "next_stage": null,
+  "scientific_claim_status": "negative_result",
+  "runpod_status": "EXITED",
+  "terminal_package_validation_pass": true,
+  "terminal_package_validation_path": "runs/counterfact_direction3_controller_v1/direction3_autonomous_stop_checkpoint_v1/terminal_package_validation.json",
+  "raw_source_metric_rederivation_available": false,
+  "failed_stages": [
+    "stage_1b4_representation_aware_value_controller"
+  ],
+  "rescues_used": {
+    "stage_1b4_value": 1
+  },
+  "completed_stages": [
+    "stage_1b4a_feature_cache_readiness_audit",
+    "stage_1b4_value_attempt1",
+    "stage_1b4_value_rescue1",
+    "direction3_autonomous_stop_checkpoint_v1",
+    "terminal_package_validation"
+  ]
+}

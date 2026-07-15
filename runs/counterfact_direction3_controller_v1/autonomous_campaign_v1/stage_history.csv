@@ -1,0 +1,8 @@
+timestamp_utc,stage,event,status,notes
+2026-07-14T00:42:03.643898+00:00,phase_a_bootstrap,campaign_state_initialized,pass,autonomous budget 50 reserve 5 hourly 0.44
+2026-07-14T00:43:02.558819+00:00,stage_1b4a_feature_cache_audit,feature_index_missing,repair_attempt_1,real feature cache was missing feature_index.jsonl; reconstructing from teacher rows without LLaDA rerun
+2026-07-14T00:43:52.985314+00:00,stage_1b4a_feature_cache_audit,audit_complete,pass,feature cache audit passed after allowed feature_index repair
+2026-07-14T01:01:43.482785+00:00,stage_1b4_v3_training_attempt1,scientific_acceptance_failed,Hard criteria failed; Stage 2A blocked. Consuming one allowed bounded value rescue.,
+2026-07-14T01:33:06.294401+00:00,stage_1b4_value_rescue1,scientific_acceptance_failed,Bounded rescue failed hard criteria; Stage 2A blocked.,
+2026-07-14T01:33:06.294401+00:00,direction3_autonomous_stop_checkpoint_v1,formal_negative_completion,Negative-result package written; pod may be stopped after validation.,
+2026-07-15T00:28:04.278670+00:00,direction3_autonomous_stop_checkpoint_v1,terminal_package_validated_and_pod_stopped,pass,Durable negative stop package validated; raw v3 source directories unavailable; idle replacement pod stopped.

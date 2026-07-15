@@ -1,0 +1,42 @@
+{
+  "actual_decode_run": false,
+  "analysis_500_used": false,
+  "artifacts": {
+    "attempt1_replay": "runs/counterfact_direction3_controller_v1/offline_replay_repr_train100_val50_v3/",
+    "attempt1_train": "runs/counterfact_direction3_controller_v1/offline_train_repr_value_gate_train100_val50_v3/",
+    "evidence_table": "runs/counterfact_direction3_controller_v1/direction3_autonomous_stop_checkpoint_v1/direction3_evidence_table.csv",
+    "rescue_replay": "runs/counterfact_direction3_controller_v1/offline_replay_repr_train100_val50_v3_rescue1/",
+    "rescue_train": "runs/counterfact_direction3_controller_v1/offline_train_repr_value_gate_train100_val50_v3_rescue1/"
+  },
+  "bounded_scientific_rescue_used": true,
+  "campaign_status": "formal_negative_completion",
+  "created_at_utc": "2026-07-14T01:33:06.294401+00:00",
+  "do_not_run_analysis_500": true,
+  "do_not_run_final_test": true,
+  "do_not_run_stage_2a": true,
+  "final_test_used": false,
+  "git_commit": "8f4c2b569ea7224b50bb84c42d38e580a5419dcf",
+  "hard_criteria_failed_after_rescue": [
+    "value_top3_pass",
+    "representation_beats_target_indicator_pass",
+    "state_shuffle_hurts_pass"
+  ],
+  "key_findings": {
+    "feature_cache_audit_pass": true,
+    "gate_roc_auc_rescue": 0.987735542560104,
+    "leakage_audit_pass": true,
+    "negative_guidance_ratio_rescue": 0.0007107693801406995,
+    "target_indicator_macro_spearman_rescue": 0.9588996422723133,
+    "value_macro_spearman_rescue": 0.5223914942230633,
+    "value_teacher_top3_overlap_rescue": 0.5263157894736842
+  },
+  "negative_completion": true,
+  "positive_completion": false,
+  "protocol_version": "counterfact_direction3_controller_v1",
+  "rescue_attempts_used": {
+    "stage_1b4_value": 1
+  },
+  "stage": "Direction 3 autonomous negative stop checkpoint",
+  "stage_2a_run": false,
+  "stop_reason": "stage_1b4_1b5_offline_hard_criteria_failed_after_allowed_rescue"
+}

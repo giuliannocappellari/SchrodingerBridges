@@ -1,0 +1,65 @@
+{
+  "protocol_version": "counterfact_direction3_controller_v1",
+  "stage": "Direction 3 terminal stop-package validation",
+  "validated_at_utc": "2026-07-15T00:30:52.660765+00:00",
+  "validation_scope": "durable_stop_summary_consistency",
+  "package_validation_pass": true,
+  "terminal_state_valid": true,
+  "analysis_500_used": false,
+  "final_test_used": false,
+  "actual_decode_performed": false,
+  "bounded_scientific_rescue_used": true,
+  "stage_2a_allowed": false,
+  "checks": {
+    "protocol_version_pass": true,
+    "formal_negative_completion_pass": true,
+    "negative_completion_pass": true,
+    "positive_completion_false_pass": true,
+    "bounded_rescue_consumed_pass": true,
+    "stage_2a_blocked_pass": true,
+    "no_actual_decode_pass": true,
+    "analysis_lock_preserved_pass": true,
+    "final_lock_preserved_pass": true,
+    "required_hard_failures_recorded_pass": true,
+    "checkpoint_markdown_pass": true,
+    "negative_report_markdown_pass": true,
+    "feature_audit_evidence_pass": true,
+    "rescue_scientific_failure_evidence_pass": true,
+    "rescue_top3_failure_evidence_pass": true,
+    "target_indicator_shortcut_evidence_pass": true,
+    "state_shuffle_failure_evidence_pass": true,
+    "feature_leakage_evidence_pass": true
+  },
+  "raw_source_metric_rederivation_available": false,
+  "referenced_source_artifacts": [
+    {
+      "path": "runs/counterfact_direction3_controller_v1/direction3_autonomous_stop_checkpoint_v1/direction3_evidence_table.csv",
+      "exists": true
+    },
+    {
+      "path": "runs/counterfact_direction3_controller_v1/offline_replay_repr_train100_val50_v3",
+      "exists": false
+    },
+    {
+      "path": "runs/counterfact_direction3_controller_v1/offline_replay_repr_train100_val50_v3_rescue1",
+      "exists": false
+    },
+    {
+      "path": "runs/counterfact_direction3_controller_v1/offline_train_repr_value_gate_train100_val50_v3",
+      "exists": false
+    },
+    {
+      "path": "runs/counterfact_direction3_controller_v1/offline_train_repr_value_gate_train100_val50_v3_rescue1",
+      "exists": false
+    }
+  ],
+  "missing_source_artifacts": [
+    "runs/counterfact_direction3_controller_v1/offline_replay_repr_train100_val50_v3",
+    "runs/counterfact_direction3_controller_v1/offline_replay_repr_train100_val50_v3_rescue1",
+    "runs/counterfact_direction3_controller_v1/offline_train_repr_value_gate_train100_val50_v3",
+    "runs/counterfact_direction3_controller_v1/offline_train_repr_value_gate_train100_val50_v3_rescue1"
+  ],
+  "warnings": [
+    "The old pod's raw v3 train/replay directories are not present in this workspace. The terminal decision is validated from the preserved stop summaries and cannot be rederived from raw rows here."
+  ]
+}

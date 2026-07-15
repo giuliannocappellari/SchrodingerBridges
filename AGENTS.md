@@ -1,527 +1,471 @@
 # AGENTS.md
 
-Rules for using a local MacBook environment, RunPod SSH, and Codex for the `counterfact_direction1_v1` LLaDA / CounterFact runtime-editing project.
+Operational and scientific rules for Codex in the LLaDA / CounterFact model-editing repository.
 
-These rules are intentionally operational. They tell Codex what may run locally, what requires RunPod, when the Pod may be started, how GPU jobs must be launched, how Python environments should be handled, and which experimental splits are locked.
+The latest research program is **Direction 3: learned edit-conditioned bridge controller** under `counterfact_direction3_controller_v1`. Its autonomous v1 campaign is now closed with a bounded negative result.
+
+Historical status:
+
+```text
+Direction 1 = closed; blocked under tested rule-based runtime gates
+Direction 2 v1 = closed; protocol-infeasible before adapter science
+Direction 2 v2 = not created and must not be created automatically
+Direction 3 v1 = closed; offline hard criteria failed after the one allowed bounded rescue
+```
+
+Direction 1 and Direction 2 v1 artifacts are immutable historical evidence. They may be read for provenance, baselines, code reuse, or reporting, but must not be overwritten, deleted, resumed, or used to change locked split policy.
 
 ---
 
-## 0. Project identity
-
-This repository is for the LLaDA / CounterFact runtime-editing project.
+## 0. Active project identity
 
 ```text
-protocol_version = counterfact_direction1_v1
-main_model = GSAI-ML/LLaDA-8B-Base
-current_research_direction = runtime bridge editing / runtime guided editing
-default_tuning_split = dev_tune_200
-```
-
-The project studies runtime factual editing for masked diffusion LMs. The default setup is:
-
-```text
-Gen_{theta0, B_e}(x; S)
-```
-
-where:
-
-```text
-theta0 = frozen LLaDA
-e = edit request supplied at edit time
-B_e = edit-conditioned bridge/controller used during decoding
-S = fixed diffusion sampling configuration
-```
-
-This is not permanent parameter editing unless a later experiment explicitly says so.
-
-Every run config must record:
-
-```text
-protocol_version = counterfact_direction1_v1
+active_protocol_version = counterfact_direction3_controller_v1
+active_direction = none; Direction 3 v1 completed negative
+active_campaign_file = ACTIVE_RESEARCH_CAMPAIGN.json
+authoritative_plan = DIRECTION3_AUTONOMOUS_RESEARCH_PLAN.md
+historical_protocols = counterfact_direction1_v1,counterfact_direction2_bridge_adapter_v1
+base_model = GSAI-ML/LLaDA-8B-Base
+theta0 = frozen
+trained_parameters = controller_and_gate_only
+base_model_weight_update = none
 edit_access = given_at_edit_time
-training_access = none
-hyperparameter_access = dev_tune_only
+training_access = controller_train_only
+current_stage = complete_negative
 ```
 
-Locked split rules:
+Direction 3 trains a small deployable controller and edit-intent gate over frozen LLaDA representations. The intended runtime form is:
 
 ```text
-dev_tune_200 = only split used for tuning thresholds, gates, span policy, hyperparameters, and method selection
-analysis_500 = proceed/stop only; no tuning after inspection
-final_test_500 = primary locked final result
-final_test_full = optional secondary replication only if pre-committed or reported as secondary
+edited_logits(v)
+  = base_logits(v)
+  + guidance_scale
+    * gate(prompt, edit)
+    * controller_advantage(v, state, step, edit)
 ```
+
+Canonical split roles:
+
+```text
+controller_train_* = controller/gate training only
+controller_val_*   = controller/gate validation, early stopping, calibration, threshold selection
+dev_smoke_50       = bounded integration smoke; split once into smoke20 + confirmation30
+dev_tune_200       = only split for final D3 method/hyperparameter selection
+ablation_500       = frozen, pre-planned ablations only; cannot affect selection
+analysis_500       = locked proceed/stop confirmation only
+final_test_500     = primary locked final result
+final_test_full    = optional secondary replication only if pre-committed and budget allows
+```
+
+The scarce target-length-bin-2 examples already assigned to Direction 3 train/validation must be preserved when scaled splits are built. Scaled Direction 3 splits extend the existing D3 train/validation splits; they do not exclude their own seed records.
 
 ---
 
-## 1. What should run locally on the MacBook
+## 1. Authoritative autonomous plan and instruction precedence
 
-Run these locally unless the dataset/files are too large:
-
-- Code editing and refactoring
-- Unit tests with fake tokenizer/model stubs
-- CSV/report aggregation
-- Plot generation
-- Gate-only replay
-- Gate parity audit
-- Actual-gate activation grid
-- Protocol validation
-- Split/manifest checks
-- Paired bootstrap over existing results
-- Reading/writing markdown reports
-- Creating notebooks that call scripts
-- Notebook cleanup
-- Report regeneration from existing artifacts
-
-Local-only or CPU-safe examples:
+Codex must read these files before acting, in this order:
 
 ```text
-Gate parity audits
-Actual-gate activation grids
-Report regeneration
-Plotting
-Unit tests
-Small data inspections
-CSV/JSON/JSONL validation
+1. AGENTS.md
+2. ACTIVE_RESEARCH_CAMPAIGN.json
+3. DIRECTION3_AUTONOMOUS_RESEARCH_PLAN.md
+4. existing autonomous campaign state under runs/
 ```
 
-Do not use the RunPod GPU for cheap CSV/report work unless the Pod is already running for a GPU experiment and the user explicitly approves using it.
+If the files conflict, the earlier item in the list takes precedence. Codex must stop with `campaign_configuration_conflict` rather than guessing.
+
+The authoritative execution plan is:
+
+```text
+DIRECTION3_AUTONOMOUS_RESEARCH_PLAN.md
+```
+
+The active campaign marker is:
+
+```text
+ACTIVE_RESEARCH_CAMPAIGN.json
+```
+
+When autonomous mode is enabled, the user grants one-time approval for Codex to execute every task explicitly listed in the Direction 3 plan without requesting per-stage, per-command, or per-GPU-job approval.
+
+Autonomous mode is enabled only when:
+
+```bash
+export D3_AUTONOMOUS_MODE=1
+export D3_AUTONOMOUS_BUDGET_USD="<total authorized budget>"
+export RUNPOD_HOURLY_RATE_USD="<current hourly rate>"
+```
+
+Recommended additional variables:
+
+```bash
+export D3_AUTONOMOUS_BUDGET_RESERVE_USD="5"
+export D3_AUTONOMOUS_MAX_INFRA_RETRIES="3"
+export D3_AUTONOMOUS_MAX_SCIENTIFIC_RESCUES_PER_STAGE="1"
+```
+
+If `D3_AUTONOMOUS_MODE != 1`, use normal approval rules and do not start paid GPU work without explicit approval.
+
+If autonomous mode is enabled, Codex must not pause for routine approval between planned stages. It must follow the state machine, acceptance criteria, budget guard, bounded rescues, split locks, and stop conditions in the plan.
+
+Codex must not:
+
+```text
+switch to Direction 2 v2 automatically
+resume Direction 2 v1
+lower hard acceptance thresholds
+invent extra rescue attempts
+expand the hyperparameter grids
+use teacher-derived runtime inputs
+use analysis/final data for tuning
+```
+
+### 1.1 Codex interaction mode
+
+For the autonomous campaign, use **Goal mode** (`/goal`), not Plan mode. The research plan, constraints, state machine, and completion criteria already exist in repository files.
+
+Use `/plan` only when the user explicitly wants to redesign or amend the research protocol before execution. A plan-mode session must not start RunPod or execute science unless it is later converted into a separately approved goal.
+
+Goal mode must treat the repository plan and active-campaign file as the completion contract.
 
 ---
 
-## 1.1 Local Python environment: use `uv`
+## 2. Autonomous campaign completion definition
 
-On the MacBook/local environment, Codex must use `uv` as the Python project manager.
+The Direction 3 campaign is complete when either:
 
-Local setup commands:
+### Positive completion
+
+```text
+- a locked D3 configuration passes analysis_500,
+- final_test_500 is executed once,
+- final tables/plots/reproducibility artifacts are generated,
+- the strongest defensible claim is classified and documented.
+```
+
+### Negative completion
+
+```text
+- a bounded scientific stop criterion in the plan is reached,
+- no further planned rescue remains,
+- no unjustified analysis/final run is performed,
+- a formal Direction 3 stop checkpoint and negative-result report are generated.
+```
+
+### Budget completion
+
+```text
+- remaining authorized budget cannot cover the next required stage plus reserve,
+- a budget-exhaustion checkpoint records completed evidence and unrun stages,
+- the Pod is stopped.
+```
+
+All three are valid research completions.
+
+---
+
+## 3. Local MacBook Python environment
+
+Outside an active RunPod campaign, the MacBook/local environment must use `uv`.
 
 ```bash
 uv sync
-```
-
-Local test commands:
-
-```bash
 uv run pytest tests -q
-```
-
-Local script commands:
-
-```bash
 uv run python scripts/<script_name>.py
 ```
 
-Local notebook-related commands, if needed:
+Rules:
 
-```bash
-uv run jupyter lab
-uv run python -m ipykernel install --user --name sb-uv --display-name "SB uv"
-```
-
-Local rules:
-
-- Prefer `uv run ...` for all Python commands on the MacBook.
-- Prefer `uv sync` to install or update local dependencies.
-- Do not manually activate `.venv` locally unless the user explicitly asks.
-- Do not use `pip install` directly in the local project environment; update project dependency files and run `uv sync` instead.
-- If `uv.lock` or `pyproject.toml` is changed, Codex must show the diff and explain why.
-- Local CPU/report tasks should be run with `uv run`, not with the RunPod Python environment.
+- Prefer `uv run ...` for every local Python command.
+- Use `uv sync` for dependency installation.
+- Do not use `pip install` directly in the local project environment.
+- Do not manually activate `.venv` unless explicitly required.
+- If `pyproject.toml` or `uv.lock` changes, inspect and report the diff.
 
 ---
 
-## 2. What should run on RunPod
+## 4. RunPod Python environment
 
-Use RunPod only for GPU-required work:
-
-- Loading `GSAI-ML/LLaDA-8B-Base`
-- Any actual LLaDA model decoding
-- `mc_bridge` decoding
-- `no_rollout_bridge` or `myopic_score` decoding over many edits
-- GPU smoke tests
-- Any actual hybrid-gate decode
-- `analysis_500` after the dev method is locked
-- Final-test evaluation after analysis confirmation
-- Direction 2 per-edit adapter training that requires CUDA
-- Direction 3 learned controller training that requires CUDA
-
-GPU-required examples:
-
-```text
-actual decode with stricter hybrid gate
-future analysis_500 confirmation
-future final_test_500 locked run
-Direction 2 per-edit adapter pilot
-Direction 3 learned controller training
-```
-
----
-
-## 2.1 RunPod Python environment: use the Python available there
-
-On RunPod/SSH, Codex should use the Python environment already available in the GPU image/template unless the user explicitly asks for a custom environment.
-
-Default RunPod Python commands:
+On RunPod, use the Python environment available in the selected PyTorch/CUDA image unless a custom environment already exists in the repo.
 
 ```bash
 python --version
 python -m pip --version
 python -m pytest tests -q
-python scripts/<gpu_script>.py
+python scripts/<script_name>.py
 ```
-
-RunPod setup/check commands:
-
-```bash
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
-python - <<'PY'
-import torch
-print('cuda_available:', torch.cuda.is_available())
-print('gpu:', torch.cuda.get_device_name(0) if torch.cuda.is_available() else None)
-PY
-```
-
-RunPod rules:
-
-- Do not require `uv` on RunPod.
-- Do not use `uv run` on RunPod unless the user explicitly installs and approves `uv` there.
-- Do not assume `.venv` exists on RunPod.
-- Do not run `source .venv/bin/activate` on RunPod unless a `.venv` has been intentionally created and the user approved using it.
-- Prefer the PyTorch/CUDA template Python and `python -m pip` for remote dependency setup.
-- Every GPU run must record the Python executable, Python version, CUDA availability, GPU name, torch version, transformers version, and bitsandbytes version when available.
-
----
-
-## 2.2 Task routing table
-
-| Task type | Default machine | May start RunPod? |
-|---|---|---|
-| Code editing | MacBook | No |
-| Unit tests with fake model/tokenizer | MacBook | No |
-| CSV aggregation | MacBook | No |
-| Plot generation | MacBook | No |
-| Gate-only replay | MacBook | No |
-| Gate parity audit | MacBook | No |
-| Actual-gate activation grid | MacBook | No |
-| Protocol manifest validation | MacBook | No |
-| Paired bootstrap over existing files | MacBook | No |
-| Report markdown writing | MacBook | No |
-| GPU smoke test | RunPod | Yes |
-| Actual LLaDA decoding | RunPod | Yes |
-| MC bridge decoding | RunPod | Yes |
-| Actual hybrid-gate decode | RunPod | Yes |
-| `analysis_500` locked evaluation | RunPod | Yes, only if `DEV_METHOD_LOCKED=1` |
-| Final-test locked evaluation | RunPod | Yes, only if `FINAL_METHOD_LOCKED=1` |
-| Direction 2 adapter training | RunPod | Yes |
-| Direction 3 controller training | RunPod | Yes |
-
----
-
-## 3. RunPod cost discipline
-
-Use RunPod as a temporary GPU workstation, not as always-on storage.
 
 Rules:
 
-1. Start the Pod only when a GPU job is ready.
-2. Work inside `tmux` for long runs.
-3. Stop the Pod when no GPU job is running.
-4. Keep important project data in `/workspace` or a network volume.
-5. Back up final artifacts to Git, local machine, Google Drive, S3, or another durable store.
-6. Do not rely on container disk for persistent data.
-7. Do not leave the Pod running overnight unless an active run is executing.
-8. Schedule an automatic stop for long runs only when the user requests it.
-9. Never terminate/delete the Pod unless the user explicitly asks.
-
-RunPod stop/start commands must use environment variables, never hard-coded Pod IDs.
-
-```bash
-runpodctl pod stop "$RUNPOD_POD_ID"
-runpodctl pod start "$RUNPOD_POD_ID"
-```
-
-Suggested safety stop after N hours, only if the user requests it:
-
-```bash
-sleep 6h; runpodctl pod stop "$RUNPOD_POD_ID" &
-```
+- Do not require `uv` on RunPod.
+- Do not assume `.venv` exists.
+- Prefer `python -m pip` if a dependency is missing.
+- Record the Python executable and package versions in every GPU run summary.
+- Never install packages from untrusted sources.
 
 ---
 
-## 3.1 When Codex may start the RunPod Pod
+## 5. Normal task routing
 
-Codex may start the RunPod Pod only for GPU-required work.
+When autonomous mode is disabled:
 
-GPU-required work includes:
-
-- loading `GSAI-ML/LLaDA-8B-Base`
-- actual LLaDA decoding
-- MC bridge decoding
-- no-rollout/myopic decoding over many edits
-- actual hybrid-gate decode
-- `analysis_500` after the dev method is locked
-- final-test evaluation after analysis confirmation
-- adapter/controller training that requires CUDA
-
-Codex must not start the Pod for:
-
-- CSV/report aggregation
-- plots
-- unit tests with fake models
-- gate-only replay
-- gate parity audit
-- actual-gate activation grid
-- markdown/report writing
-- paired bootstrap over existing results
-
-Before starting the Pod, Codex must check:
-
-```bash
-echo "$RUNPOD_POD_ID"
-runpodctl pod list
-```
-
-If `$RUNPOD_POD_ID` is empty, Codex must stop and ask the user for the Pod ID.
-
-Start command:
-
-```bash
-runpodctl pod start "$RUNPOD_POD_ID"
-```
-
-After starting, Codex must verify the Pod is available:
-
-```bash
-runpodctl pod list
-```
-
-If the Pod starts with zero GPUs or no SSH access, Codex must stop and ask the user to inspect the RunPod console. Do not run a GPU experiment on a zero-GPU Pod.
-
-Codex must never create a new Pod unless the user explicitly asks.
-Codex must never terminate/delete a Pod unless the user explicitly asks.
+| Task | Default environment |
+|---|---|
+| Code editing/refactoring | MacBook |
+| Unit tests/fake-model tests | MacBook |
+| CSV/JSON/report aggregation | MacBook |
+| Cached-state training/replay | MacBook unless too slow |
+| Frozen-LLaDA feature extraction | RunPod |
+| Teacher-cache generation | RunPod |
+| Actual LLaDA decoding | RunPod |
+| analysis_500/final_test_500 | RunPod after locks |
 
 ---
 
-## 4. Storage rules
+## 6. Autonomous task routing
 
-Use:
+When `D3_AUTONOMOUS_MODE=1`:
 
-```text
-/workspace/SB
-```
+1. Start the existing configured RunPod Pod at campaign start if it is stopped.
+2. Use `/workspace/SB` as the authoritative worktree for the remainder of the campaign.
+3. Run both CPU and GPU campaign tasks on the Pod so the campaign can progress without waiting for local synchronization.
+4. Use the remote system Python for tests, training, reports, and decoding.
+5. Commit/push code checkpoints after tests pass; do not commit large artifacts.
+6. Keep the Pod running between stages, including CPU-only stages.
+7. Do not stop the Pod merely because a GPU job ended.
 
-as the main repository directory on RunPod.
-
-Recommended layout:
-
-```text
-/workspace/SB/                         # git repo
-/workspace/SB/runs/                    # experiment artifacts
-/workspace/.cache/huggingface/         # model cache if configured
-/workspace/checkpoints/                # optional training checkpoints
-/workspace/logs/                       # optional logs
-```
-
-Never assume data outside `/workspace` will survive a stop.
-
-Before terminating a Pod, back up:
-
-```text
-runs/counterfact_direction1_v1/<new_report_or_run_dir>/
-```
-
-Do not commit large run artifacts to Git. Commit only scripts, configs, tests, small summaries, and documentation.
+The Pod must remain running until one of the campaign stop conditions in Section 9 occurs.
 
 ---
 
-## 5. SSH and tmux rules
+## 7. Required RunPod variables
 
-Always connect by SSH for long-running work.
-
-After connecting:
+Before autonomous campaign start, these must be configured:
 
 ```bash
-cd /workspace/SB
-tmux new -s sb
+export RUNPOD_POD_ID="<existing pod id>"
+export RUNPOD_SSH_KEY="$HOME/.ssh/<private-key-file>"
+export RUNPOD_SSH_USER="root"
+export RUNPOD_SSH_HOST="<current host>"
+export RUNPOD_SSH_PORT="<current port>"
+export REMOTE_REPO_DIR="/workspace/SB"
 ```
 
-Inside tmux:
+Also configure `runpodctl` with a RunPod API key.
 
-```bash
-python --version
-nvidia-smi
-git status
-```
+Codex must never print private keys, API keys, Hugging Face tokens, or OpenAI credentials.
 
-Detach from tmux:
+If SSH host/port changes after a restart, Codex should refresh connection details using the configured RunPod tooling/API available in the environment. Do not guess values.
 
-```text
-Ctrl-b then d
-```
-
-Reattach:
-
-```bash
-tmux attach -t sb
-```
-
-If a session already exists, use:
-
-```bash
-tmux ls
-tmux attach -t sb
-```
+If connection details cannot be refreshed after the configured infrastructure retry limit, mark the campaign `infrastructure_blocked`, write a checkpoint, and stop the Pod to protect the budget.
 
 ---
 
-## 5.1 Remote GPU execution template
+## 8. RunPod lifecycle in autonomous mode
 
-GPU jobs must run inside `tmux` on the RunPod machine.
-
-From the MacBook, first start the Pod if needed:
+### Start
 
 ```bash
 runpodctl pod start "$RUNPOD_POD_ID"
 runpodctl pod list
 ```
 
-Then connect by SSH using the current SSH command from the RunPod console or local environment variables:
-
-```bash
-ssh -i "$RUNPOD_SSH_KEY" -p "$RUNPOD_SSH_PORT" "$RUNPOD_SSH_USER@$RUNPOD_SSH_HOST"
-```
-
-Inside the Pod:
-
-```bash
-cd /workspace/SB
-tmux new -s sb
-python --version
-nvidia-smi
-git status
-git pull
-python -m pytest tests -q
-```
-
-Long GPU jobs must be launched inside tmux and must write logs:
-
-```bash
-mkdir -p logs
-
-python scripts/<gpu_script>.py \
-  2>&1 | tee logs/<stage_name>_$(date +%Y%m%d_%H%M%S).log
-```
-
-For detached execution:
-
-```bash
-tmux new -d -s "<stage_name>" \
-  'cd /workspace/SB && python scripts/<gpu_script>.py 2>&1 | tee logs/<stage_name>.log'
-```
-
-After launching a detached job, Codex must check:
-
-```bash
-tmux ls
-```
-
-and provide the user with:
+After start, verify:
 
 ```text
-tmux session name
-log path
-expected output directory
-safe stop command
+- desired status is RUNNING,
+- at least one GPU is allocated,
+- SSH works,
+- nvidia-smi works,
+- /workspace/SB exists or can be cloned.
 ```
 
----
+### Keep running
 
-## 5.2 Stopping the Pod after GPU work
+During the autonomous campaign:
 
-When a GPU job finishes, Codex must verify that no GPU process is still running:
+- Do not stop the Pod between plan stages.
+- Do not stop after teacher-cache generation, feature extraction, training, replay, smoke decoding, dev tuning, analysis, or final reporting if another planned task remains.
+- If no GPU process is active, immediately continue to the next CPU/report/training task on the same Pod.
+- Use `tmux` for long jobs.
 
-```bash
-nvidia-smi
-tmux ls
-```
+### Stop
 
-If no GPU job is running, Codex should sync or confirm artifacts:
+Stop the Pod only when:
 
-```bash
-ls -lah runs/counterfact_direction1_v1/<new_run_dir>/
-```
+1. the complete Direction 3 research campaign finishes positively;
+2. the Direction 3 campaign finishes with a formal negative stop checkpoint;
+3. the autonomous budget is exhausted or insufficient for the next stage;
+4. an unrecoverable infrastructure failure remains after all allowed retries;
+5. a data-integrity or split-leakage failure makes further execution unsafe.
 
-Then Codex may stop the Pod:
+Stop command:
 
 ```bash
 runpodctl pod stop "$RUNPOD_POD_ID"
 ```
 
-For long jobs, Codex may schedule a safety stop only if the user requested it:
-
-```bash
-sleep 6h; runpodctl pod stop "$RUNPOD_POD_ID" &
-```
-
-Do not stop the Pod if:
-
-- a Python process is still running
-- `nvidia-smi` shows active GPU memory usage from the experiment
-- `tmux` contains an active experiment session
-- artifacts have not been written or backed up
+Never terminate/delete the Pod unless the user explicitly requests deletion.
 
 ---
 
-## 6. Git rules
+## 9. Budget guard
+
+The campaign must track cost continuously.
+
+Required state file:
+
+```text
+runs/counterfact_direction3_controller_v1/autonomous_campaign_v1/budget_state.json
+```
+
+It must contain:
+
+```json
+{
+  "budget_usd": 0.0,
+  "hourly_rate_usd": 0.0,
+  "reserve_usd": 0.0,
+  "estimated_spend_usd": 0.0,
+  "remaining_budget_usd": 0.0,
+  "campaign_start_utc": "",
+  "last_updated_utc": "",
+  "stage_costs": []
+}
+```
+
+Cost source priority:
+
+1. RunPod API/account usage if available;
+2. actual Pod running duration multiplied by `RUNPOD_HOURLY_RATE_USD`;
+3. conservative stage-runtime estimate.
+
+Before every expensive stage, Codex must estimate stage cost.
+
+Proceed only if:
+
+```text
+estimated_stage_cost <= remaining_budget - reserve
+```
+
+If not, Codex must:
+
+```text
+- not start the stage,
+- write a budget-exhaustion checkpoint,
+- summarize completed science and missing work,
+- stop the Pod.
+```
+
+Codex must not request a budget top-up during autonomous execution.
+
+---
+
+## 10. Campaign state machine
+
+Required campaign directory:
+
+```text
+runs/counterfact_direction3_controller_v1/autonomous_campaign_v1/
+```
+
+Before creating or resuming that directory, Codex must validate `ACTIVE_RESEARCH_CAMPAIGN.json`:
+
+```text
+active_protocol = counterfact_direction3_controller_v1
+active_direction = direction3
+campaign_status = active
+analysis_500_locked = true
+final_test_locked = true
+```
+
+If an old Direction 2 campaign state exists, preserve it as historical and do not reuse its state, budget, locks, or current-stage fields.
+
+Required files:
+
+```text
+campaign_state.json
+budget_state.json
+stage_history.csv
+autonomous_log.md
+```
+
+`campaign_state.json` must contain:
+
+```json
+{
+  "protocol_version": "counterfact_direction3_controller_v1",
+  "autonomous_mode": true,
+  "current_stage": "",
+  "current_stage_status": "pending",
+  "next_stage": "",
+  "campaign_status": "running",
+  "scientific_claim_status": "undetermined",
+  "analysis_500_used": false,
+  "final_test_used": false,
+  "last_git_commit": "",
+  "completed_stages": [],
+  "failed_stages": [],
+  "rescues_used": {}
+}
+```
+
+For each stage:
+
+1. Read the plan and current campaign state.
+2. Run preflight checks.
+3. Run tests.
+4. Estimate budget.
+5. Execute the stage.
+6. Validate all acceptance criteria.
+7. Write versioned artifacts and report summary.
+8. Update campaign and budget state.
+9. Advance automatically if passed.
+10. Apply at most the bounded rescue specified in the plan if failed.
+11. If no rescue remains, finish as a negative result.
+
+Codex must not invent unplanned experiments or expand hyperparameter grids beyond the plan.
+
+---
+
+## 11. Git and code rules
 
 Code moves through Git. Large artifacts do not.
 
-For local MacBook checks, use `uv`:
+Before each stage:
 
 ```bash
-git status
-uv sync
-uv run pytest tests -q
-```
-
-For RunPod GPU checks, use the remote Python available there:
-
-```bash
+cd /workspace/SB
 git status
 git pull
 python -m pytest tests -q
 ```
 
-Before running a GPU job:
-
-```bash
-git status
-git pull
-python -m pytest tests -q
-```
-
-After Codex changes code:
+After code changes:
 
 ```bash
 git diff
 git status
+python -m pytest tests -q
 ```
 
-Commit code changes only after tests pass.
+Commit only after tests pass.
 
 Do not commit:
 
 ```text
 .env
-HF tokens
-OpenAI tokens
+private keys
+tokens
 RunPod API keys
-private SSH keys
 model weights
 large run artifacts
+*.safetensors
+*.pt
+*.ckpt
 ```
 
-`.gitignore` should include at least:
+The `.gitignore` should include:
 
 ```text
 .env
@@ -535,458 +479,402 @@ __pycache__/
 .ipynb_checkpoints/
 ```
 
-If run artifacts need to be versioned, export summarized CSV/JSON/markdown only.
-
 ---
 
-## 7. Secret rules
+## 12. Storage and artifact rules
 
-Never print or commit secrets.
-
-Allowed secret locations:
+Authoritative remote paths:
 
 ```text
-.env
-shell environment variables
-RunPod secret/environment configuration
+/workspace/SB
+/workspace/SB/runs
+/workspace/.cache/huggingface
+/workspace/SB/logs
 ```
 
-Required secrets may include:
+Every stage must use a new versioned output directory. Never overwrite a completed run by default.
+
+Every stage must write:
 
 ```text
-HF_TOKEN
-RUNPOD_API_KEY
-OPENAI_API_KEY
+report_summary.json
+run_config.json or equivalent
+validation report
+log file
+exit-code file for long jobs
 ```
 
-Never paste private SSH keys into notebooks, source files, markdown, prompts, or commit history.
-
----
-
-## 7.1 Required local environment variables for RunPod control
-
-On the MacBook, define:
+Long job pattern:
 
 ```bash
-export RUNPOD_POD_ID="<pod-id>"
-export RUNPOD_SSH_KEY="$HOME/.ssh/runpod_sb"
-export RUNPOD_SSH_USER="root"
-export RUNPOD_SSH_HOST="<current-runpod-host>"
-export RUNPOD_SSH_PORT="<current-runpod-port>"
-export REMOTE_REPO_DIR="/workspace/SB"
+tmux new -d -s "<stage_name>" \
+  'cd /workspace/SB && set -o pipefail && \
+   python scripts/<script>.py <args> 2>&1 | tee logs/<stage_name>.log; \
+   code=${PIPESTATUS[0]}; echo "$code" > logs/<stage_name>.exitcode; exit "$code"'
 ```
 
-`RUNPOD_SSH_HOST` and `RUNPOD_SSH_PORT` may need to be refreshed from the RunPod console if SSH fails after restart.
-
-Codex must not guess SSH host/port. If missing, ask the user.
+Large artifacts remain on `/workspace`. At major checkpoints, copy summaries and small reports to a durable backup. Do not stop the campaign solely for backup synchronization.
 
 ---
 
-## 8. Split locks and safety guards
+## 13. Split locks and scientific safety
 
-Codex must not run `analysis_500` or final-test commands unless explicitly unlocked.
+Direction 1 and Direction 2 v1 protocol directories are read-only historical evidence.
 
-Every script that can run a split must enforce:
+Direction 2 v1 ended before adapter science because all 284 legal target-length-bin-2 training examples were consumed by the predeclared Direction 1 and Direction 3 reservations. It must not be resumed. Direction 2 v2 requires an explicit new protocol and is outside this autonomous campaign.
+
+For Direction 3 scaled split construction:
+
+```text
+controller_train_1000 must be a deterministic superset of controller_train_100
+controller_val_200 must be a deterministic superset of controller_val_50
+dev_smoke_50 remains held out and is never absorbed into training
+existing D3 target-length-bin-2 train/val records must be preserved
+no new requirement may demand additional bin-2 cases beyond those legally available
+bin-2 scarcity must be reported in every scaled summary
+```
+
+No script may use `analysis_500` or final-test splits unless the relevant lock exists.
+
+### Analysis lock
+
+Required file:
+
+```text
+runs/counterfact_direction3_controller_v1/dev_method_lock.json
+```
+
+Only after that file validates may Codex set:
+
+```bash
+export DEV_METHOD_LOCKED=1
+```
+
+### Final lock
+
+Required file:
+
+```text
+runs/counterfact_direction3_controller_v1/analysis_confirmation_lock.json
+```
+
+Only after analysis passes may Codex set:
+
+```bash
+export FINAL_METHOD_LOCKED=1
+```
+
+Every split-capable script must enforce:
 
 ```python
 import os
 
 if split_role == "analysis_500":
-    assert os.environ.get("DEV_METHOD_LOCKED") == "1", (
-        "analysis_500 is locked. Set DEV_METHOD_LOCKED=1 only after freezing the dev method."
-    )
+    assert os.environ.get("DEV_METHOD_LOCKED") == "1"
 
 if split_role.startswith("final_test"):
-    assert os.environ.get("FINAL_METHOD_LOCKED") == "1", (
-        "final_test is locked. Set FINAL_METHOD_LOCKED=1 only after analysis confirmation."
-    )
+    assert os.environ.get("FINAL_METHOD_LOCKED") == "1"
 ```
 
-Default split for all tuning is:
+After inspecting `analysis_500`, do not change:
 
 ```text
-dev_tune_200
+controller architecture
+controller checkpoint
+gate checkpoint
+gate threshold
+guidance scale
+top_k
+steps
+schedule
+span policy
+normalization
+metrics
+budgets
+filtering
+random seeds
 ```
 
-No threshold, gate, method, span policy, normalization, metric, or filtering choice may be changed after inspecting `analysis_500`.
-
-If `analysis_500` fails:
-
-```text
-mark counterfact_direction1_v1 failed
-create counterfact_direction1_v2
-do not tune on analysis_500
-```
+If analysis fails, mark `counterfact_direction3_controller_v1` failed. Do not tune on analysis.
 
 ---
 
-## 9. Run summaries
+## 14. Feature leakage and deployability rules
 
-Every new report directory must include:
+Runtime controller/gate inputs must be available during actual inference.
+
+Forbidden runtime inputs include:
 
 ```text
-report_summary.json
+raw_bridge_scores_top_k
+mc_rollout_rewards_top_k
+myopic/no_rollout scores or margins
+teacher chosen token
+final decoded output
+final edit/locality success
+malformed outcome
+completed-trajectory KL
+prompt_type
+negative_type
+split label
+case/edit identifiers as semantic features
 ```
 
-with at least:
+Teacher-derived fields may be labels/targets only.
+
+Every controller-training stage must write a feature schema and pass an actual-tensor leakage audit with:
+
+```text
+num_leaked_runtime_features = 0
+feature_leakage_audit_pass = true
+```
+
+No actual decoding is allowed if leakage audit fails.
+
+---
+
+## 15. Direction 3 scientific integrity rules
+
+The controller must be evaluated groupwise over each top-k candidate group. Do not use flattened global correlation as the primary ranking metric.
+
+Primary offline value metrics:
+
+```text
+macro groupwise Spearman
+Kendall tau
+NDCG@8
+pairwise ranking accuracy
+teacher top-1 agreement
+teacher top-3 overlap
+target top-3 improvement over base
+```
+
+Primary gate metrics:
+
+```text
+ROC-AUC
+PR-AUC
+rewrite activation
+paraphrase activation
+same-subject activation
+near/far locality activation
+```
+
+Primary safety metric:
+
+```text
+negative_guidance_ratio
+same_subject_target_advantage_vs_base
+```
+
+Target-indicator-only and representation-shuffle ablations are mandatory before actual decoding.
+
+---
+
+## 16. Retry policy
+
+### Infrastructure retries
+
+Use up to `D3_AUTONOMOUS_MAX_INFRA_RETRIES` for:
+
+```text
+SSH disconnect
+transient package/download error
+RunPod restart/capacity issue
+single-process crash without data corruption
+```
+
+Resume from checkpoints when possible.
+
+### Scientific rescues
+
+Use at most the rescue explicitly defined for the stage in the plan, normally one.
+
+Do not:
+
+```text
+run unbounded sweeps
+add teacher-derived runtime features
+change locked splits
+reuse analysis/final for tuning
+silently lower acceptance criteria
+```
+
+If the bounded rescue fails, finish the Direction 3 campaign as a negative result.
+
+---
+
+## 17. Reporting rules
+
+Every `report_summary.json` must include at least:
 
 ```json
 {
-  "protocol_version": "counterfact_direction1_v1",
-  "split_role": "dev_tune_200",
+  "protocol_version": "counterfact_direction3_controller_v1",
+  "stage": "",
+  "git_commit": "",
+  "split_role": "",
   "analysis_500_used": false,
   "final_test_used": false,
-  "git_commit": "<current commit>",
-  "stage": "<stage name>",
+  "llada_loaded": false,
+  "actual_decode_performed": false,
+  "acceptance_pass": false,
+  "acceptance_failures": [],
   "artifacts": {}
 }
 ```
 
-Every GPU run summary must also include:
+Every GPU report must additionally record:
 
 ```text
 model_id
 dtype
 use_4bit
 device_map
-Python executable
-Python version
+Python executable/version
 GPU name
 CUDA version
 torch version
 transformers version
 bitsandbytes version
-GPU minutes per edit
-model evals per edit
+wall time
+model evaluation count
+estimated cost
 ```
 
 ---
 
-## 9.1 GPU job preflight
+## 18. Direction 3 final claim classification
 
-Before any GPU run, Codex must check:
+At campaign completion, classify the strongest defensible result as exactly one of:
 
-```bash
-cd /workspace/SB
-python --version
-git status
-git pull
-python -m pytest tests -q
-nvidia-smi
-```
-
-Codex must also check that the script will not run locked splits unless explicitly unlocked:
-
-```bash
-echo "$DEV_METHOD_LOCKED"
-echo "$FINAL_METHOD_LOCKED"
-```
-
-For dev tuning jobs, expected values are usually empty.
-
-Before running a GPU script, Codex must print:
+### Strong method claim
 
 ```text
-stage
-split_role
-method(s)
-gate_id
-output_dir
-model_id
-dtype
-use_4bit
-expected artifacts
+D3-gated beats myopic/no-rollout/raw bridge baselines on the stress-aware aggregate,
+controls same-subject TFPR,
+uses less compute than MC bridge,
+and survives analysis and final test.
 ```
 
-Every GPU script must write:
+### Efficiency/amortization claim
+
+```text
+D3-gated matches MC bridge within confidence intervals
+while using substantially fewer model evaluations and GPU time.
+```
+
+### Safety/evaluation claim
+
+```text
+D3 does not win overall,
+but learned edit-intent control materially improves same-subject safety
+and exposes a central failure mode of diffusion-LM runtime editing.
+```
+
+### Negative result
+
+```text
+Deployable controller/gate behavior fails offline or actual decoding
+under the bounded plan.
+```
+
+Never overstate the claim.
+
+---
+
+## 19. Autonomous stop checkpoint
+
+When the campaign stops for scientific failure or budget exhaustion, write:
+
+```text
+runs/counterfact_direction3_controller_v1/direction3_stop_checkpoint_v1/
+```
+
+with:
 
 ```text
 report_summary.json
-run_config.json or equivalent config snapshot
-logs
+direction3_stop_checkpoint.md
+direction3_evidence_table.csv
+remaining_unrun_stages.csv
+budget_summary.json
+paper_claim_recommendation.md
 ```
+
+Then stop the Pod.
 
 ---
 
-## 10. Overwrite rules
+## 20. Final completion package
 
-Default: never overwrite old reports.
-
-Use new versioned directories:
+When final_test_500 completes, write:
 
 ```text
-..._v1
-..._v2
-..._v3
+runs/counterfact_direction3_controller_v1/final_research_package_v1/
 ```
 
-A script may overwrite only if explicitly passed:
+with:
 
 ```text
---allow_overwrite 1
+report_summary.json
+main_results_table.csv
+same_subject_stress_table.csv
+target_length_table.csv
+compute_table.csv
+paired_bootstrap.csv
+pareto_plot.png
+same_subject_plot.png
+target_length_plot.png
+failure_cases.csv
+reproducibility_manifest.json
+final_research_report.md
+paper_claim_recommendation.md
 ```
 
-and the notebook/report clearly states that it was rerun.
-
-Codex must not delete old report directories unless explicitly instructed by the user.
+Only after this package validates is positive campaign completion reached. Then stop the Pod.
 
 ---
 
-## 11. Exit criteria before analysis_500
+## 21. Codex behavior expectations
 
-Do not run `analysis_500` until a dev method has passed all of:
+Codex must:
 
-```text
-rewrite/paraphrase usefulness
-ordinary near/far locality
-same-subject stress
-malformed-span budget
-compute budget
-KL/Pareto budget or chosen dev Pareto point
-paired bootstrap sanity checks
-target-length breakdown inspection
-```
+- Read `AGENTS.md`, `ACTIVE_RESEARCH_CAMPAIGN.json`, and the autonomous Direction 3 plan.
+- Follow the stage state machine without asking for approval when autonomous mode is enabled.
+- Keep the existing RunPod Pod running between stages.
+- Maintain budget and campaign state.
+- Run tests before every stage.
+- Preserve old artifacts.
+- Use versioned outputs.
+- Stop automatically only at campaign completion, budget exhaustion, or unrecoverable safety/infrastructure failure.
+- Report uncertainty and scientific failures honestly.
 
-After that, freeze:
+Codex must not:
 
-```text
-method
-gate_id
-gate thresholds
-span policy
-normalization
-metrics
-budgets
-report scripts
-random seeds
-relation_bank_source
-relation_bank_fingerprint
-```
+- Ask for routine stage approval in autonomous mode.
+- Stop the Pod between planned stages.
+- Create or delete Pods.
+- Tune on `analysis_500` or final-test splits.
+- Reintroduce teacher-derived runtime features.
+- Lower acceptance thresholds to manufacture a pass.
+- Run experiments outside the autonomous plan.
+- Create Direction 2 v2 or switch research directions without an explicit user-authored protocol change.
+- Reuse Direction 2 autonomous state as Direction 3 state.
 
-Then write:
-
-```text
-runs/counterfact_direction1_v1/dev_method_lock.json
-```
-
-and only then set:
-
-```bash
-export DEV_METHOD_LOCKED=1
-```
-
-Only then may `analysis_500` run.
 
 ---
 
-## 12. GPU command approval rule
+## 22. Goal-mode completion contract
 
-Codex must not start a GPU job unless the user has explicitly requested a GPU run or approved the command.
-
-Before starting RunPod, Codex should show:
+When the campaign is launched with `/goal`, Codex must continue until exactly one terminal state is written and validated:
 
 ```text
-Reason GPU is needed:
-Estimated stage:
-Expected output directory:
-Command to start Pod:
-Command to run experiment:
-Command to monitor logs:
-Command to stop Pod:
+positive_complete
+negative_complete
+budget_complete
+infrastructure_blocked
+unsafe_data_integrity_stop
 ```
 
-Then wait for user approval.
-
-Exception: if the user explicitly says “run the GPU step on RunPod now,” Codex may start the Pod using the approved commands.
-
----
-
-## 13. RunPod command templates
-
-### List Pods
-
-```bash
-runpodctl pod list
-```
-
-### Start the configured Pod
-
-```bash
-runpodctl pod start "$RUNPOD_POD_ID"
-```
-
-After starting:
-
-```bash
-runpodctl pod list
-```
-
-If the Pod has zero GPUs or SSH fails, stop and ask the user to inspect the RunPod console.
-
-### SSH into the Pod
-
-```bash
-ssh -i "$RUNPOD_SSH_KEY" -p "$RUNPOD_SSH_PORT" "$RUNPOD_SSH_USER@$RUNPOD_SSH_HOST"
-```
-
-### Start tmux session
-
-```bash
-cd /workspace/SB
-tmux new -s sb
-```
-
-### Run GPU job inside tmux
-
-```bash
-cd /workspace/SB
-python --version
-nvidia-smi
-python scripts/<gpu_script>.py 2>&1 | tee logs/<stage_name>.log
-```
-
-### Run detached GPU job
-
-```bash
-tmux new -d -s "<stage_name>" \
-  'cd /workspace/SB && python scripts/<gpu_script>.py 2>&1 | tee logs/<stage_name>.log'
-```
-
-### Check job
-
-```bash
-tmux ls
-nvidia-smi
-tail -f logs/<stage_name>.log
-```
-
-### Stop the Pod
-
-Only stop after verifying no GPU job is running.
-
-```bash
-runpodctl pod stop "$RUNPOD_POD_ID"
-```
-
-### Schedule safety stop
-
-Only if the user requested it.
-
-```bash
-sleep 6h; runpodctl pod stop "$RUNPOD_POD_ID" &
-```
-
-### Terminate/delete Pod
-
-Codex must not terminate/delete Pods unless explicitly asked by the user.
-
-```bash
-runpodctl pod delete "$RUNPOD_POD_ID"
-```
-
----
-
-## 14. Artifact backup rules
-
-After a GPU job finishes, back up the new report/run directory.
-
-Recommended local pull from MacBook:
-
-```bash
-rsync -avz -e "ssh -i $RUNPOD_SSH_KEY -p $RUNPOD_SSH_PORT" \
-  "$RUNPOD_SSH_USER@$RUNPOD_SSH_HOST:/workspace/SB/runs/counterfact_direction1_v1/<new_run_dir>/" \
-  "./runs/counterfact_direction1_v1/<new_run_dir>/"
-```
-
-Recommended push to remote from MacBook, if needed:
-
-```bash
-rsync -avz -e "ssh -i $RUNPOD_SSH_KEY -p $RUNPOD_SSH_PORT" \
-  "./scripts/" \
-  "$RUNPOD_SSH_USER@$RUNPOD_SSH_HOST:/workspace/SB/scripts/"
-```
-
-Git is preferred for code synchronization.
-`rsync` is preferred for run artifacts.
-
----
-
-## 15. Codex behavior expectations
-
-Codex should:
-
-- Read this file before acting.
-- Use `uv` for local MacBook Python commands.
-- Use the available Python environment on RunPod/SSH.
-- Prefer scripts over notebook-only logic.
-- Keep notebooks as orchestration/reporting layers when possible.
-- Add or update tests for new logic.
-- Avoid running expensive jobs without approval.
-- Avoid changing protocol definitions casually.
-- Preserve backward compatibility with old artifacts when feasible.
-- Report uncertainty when an artifact or config is missing.
-- Stop and ask the user when a required environment variable, split lock, SSH detail, or secret is missing.
-
-Codex should not:
-
-- Guess RunPod SSH host/port.
-- Start the Pod for CPU/report tasks.
-- Run `analysis_500` or final-test splits without lock flags.
-- Overwrite old report directories by default.
-- Commit secrets or large artifacts.
-- Terminate/delete a Pod without explicit instruction.
-- Use `uv` on RunPod unless explicitly approved.
-- Use `pip install` directly in the local MacBook project environment.
-
----
-
-## 16. Current research interpretation guardrails
-
-Direction 1 is still active only if a valid dev method passes:
-
-```text
-rewrite/paraphrase usefulness
-near/far locality
-same-subject stress
-malformed budget
-compute budget
-KL/Pareto budget
-paired-bootstrap sanity
-```
-
-If no runtime gate can satisfy the same-subject stress constraints while preserving rewrite/paraphrase usefulness, then Codex should not keep tuning Direction 1 indefinitely. It should report that Direction 1 is blocked and ask whether to move to:
-
-```text
-Direction 2: per-edit bridge adapters
-Direction 3: learned edit-conditioned controller
-```
-
----
-
-## 17. Minimal run checklist
-
-Before any dev CPU/report step:
-
-```text
-[ ] Confirm split is dev_tune_200.
-[ ] Confirm no analysis/final artifacts are being read for tuning.
-[ ] Confirm output directory is versioned.
-[ ] Run local commands through uv, for example `uv run pytest tests -q`.
-[ ] Write report_summary.json.
-```
-
-Before any GPU step:
-
-```text
-[ ] User approved GPU run.
-[ ] RUNPOD_POD_ID is set.
-[ ] SSH variables are set.
-[ ] Pod is running with GPU.
-[ ] Code is committed or diff is understood.
-[ ] Remote tests pass with `python -m pytest tests -q`, or skipped with explicit reason.
-[ ] tmux session is active.
-[ ] nvidia-smi works.
-[ ] Output directory is versioned.
-[ ] Logs are written.
-[ ] Stop/safety-stop plan is known.
-```
+A goal is not complete merely because one command or one stage finishes. It is complete only after the appropriate final or stop package exists, campaign/budget state is updated, durable summaries are preserved, and the Pod is stopped.

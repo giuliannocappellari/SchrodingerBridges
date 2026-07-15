@@ -1,0 +1,20 @@
+stage,artifact,metric,value,threshold_or_expected,pass,notes
+1B.4A feature audit,deployable_feature_cache_train100_val50_v1_local_audit/report_summary.json,audit_pass,True,true,True,Feature cache usable after schema/index repair; no leaked runtime features.
+1B.4A feature audit,deployable_feature_cache_train100_val50_v1_local_audit/report_summary.json,num_candidate_groups,2994,2994,True,Candidate groups aligned to teacher cache.
+1B.4/1B.5 attempt1,offline_replay_repr_train100_val50_v3/scientific_status.json,scientific_acceptance_pass,False,true,False,Stage 2A blocked.
+1B.4/1B.5 attempt1,offline_replay_repr_train100_val50_v3/validation_metrics.csv,d3_value_repr_macro_spearman,0.5350405251429955,>=0.40,True,Value ranking threshold passed.
+1B.4/1B.5 attempt1,offline_replay_repr_train100_val50_v3/validation_metrics.csv,d3_value_repr_teacher_top3_overlap,0.5207927225471084,>=0.65,False,Failed hard value top-3 overlap criterion.
+1B.4/1B.5 attempt1,offline_replay_repr_train100_val50_v3/validation_metrics.csv,target_indicator_only_macro_spearman,0.9588996422723133,full should beat by >=0.05 or NDCG by >=0.05,False,Target indicator shortcut dominated full representation model.
+1B.4/1B.5 attempt1,offline_replay_repr_train100_val50_v3/representation_ablation.csv,state_shuffle_hurts,False,true,False,State shuffle did not reduce the primary value metric by >=0.05.
+1B.4/1B.5 attempt1,offline_replay_repr_train100_val50_v3/validation_metrics.csv,gate_roc_auc,0.9882014978967888,>=0.85,True,Gate itself passed strongly.
+1B.4/1B.5 attempt1,offline_replay_repr_train100_val50_v3/negative_guidance_diagnostics.csv,negative_guidance_ratio,0.0004538524277000075,<=0.15,True,Negative guidance ratio passed.
+1B.4/1B.5 rescue1,offline_train_repr_value_gate_train100_val50_v3_rescue1/report_summary.json,rescue_config,proj_dim=256; negative_identity_weight=2.0; target_loss_weight=0.0,bounded value rescue only,True,Used the one allowed Stage 1B bounded scientific rescue.
+1B.4/1B.5 rescue1,offline_replay_repr_train100_val50_v3_rescue1/scientific_status.json,scientific_acceptance_pass,False,true,False,Rescue failed; formal negative stop condition reached.
+1B.4/1B.5 rescue1,offline_replay_repr_train100_val50_v3_rescue1/validation_metrics.csv,d3_value_repr_macro_spearman,0.5223914942230633,>=0.40,True,Value rank threshold passed but was insufficient.
+1B.4/1B.5 rescue1,offline_replay_repr_train100_val50_v3_rescue1/validation_metrics.csv,d3_value_repr_teacher_top3_overlap,0.5263157894736842,>=0.65,False,Failed top-3 overlap hard criterion after rescue.
+1B.4/1B.5 rescue1,offline_replay_repr_train100_val50_v3_rescue1/validation_metrics.csv,d3_value_repr_no_target_indicator_macro_spearman,0.544849822336291,diagnostic,diagnostic,No-target variant slightly exceeded full but still target-indicator-only dominated.
+1B.4/1B.5 rescue1,offline_replay_repr_train100_val50_v3_rescue1/validation_metrics.csv,target_indicator_only_macro_spearman,0.9588996422723133,full should beat by >=0.05 or NDCG by >=0.05,False,Target-indicator-only remained far stronger.
+1B.4/1B.5 rescue1,offline_replay_repr_train100_val50_v3_rescue1/representation_ablation.csv,state_shuffle_hurts,False,true,False,State representation still not meaningfully used.
+1B.4/1B.5 rescue1,offline_replay_repr_train100_val50_v3_rescue1/validation_metrics.csv,gate_roc_auc,0.987735542560104,>=0.85,True,Gate remained strong.
+1B.4/1B.5 rescue1,offline_replay_repr_train100_val50_v3_rescue1/negative_guidance_diagnostics.csv,negative_guidance_ratio,0.0007107693801406995,<=0.15,True,Negative guidance remained near zero.
+1B.4/1B.5 rescue1,stage1b_feature_leakage_audit_v3_rescue1/report_summary.json,feature_leakage_audit_pass,True,true,True,No forbidden runtime feature leakage found.

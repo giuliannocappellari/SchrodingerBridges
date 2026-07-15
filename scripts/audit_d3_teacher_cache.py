@@ -308,6 +308,8 @@ def require_acceptance(
     scores: Sequence[Mapping[str, Any]],
     variances: Sequence[Mapping[str, Any]],
     separation: Sequence[Mapping[str, Any]],
+    min_train_edits: int,
+    min_val_edits: int,
 ) -> Dict[str, Any]:
     train_edits = {str(row.get("edit_id") or row.get("case_id")) for row in train_rows}
     val_edits = {str(row.get("edit_id") or row.get("case_id")) for row in val_rows}
@@ -320,8 +322,8 @@ def require_acceptance(
         "final_test_unused": not bool(teacher_summary.get("final_test_used", False)),
         "fake_model_false": teacher_summary.get("fake_model") is False,
         "llada_loaded_true_for_teacher_generation": teacher_summary.get("llada_loaded") is True,
-        "num_train_edits_ge_10": len(train_edits) >= 10,
-        "num_val_edits_ge_5": len(val_edits) >= 5,
+        "num_train_edits_ge_min": len(train_edits) >= int(min_train_edits),
+        "num_val_edits_ge_min": len(val_edits) >= int(min_val_edits),
         "distinct_steps_ge_3": len(step_values) >= 3,
         "active_mask_count_gt_1_present": any(count > 1 for count in active_counts),
         "target_length_bins_1_and_2_present": "1" in target_bins and "2" in target_bins,
@@ -336,7 +338,13 @@ def require_acceptance(
     return checks
 
 
-def build_audit(cache_dir: Path, output_dir: Path, top_k: int) -> Dict[str, Any]:
+def build_audit(
+    cache_dir: Path,
+    output_dir: Path,
+    top_k: int,
+    min_train_edits: int = 10,
+    min_val_edits: int = 5,
+) -> Dict[str, Any]:
     train_rows, val_rows, teacher_summary = load_cache_rows(cache_dir)
     all_rows = train_rows + val_rows
     if not all_rows:
@@ -359,6 +367,8 @@ def build_audit(cache_dir: Path, output_dir: Path, top_k: int) -> Dict[str, Any]
         scores=score_audit,
         variances=variances,
         separation=separation,
+        min_train_edits=min_train_edits,
+        min_val_edits=min_val_edits,
     )
 
     report = {
@@ -373,6 +383,8 @@ def build_audit(cache_dir: Path, output_dir: Path, top_k: int) -> Dict[str, Any]
         "analysis_500_used": False,
         "final_test_used": False,
         "top_k": top_k,
+        "min_train_edits": int(min_train_edits),
+        "min_val_edits": int(min_val_edits),
         "num_train_rows": len(train_rows),
         "num_val_rows": len(val_rows),
         "num_rows": len(all_rows),
@@ -407,6 +419,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--teacher_cache_dir", type=Path, default=DEFAULT_INPUT)
     parser.add_argument("--output_dir", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--top_k", type=int, default=TOP_K_DEFAULT)
+    parser.add_argument("--min_train_edits", type=int, default=10)
+    parser.add_argument("--min_val_edits", type=int, default=5)
     parser.add_argument("--allow_overwrite", type=int, default=1)
     return parser.parse_args()
 
@@ -414,7 +428,13 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     repo_path(args.output_dir).mkdir(parents=True, exist_ok=True)
-    result = build_audit(args.teacher_cache_dir, args.output_dir, top_k=int(args.top_k))
+    result = build_audit(
+        args.teacher_cache_dir,
+        args.output_dir,
+        top_k=int(args.top_k),
+        min_train_edits=int(args.min_train_edits),
+        min_val_edits=int(args.min_val_edits),
+    )
     write_csv(args.output_dir / "cache_quality_table.csv", result["quality"])
     write_csv(args.output_dir / "score_field_audit.csv", result["score_audit"])
     write_csv(args.output_dir / "teacher_score_variance.csv", result["variances"])
