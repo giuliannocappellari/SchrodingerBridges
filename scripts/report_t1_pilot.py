@@ -39,6 +39,16 @@ def mean(values: Sequence[float]) -> float:
     return sum(values) / len(values) if values else 0.0
 
 
+def max_bucket_mean_malformed(rows: Sequence[Mapping[str, Any]]) -> float:
+    """Return the worst bucket-level malformed rate, not a row-level maximum."""
+
+    by_bucket: dict[str, list[float]] = defaultdict(list)
+    for row in rows:
+        bucket = str(row.get("bucket") or "unknown")
+        by_bucket[bucket].append(float(row.get("malformed_rate") or 0.0))
+    return max((mean(values) for values in by_bucket.values()), default=0.0)
+
+
 def aggregate(rows: Sequence[Mapping[str, Any]], runtime_seconds: float) -> list[dict[str, Any]]:
     methods = sorted({str(row["method"]) for row in rows})
     original_edits = {
@@ -66,9 +76,7 @@ def aggregate(rows: Sequence[Mapping[str, Any]], runtime_seconds: float) -> list
                     [float(row["target_false_positive_rate"]) for row in by_bucket["far_locality"]]
                 ),
                 "same_subject_tfpr": mean([float(row["exact_rate"]) for row in stress]),
-                "malformed_rate": max(
-                    [float(row["malformed_rate"]) for row in method_rows], default=0.0
-                ),
+                "malformed_rate": max_bucket_mean_malformed(method_rows),
                 "mean_sparse_guidance_kl": mean(
                     [float(row["sparse_guidance_kl"]) for row in method_rows]
                 ),
