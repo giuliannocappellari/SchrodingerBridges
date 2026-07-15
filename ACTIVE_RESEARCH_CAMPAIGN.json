@@ -1,11 +1,11 @@
 {
   "campaign_protocol": "counterfact_sb_alternatives_campaign_v1",
-  "campaign_status": "configured_not_started",
+  "campaign_status": "completed_budget",
   "execution_mode": "autonomous_goal",
   "active_plan": "SB_ALTERNATIVES_AUTONOMOUS_RESEARCH_PLAN.md",
-  "current_phase": "bootstrap",
+  "current_phase": "terminal",
   "current_track": null,
-  "current_stage": "campaign_preflight",
+  "current_stage": "budget_completion",
   "historical_protocols": {
     "counterfact_direction1_v1": {
       "status": "closed_blocked_under_tested_rule_based_gates",
@@ -27,31 +27,31 @@
     "learned_gate_raw_bridge": {
       "protocol": "counterfact_learned_gate_raw_bridge_v1",
       "plan": "LEARNED_GATE_RAW_BRIDGE_PLAN.md",
-      "status": "pending",
+      "status": "formal_negative",
       "priority": 1
     },
     "activation_space_sb": {
       "protocol": "counterfact_activation_space_sb_v1",
       "plan": "ACTIVATION_SPACE_SB_PLAN.md",
-      "status": "pending",
+      "status": "budget_not_run",
       "priority": 2
     },
     "conditional_answer_span_csbm": {
       "protocol": "counterfact_conditional_answer_span_csbm_v1",
       "plan": "CONDITIONAL_ANSWER_SPAN_CSBM_PLAN.md",
-      "status": "pending",
+      "status": "budget_not_run",
       "priority": 3
     },
     "unbalanced_partial_csbm": {
       "protocol": "counterfact_unbalanced_partial_csbm_v1",
       "plan": "UNBALANCED_PARTIAL_CSBM_PLAN.md",
-      "status": "pending",
+      "status": "budget_not_run",
       "priority": 4
     },
     "parameter_space_sb": {
       "protocol": "counterfact_parameter_space_sb_v1",
       "plan": "PARAMETER_SPACE_SB_PLAN.md",
-      "status": "pending",
+      "status": "budget_not_run",
       "priority": 5
     }
   },
@@ -61,5 +61,10 @@
   "final_test_full_locked": true,
   "pod_retention_until_campaign_terminal": true,
   "new_protocol_creation_allowed": false,
-  "user_notification_policy": "final_campaign_report_only"
+  "user_notification_policy": "final_campaign_report_only",
+  "terminal_reason": "authorized_budget_insufficient_for_remaining_mandatory_pilots_plus_reserve",
+  "terminal_package": "runs/counterfact_sb_alternatives_campaign_v1/final_research_package_v1",
+  "analysis_500_used": false,
+  "final_test_used": false,
+  "completed_at_utc": "2026-07-15T12:24:42.251192+00:00"
 }
