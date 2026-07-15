@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import functools
 import math
 import random
 import sys
@@ -55,6 +56,13 @@ class CandidateTransitionMLP(nn.Module):
         return self.network(values).squeeze(-1)
 
 
+@functools.lru_cache(maxsize=20000)
+def text_feature(
+    prompt: str, subject: str, relation_template: str, relation_id: str
+) -> torch.Tensor:
+    return featurize(prompt, subject, relation_template, relation_id)
+
+
 def token_features(token_id: int) -> torch.Tensor:
     value = float(int(token_id) + 1)
     frequencies = torch.arange(1, TOKEN_FEATURE_DIM // 2 + 1, dtype=torch.float32)
@@ -69,7 +77,7 @@ def candidate_feature(
     time: float,
     position: int,
 ) -> torch.Tensor:
-    text = featurize(
+    text = text_feature(
         str(row["prompt"]),
         str(row["subject"]),
         str(row["relation_template"]),
