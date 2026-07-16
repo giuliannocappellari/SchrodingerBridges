@@ -6,6 +6,10 @@ import torch
 
 from scripts.mdm_memit_editor import sparse_support_kl
 from scripts.run_mask_pattern_sb_track import _scheduled_bridge
+from scripts.run_sb_regularized_memit_track import (
+    _nearest_lower_path_weight,
+    _retains_dev_efficacy,
+)
 from scripts.run_toy_text_csbm_fallback import (
     _kernel,
     _make_dataset,
@@ -44,6 +48,22 @@ def test_state_dependent_bridge_schedules_normalize():
     for schedule in ("early_strong", "late_strong"):
         policy = _scheduled_bridge(costs, n, reference, beta=1.0, schedule=schedule)
         assert all(abs(sum(row.values()) - 1.0) < 1e-10 for row in policy.values())
+
+
+def test_m3_bounded_rescue_uses_nearest_lower_predeclared_path_weight():
+    assert _nearest_lower_path_weight(0.25) == 0.1
+    assert _nearest_lower_path_weight(0.1) == 0.05
+    assert _nearest_lower_path_weight(0.05) == 0.01
+    assert _nearest_lower_path_weight(0.01) is None
+
+
+def test_m3_dev_efficacy_gate_applies_all_frozen_limits():
+    baseline = {"rewrite_exact": 0.8, "paraphrase_exact": 0.5}
+    passing = {"rewrite_exact": 0.75, "paraphrase_exact": 0.45, "malformed_rate": 0.05}
+    assert _retains_dev_efficacy(passing, baseline)
+    assert not _retains_dev_efficacy({**passing, "rewrite_exact": 0.749}, baseline)
+    assert not _retains_dev_efficacy({**passing, "paraphrase_exact": 0.449}, baseline)
+    assert not _retains_dev_efficacy({**passing, "malformed_rate": 0.051}, baseline)
 
 
 def test_toy_csbm_dataset_and_sinkhorn_endpoint_constraints():

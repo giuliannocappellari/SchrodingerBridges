@@ -175,6 +175,19 @@ def _candidate_score(row: Mapping[str, Any], baseline: Mapping[str, Any]) -> flo
     return harmonic + 0.25 * safety_gain + 0.10 * update_gain
 
 
+def _retains_dev_efficacy(row: Mapping[str, Any], baseline: Mapping[str, Any]) -> bool:
+    return (
+        float(row["rewrite_exact"]) >= float(baseline["rewrite_exact"]) - 0.05
+        and float(row["paraphrase_exact"]) >= float(baseline["paraphrase_exact"]) - 0.05
+        and float(row["malformed_rate"]) <= 0.05
+    )
+
+
+def _nearest_lower_path_weight(value: float) -> float | None:
+    lower = [candidate for candidate in PATH_GRID if candidate < value]
+    return max(lower) if lower else None
+
+
 def _make_manifests(output_dir: Path) -> tuple[Path, Path, Path]:
     cf_dev = read_jsonl(PROTOCOL_ROOT / "cf_sb_dev_200.jsonl")
     kamel_dev = _augment_locality(read_jsonl(PROTOCOL_ROOT / "kamel_dev_50_per_length.jsonl"))
@@ -330,15 +343,25 @@ def main() -> None:
                 )
             )
     unique_stage3 = {row["label"]: row for row in stage3}
-    eligible = [
-        row
-        for row in unique_stage3.values()
-        if float(row["rewrite_exact"]) >= float(baseline["rewrite_exact"]) - 0.05
-        and float(row["paraphrase_exact"]) >= float(baseline["paraphrase_exact"]) - 0.05
-        and float(row["malformed_rate"]) <= 0.05
-    ]
-    pool = eligible or list(unique_stage3.values())
-    candidates = sorted(pool, key=lambda row: -_candidate_score(row, baseline))[:2]
+    eligible = [row for row in unique_stage3.values() if _retains_dev_efficacy(row, baseline)]
+    bounded_rescue_used = False
+    rescue_record: dict[str, Any] | None = None
+    if not eligible:
+        anchor = sorted(
+            unique_stage3.values(), key=lambda row: -_candidate_score(row, baseline)
+        )[0]
+        rescue_path = _nearest_lower_path_weight(float(anchor["lambda_path"]))
+        if rescue_path is not None:
+            bounded_rescue_used = True
+            rescue_record = ensure(
+                f"bounded_rescue_path_{_slug(rescue_path)}_identity_{_slug(float(anchor['lambda_identity']))}_weight_{_slug(float(anchor['lambda_weight']))}",
+                rescue_path,
+                float(anchor["lambda_identity"]),
+                float(anchor["lambda_weight"]),
+            )
+            if _retains_dev_efficacy(rescue_record, baseline):
+                eligible.append(rescue_record)
+    candidates = sorted(eligible, key=lambda row: -_candidate_score(row, baseline))[:2]
     for candidate in candidates:
         ensure(
             f"path_only_{_slug(float(candidate['lambda_path']))}",
@@ -354,9 +377,83 @@ def main() -> None:
         {
             "selection_split": "fresh cf_sb_dev_200 plus kamel_dev_50_per_length",
             "selected": candidates,
+            "bounded_rescue_used": bounded_rescue_used,
+            "bounded_rescue_candidate": rescue_record,
             "analysis_not_opened_during_selection": True,
         },
     )
+
+    if not candidates:
+        write_csv(
+            args.output_dir / "analysis_results.csv",
+            [],
+            fieldnames=("dataset", "label", "rewrite_exact", "paraphrase_exact"),
+        )
+        write_csv(
+            args.output_dir / "loss_ablation.csv",
+            [baseline, l2_baseline, identity_only],
+        )
+        write_csv(
+            args.output_dir / "identity_stress.csv",
+            [],
+            fieldnames=("dataset", "label", "same_subject_tfpr"),
+        )
+        write_csv(
+            args.output_dir / "path_kl_table.csv",
+            [
+                {
+                    "dataset": "dev",
+                    "label": row["label"],
+                    "mean_path_kl_training": row["mean_path_kl_training"],
+                    "update_norm_sum": row["update_norm_sum"],
+                }
+                for row in dev_rows
+            ],
+        )
+        write_csv(
+            args.output_dir / "paired_bootstrap.csv",
+            [],
+            fieldnames=("dataset", "candidate_label", "baseline_label", "bucket"),
+        )
+        report = {
+            "campaign_id": "masked_diffusion_memit_sb_positive_result_v1",
+            "track": "M3",
+            "stage": "M3_complete",
+            "created_at_utc": now_utc(),
+            "git_commit": git_commit(),
+            "selected_layers": layers,
+            "partial_mask_schedule": schedule,
+            "reveal_policy": reveal,
+            "dev_candidates": [],
+            "analysis_candidate_checks": [],
+            "sb_specific_positive_result": False,
+            "acceptance_pass": False,
+            "bounded_rescue_used": bounded_rescue_used,
+            "bounded_rescue_candidate": rescue_record,
+            "failure_reason": "efficacy_collapsed_on_dev_after_bounded_rescue",
+            "old_analysis_500_used": False,
+            "old_final_test_used": False,
+            "fresh_campaign_analysis_used": False,
+        }
+        write_json(args.output_dir / "report_summary.json", report)
+        (args.output_dir / "final_track_report.md").write_text(
+            "# M3 Path-KL/Identity-Regularized MEMIT\n\n"
+            "Status: **formal_negative**\n\n"
+            "No candidate retained dev efficacy after the single predeclared nearest-lower "
+            "path-KL rescue. Fresh campaign analysis was not opened.\n",
+            encoding="utf-8",
+        )
+        record_stage(
+            stage="M3_complete",
+            track="M3",
+            status="failed",
+            output_dir=args.output_dir,
+            acceptance_pass=False,
+            started_at_utc=started,
+            notes="dev efficacy collapsed after bounded rescue; analysis not opened",
+        )
+        print(json.dumps({"acceptance_pass": False, "selected_candidates": []}))
+        return
 
     analysis_rows: list[dict[str, Any]] = []
     analysis_specs = [baseline, l2_baseline] + candidates
@@ -486,7 +583,8 @@ def main() -> None:
         "analysis_candidate_checks": positive_candidates,
         "sb_specific_positive_result": acceptance,
         "acceptance_pass": acceptance,
-        "bounded_rescue_used": False,
+        "bounded_rescue_used": bounded_rescue_used,
+        "bounded_rescue_candidate": rescue_record,
         "old_analysis_500_used": False,
         "old_final_test_used": False,
         "fresh_campaign_analysis_used": True,
