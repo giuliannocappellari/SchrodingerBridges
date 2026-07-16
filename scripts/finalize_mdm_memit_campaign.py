@@ -465,11 +465,24 @@ The campaign used fresh manifests. Historical locked analysis/final prompt conte
     write_json(args.output_dir / "report_summary.json", summary)
     if not package_pass:
         raise RuntimeError("Terminal package validation failed")
+    history_rows = _read_csv(STATE_ROOT / "stage_history.csv")
+    completed_stages = [
+        row["stage"]
+        for row in history_rows
+        if str(row.get("acceptance_pass", "")).casefold() == "true"
+    ]
+    failed_stages = [
+        row["stage"]
+        for row in history_rows
+        if str(row.get("acceptance_pass", "")).casefold() == "false"
+    ]
     update_campaign_state(
         campaign_status="completed_positive" if campaign_positive else "completed_scientific_negative",
         current_stage="terminal_final_package",
         next_stage="pod_stop",
         track_status={row["track"]: row["status"] for row in track_rows},
+        completed_stages=list(dict.fromkeys(completed_stages + ["terminal_final_package"])),
+        failed_stages=list(dict.fromkeys(failed_stages)),
         old_analysis_500_used=False,
         old_final_test_used=False,
         pod_status="stop_pending",
