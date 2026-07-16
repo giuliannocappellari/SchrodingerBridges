@@ -6,6 +6,7 @@ from pathlib import Path
 import torch
 
 from scripts.mdm_memit_editor import sparse_support_kl
+from scripts.finalize_mdm_memit_campaign import _latest_stage_outcomes
 from scripts.run_mask_pattern_sb_track import _analytical_tests, _scheduled_bridge
 from scripts.run_sb_regularized_memit_track import (
     _nearest_lower_path_weight,
@@ -53,6 +54,18 @@ def test_state_dependent_bridge_schedules_normalize():
 
 def test_m4_analytical_fixture_has_order_dependent_path_cost(tmp_path: Path):
     assert _analytical_tests(tmp_path)
+
+
+def test_terminal_stage_ledger_uses_latest_audited_outcome():
+    completed, failed = _latest_stage_outcomes(
+        [
+            {"stage": "M4_complete", "acceptance_pass": "False"},
+            {"stage": "M3_complete", "acceptance_pass": "False"},
+            {"stage": "M4_complete", "acceptance_pass": "True"},
+        ]
+    )
+    assert completed == ["M4_complete"]
+    assert failed == ["M3_complete"]
 
 
 def test_m3_bounded_rescue_uses_nearest_lower_predeclared_path_weight():

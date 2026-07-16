@@ -10,6 +10,7 @@ valid and SB-positive.
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import shutil
 import sys
@@ -20,7 +21,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from scripts.mdm_memit_common import git_commit, now_utc, write_json
+from scripts.mdm_memit_common import STATE_ROOT, git_commit, now_utc, record_stage, write_json
 from scripts.run_mask_pattern_sb_track import M4_ROOT, _analytical_tests
 
 
@@ -37,10 +38,35 @@ def _backup(source: Path, destination: Path) -> None:
     shutil.copy2(source, destination)
 
 
+def _record_reconciliation_if_missing(output_dir: Path, started_at_utc: str) -> None:
+    history_path = STATE_ROOT / "stage_history.csv"
+    rows: list[dict[str, str]] = []
+    if history_path.exists():
+        with history_path.open(newline="", encoding="utf-8") as handle:
+            rows = list(csv.DictReader(handle))
+    already_recorded = any(
+        row.get("stage") == "M4_complete"
+        and str(row.get("acceptance_pass", "")).casefold() == "true"
+        and "analytical_fixture_reconciled" in str(row.get("notes", ""))
+        for row in rows
+    )
+    if not already_recorded:
+        record_stage(
+            stage="M4_complete",
+            track="M4",
+            status="passed",
+            output_dir=output_dir,
+            acceptance_pass=True,
+            started_at_utc=started_at_utc,
+            notes="analytical_fixture_reconciled; no model load or decoding rerun",
+        )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--output_dir", type=Path, default=M4_ROOT)
     args = parser.parse_args()
+    started_at_utc = now_utc()
     output_dir = args.output_dir
     report_path = output_dir / "report_summary.json"
     analytical_path = output_dir / "analytical_test_report.json"
@@ -53,6 +79,7 @@ def main() -> None:
     if report.get("analytical_test_correction", {}).get("status") == "validated":
         if not report.get("acceptance_pass") or not _read(analytical_path).get("acceptance_pass"):
             raise RuntimeError("Existing M4 reconciliation is internally inconsistent")
+        _record_reconciliation_if_missing(output_dir, started_at_utc)
         print(json.dumps({"acceptance_pass": True, "already_reconciled": True}))
         return
 
@@ -128,6 +155,7 @@ def main() -> None:
         "- Original reports preserved with `pre_fix` suffixes\n",
         encoding="utf-8",
     )
+    _record_reconciliation_if_missing(output_dir, started_at_utc)
     print(json.dumps({"acceptance_pass": report["acceptance_pass"], "already_reconciled": False}))
 
 

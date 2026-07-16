@@ -143,6 +143,20 @@ def _plot_packages(
     fig.savefig(FINAL_ROOT / "rewrite_generalization_plot.png", dpi=180)
     plt.close(fig)
 
+
+def _latest_stage_outcomes(history_rows: list[dict[str, Any]]) -> tuple[list[str], list[str]]:
+    """Return disjoint terminal lists using the latest audit for each stage."""
+
+    latest: dict[str, bool] = {}
+    for row in history_rows:
+        stage = str(row.get("stage") or "")
+        value = str(row.get("acceptance_pass", "")).casefold()
+        if stage and value in {"true", "false"}:
+            latest[stage] = value == "true"
+    completed = [stage for stage, accepted in latest.items() if accepted]
+    failed = [stage for stage, accepted in latest.items() if not accepted]
+    return completed, failed
+
     fig, ax = plt.subplots(figsize=(6.4, 4.2))
     for label, color in (("fully_masked", "#6C757D"), ("partial_seed1", "#2A9D8F")):
         points = sorted(
@@ -466,16 +480,7 @@ The campaign used fresh manifests. Historical locked analysis/final prompt conte
     if not package_pass:
         raise RuntimeError("Terminal package validation failed")
     history_rows = _read_csv(STATE_ROOT / "stage_history.csv")
-    completed_stages = [
-        row["stage"]
-        for row in history_rows
-        if str(row.get("acceptance_pass", "")).casefold() == "true"
-    ]
-    failed_stages = [
-        row["stage"]
-        for row in history_rows
-        if str(row.get("acceptance_pass", "")).casefold() == "false"
-    ]
+    completed_stages, failed_stages = _latest_stage_outcomes(history_rows)
     update_campaign_state(
         campaign_status="completed_positive" if campaign_positive else "completed_scientific_negative",
         current_stage="terminal_final_package",
