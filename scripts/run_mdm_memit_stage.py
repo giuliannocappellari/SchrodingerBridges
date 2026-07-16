@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import json
 import math
 import platform
@@ -37,6 +38,7 @@ from scripts.mdm_memit_editor import (
     apply_memit_batch,
     contextual_target_ids,
     denoise_answer_span,
+    denoise_answer_spans_batch,
     infer_mask_id,
     normalized_hit,
     render_masked_input,
@@ -130,6 +132,9 @@ def evaluate_prompt(
         "case_id": row["case_id"],
         "bucket": bucket,
         "prompt": prompt,
+        "prompt_fingerprint": hashlib.sha256(
+            f"{row['case_id']}::{bucket}::{prompt}".encode("utf-8")
+        ).hexdigest(),
         "target_new": row["target_new"],
         "target_true": row["target_true"],
         "expected_target": expected,
@@ -152,65 +157,90 @@ def evaluate_rows(
     include_locality: bool,
     fixed_length: int | None = None,
     fixed_steps: int | None = None,
+    decode_batch_size: int = 16,
 ) -> list[dict[str, Any]]:
-    results: list[dict[str, Any]] = []
+    tasks: list[dict[str, Any]] = []
     for row in rows:
-        results.append(
-            evaluate_prompt(
-                model,
-                tokenizer,
-                row,
-                str(row["rewrite_prompt"]),
-                "rewrite",
-                str(row["target_new"]),
-                fixed_length=fixed_length,
-                fixed_steps=fixed_steps,
-            )
+        tasks.append(
+            {
+                "row": row,
+                "prompt": str(row["rewrite_prompt"]),
+                "bucket": "rewrite",
+                "expected": str(row["target_new"]),
+            }
         )
         for prompt in list(row.get("paraphrase_prompts") or []):
-            results.append(
-                evaluate_prompt(
-                    model,
-                    tokenizer,
-                    row,
-                    str(prompt),
-                    "paraphrase",
-                    str(row["target_new"]),
-                    fixed_length=fixed_length,
-                    fixed_steps=fixed_steps,
-                )
+            tasks.append(
+                {
+                    "row": row,
+                    "prompt": str(prompt),
+                    "bucket": "paraphrase",
+                    "expected": str(row["target_new"]),
+                }
             )
         if not include_locality:
             continue
         for prompt in list(row.get("neighborhood_prompts") or [])[:10]:
-            results.append(
-                evaluate_prompt(
-                    model,
-                    tokenizer,
-                    row,
-                    str(prompt),
-                    "classic_specificity",
-                    str(row["target_true"]),
-                    fixed_length=fixed_length,
-                    fixed_steps=fixed_steps,
-                )
+            tasks.append(
+                {
+                    "row": row,
+                    "prompt": str(prompt),
+                    "bucket": "classic_specificity",
+                    "expected": str(row["target_true"]),
+                }
             )
         same_subject_prompts = list(row.get("generation_prompts") or [])[:2] + list(row.get("attribute_prompts") or [])[:2]
         for prompt in same_subject_prompts:
             if str(row["subject"]).casefold() not in str(prompt).casefold():
                 continue
-            results.append(
-                evaluate_prompt(
-                    model,
-                    tokenizer,
-                    row,
-                    str(prompt),
-                    "same_subject_stress",
-                    str(row["target_true"]),
-                    fixed_length=fixed_length,
-                    fixed_steps=fixed_steps,
-                )
+            tasks.append(
+                {
+                    "row": row,
+                    "prompt": str(prompt),
+                    "bucket": "same_subject_stress",
+                    "expected": str(row["target_true"]),
+                }
             )
+    lengths = [
+        fixed_length or answer_length(tokenizer, task["prompt"], task["row"])
+        for task in tasks
+    ]
+    decoded_rows = denoise_answer_spans_batch(
+        model,
+        tokenizer,
+        [task["prompt"] for task in tasks],
+        lengths,
+        steps=fixed_steps,
+        batch_size=decode_batch_size,
+    )
+    results: list[dict[str, Any]] = []
+    for task, decoded in zip(tasks, decoded_rows):
+        row = task["row"]
+        prompt = task["prompt"]
+        expected = task["expected"]
+        results.append(
+            {
+                "case_id": row["case_id"],
+                "bucket": task["bucket"],
+                "prompt": prompt,
+                "prompt_fingerprint": hashlib.sha256(
+                    f"{row['case_id']}::{task['bucket']}::{prompt}".encode("utf-8")
+                ).hexdigest(),
+                "target_new": row["target_new"],
+                "target_true": row["target_true"],
+                "expected_target": expected,
+                "output_text": decoded["output_text"],
+                "output_token_ids": json.dumps(decoded["output_token_ids"]),
+                "target_new_token_ids": json.dumps(row.get("target_new_token_ids") or []),
+                "target_new_hit": normalized_hit(decoded["output_text"], row["target_new"]),
+                "target_true_hit": normalized_hit(decoded["output_text"], row["target_true"]),
+                "expected_hit": normalized_hit(decoded["output_text"], expected),
+                "malformed": decoded["malformed"],
+                "model_eval_count": decoded["model_eval_count"],
+                "target_length": row.get("target_length"),
+                "relation_id": row.get("relation_id"),
+            }
+        )
     return results
 
 
@@ -230,6 +260,46 @@ def aggregate(results: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
             "model_eval_count": sum(int(row["model_eval_count"]) for row in values),
         }
     return buckets
+
+
+def add_base_agreement(
+    base_results: Sequence[Mapping[str, Any]],
+    edited_results: Sequence[Mapping[str, Any]],
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Attach per-prompt agreement with the frozen base decode.
+
+    CounterFact neighborhood prompts concern other subjects, so the edited
+    fact's old target is not their gold answer. Agreement with the frozen base
+    is the deployable specificity signal available for every such prompt.
+    """
+
+    base_by_key = {
+        str(row["prompt_fingerprint"]): row for row in base_results
+    }
+    enriched: list[dict[str, Any]] = []
+    grouped: dict[str, list[bool]] = defaultdict(list)
+    for raw in edited_results:
+        row = dict(raw)
+        base = base_by_key.get(str(row["prompt_fingerprint"]))
+        if base is None:
+            raise RuntimeError(
+                f"Missing aligned base prompt {row['prompt_fingerprint']}"
+            )
+        agreement = " ".join(str(row["output_text"]).casefold().split()) == " ".join(
+            str(base["output_text"]).casefold().split()
+        )
+        row["base_output_text"] = base["output_text"]
+        row["base_agreement"] = agreement
+        grouped[str(row["bucket"])].append(agreement)
+        enriched.append(row)
+    summary = {
+        bucket: {
+            "num_rows": len(values),
+            "exact_base_agreement": sum(values) / len(values),
+        }
+        for bucket, values in grouped.items()
+    }
+    return enriched, summary
 
 
 def write_result_csv(path: Path, rows: Sequence[Mapping[str, Any]]) -> None:
@@ -252,6 +322,9 @@ def main() -> None:
     parser.add_argument("--kl_factor", type=float, default=0.0625)
     parser.add_argument("--weight_decay", type=float, default=0.5)
     parser.add_argument("--covariance_weight", type=float, default=15000.0)
+    parser.add_argument("--lambda_path", type=float, default=0.0)
+    parser.add_argument("--lambda_identity", type=float, default=0.0)
+    parser.add_argument("--lambda_weight", type=float, default=0.0)
     parser.add_argument("--partial_mask_schedule", default="fully_masked")
     parser.add_argument("--reveal_policy", default="random")
     parser.add_argument("--limit", type=int, default=0)
@@ -289,6 +362,9 @@ def main() -> None:
         covariance_weight=args.covariance_weight,
         partial_mask_schedule=args.partial_mask_schedule,
         reveal_policy=args.reveal_policy,
+        lambda_path=args.lambda_path,
+        lambda_identity=args.lambda_identity,
+        lambda_weight=args.lambda_weight,
         seed=args.seed,
     )
     before_probability = target_probability(model, tokenizer, rows[0])
@@ -323,6 +399,9 @@ def main() -> None:
     if not rollback_pass:
         raise RuntimeError("MEMIT rollback checksum failed")
 
+    edited_results, base_agreement_summary = add_base_agreement(
+        base_results, edited_results
+    )
     write_result_csv(args.output_dir / "base_per_prompt.csv", base_results)
     write_result_csv(args.output_dir / "edited_per_prompt.csv", edited_results)
     write_json(args.output_dir / "target_value_diagnostics.json", diagnostics)
@@ -377,6 +456,7 @@ def main() -> None:
         "rollback_checksum_pass": rollback_pass,
         "base_summary": base_summary,
         "edited_summary": edited_summary,
+        "base_agreement_summary": base_agreement_summary,
         "rewrite_exact": rewrite,
         "paraphrase_exact": paraphrase,
         "malformed_rate": malformed,

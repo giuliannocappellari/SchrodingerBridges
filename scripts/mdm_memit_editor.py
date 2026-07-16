@@ -38,6 +38,10 @@ class MemitConfig:
     covariance_weight: float = 15000.0
     partial_mask_schedule: str = "fully_masked"
     reveal_policy: str = "random"
+    lambda_path: float = 0.0
+    lambda_identity: float = 0.0
+    lambda_weight: float = 0.0
+    sparse_kl_top_k: int = 32
     seed: int = 260603924
 
     def to_dict(self) -> dict[str, Any]:
@@ -259,6 +263,7 @@ def _masked_context_rows(
     config: MemitConfig,
     step: int,
     rng: random.Random,
+    confidence: Sequence[float] | None = None,
 ) -> tuple[list[dict[str, Any]], list[int], int]:
     subject = str(request["subject"])
     template = str(request.get("rewrite_template") or request.get("prompt_template") or "{}")
@@ -276,6 +281,7 @@ def _masked_context_rows(
             schedule=config.partial_mask_schedule,
             reveal_policy=config.reveal_policy,
             rng=rng,
+            confidence=confidence,
         )
         rows.append(row)
         lookup_unpadded.append(find_last_subject_token(tokenizer, prompt, subject))
@@ -285,6 +291,13 @@ def _masked_context_rows(
     anchor_row = render_masked_input(tokenizer, anchor_prompt, anchor_target, mask_id)
     rows.append(anchor_row)
     lookup_unpadded.append(find_last_subject_token(tokenizer, anchor_prompt, subject))
+    for identity_prompt in list(request.get("identity_prompts") or [])[:2]:
+        identity_text = str(identity_prompt)
+        if subject.casefold() not in identity_text.casefold():
+            raise ValueError("Identity prompt must contain the edited subject")
+        identity_row = render_masked_input(tokenizer, identity_text, [mask_id], mask_id)
+        rows.append(identity_row)
+        lookup_unpadded.append(find_last_subject_token(tokenizer, identity_text, subject))
     return rows, lookup_unpadded, len(DEFAULT_CONTEXT_PREFIXES)
 
 
@@ -311,6 +324,16 @@ def optimize_target_value(
     initial_kl: torch.Tensor | None = None
     history: list[dict[str, float]] = []
     rng = random.Random(config.seed + int(stable_request_int(request)))
+    confidence: list[float] | None = None
+    if config.reveal_policy == "base_confidence":
+        rendered = render_masked_input(tokenizer, prompt, target_ids, mask_id)
+        ids = torch.tensor([rendered["input_ids"]], dtype=torch.long, device=device)
+        with torch.no_grad():
+            base_logits = model(input_ids=ids).logits[0].float()
+        confidence = [
+            float(F.softmax(base_logits[position], dim=-1)[int(token_id)])
+            for position, token_id in zip(rendered["answer_positions"], target_ids)
+        ]
     for step in range(config.target_optimization_steps):
         optimizer.zero_grad(set_to_none=True)
         rows, lookup_unpadded, rewrite_count = _masked_context_rows(
@@ -321,10 +344,17 @@ def optimize_target_value(
             config=config,
             step=step,
             rng=rng,
+            confidence=confidence,
         )
         batch = pad_batch(rows, int(tokenizer.pad_token_id), device)
         offsets = batch["left_offsets"].tolist()
         lookup = [int(offsets[index]) + int(value) for index, value in enumerate(lookup_unpadded)]
+        base_logits: torch.Tensor | None = None
+        if config.lambda_path > 0 or config.lambda_identity > 0:
+            with torch.no_grad():
+                base_logits = model(
+                    input_ids=batch["input_ids"], attention_mask=batch["attention_mask"]
+                ).logits.float()
         with intervene_block_output(module, lookup, delta, target_init_box):
             logits = model(input_ids=batch["input_ids"], attention_mask=batch["attention_mask"]).logits.float()
 
@@ -348,9 +378,64 @@ def optimize_target_value(
         if initial_kl is None:
             initial_kl = anchor_log_probs.detach().clone()
         kl = F.kl_div(initial_kl, anchor_log_probs, log_target=True, reduction="sum")
+        path_terms: list[torch.Tensor] = []
+        if config.lambda_path > 0:
+            if base_logits is None:
+                raise RuntimeError("Path KL requested without frozen-base logits")
+            target_true_ids = list(map(int, request.get("target_true_token_ids") or []))
+            extra_ids = list(target_ids) + target_true_ids
+            for index, row in enumerate(rows[:rewrite_count]):
+                offset = int(offsets[index])
+                for position in row["supervised_positions"]:
+                    absolute = offset + int(position)
+                    path_terms.append(
+                        sparse_support_kl(
+                            logits[index, absolute],
+                            base_logits[index, absolute],
+                            extra_ids=extra_ids,
+                            top_k=config.sparse_kl_top_k,
+                        )
+                    )
+        path_kl = (
+            torch.stack(path_terms).mean()
+            if path_terms
+            else torch.zeros((), device=device)
+        )
+        identity_terms: list[torch.Tensor] = []
+        if config.lambda_identity > 0:
+            if base_logits is None:
+                raise RuntimeError("Identity loss requested without frozen-base logits")
+            identity_start = rewrite_count + 1
+            for index in range(identity_start, len(rows)):
+                offset = int(offsets[index])
+                absolute = offset + int(rows[index]["answer_positions"][0])
+                identity_kl = sparse_support_kl(
+                    logits[index, absolute],
+                    base_logits[index, absolute],
+                    extra_ids=target_ids,
+                    top_k=config.sparse_kl_top_k,
+                )
+                edited_probs = F.softmax(logits[index, absolute], dim=-1)
+                target_pressure = edited_probs[
+                    torch.tensor(target_ids, dtype=torch.long, device=device)
+                ].sum()
+                identity_terms.append(identity_kl + target_pressure)
+        identity_loss = (
+            torch.stack(identity_terms).mean()
+            if identity_terms
+            else torch.zeros((), device=device)
+        )
         target_init = target_init_box[0].float()
         decay = config.weight_decay * delta.norm() / target_init.norm().clamp_min(1e-8).pow(2)
-        total = nll + config.kl_factor * kl + decay
+        delta_l2 = delta.float().pow(2).mean()
+        total = (
+            nll
+            + config.kl_factor * kl
+            + decay
+            + config.lambda_path * path_kl
+            + config.lambda_identity * identity_loss
+            + config.lambda_weight * delta_l2
+        )
         if not torch.isfinite(total):
             raise FloatingPointError("Non-finite target-value loss")
         history.append(
@@ -360,6 +445,9 @@ def optimize_target_value(
                 "nll_loss": float(nll.detach()),
                 "kl_loss": float(kl.detach()),
                 "weight_decay": float(decay.detach()),
+                "path_kl_loss": float(path_kl.detach()),
+                "identity_loss": float(identity_loss.detach()),
+                "delta_l2": float(delta_l2.detach()),
                 "delta_norm": float(delta.detach().norm()),
             }
         )
@@ -632,6 +720,118 @@ def denoise_answer_span(
         "model_eval_count": eval_count,
         "trajectory": trajectory,
     }
+
+
+@torch.no_grad()
+def denoise_answer_spans_batch(
+    model: torch.nn.Module,
+    tokenizer: Any,
+    prompts: Sequence[str],
+    answer_lengths: Sequence[int],
+    *,
+    steps: int | None = None,
+    batch_size: int = 16,
+) -> list[dict[str, Any]]:
+    """Batched equivalent of :func:`denoise_answer_span`.
+
+    Rows are grouped by answer length so every batch follows exactly the same
+    reveal schedule as the scalar implementation. Left padding is masked out.
+    """
+
+    if len(prompts) != len(answer_lengths):
+        raise ValueError("prompts and answer_lengths must align")
+    if batch_size <= 0:
+        raise ValueError("batch_size must be positive")
+    output: list[dict[str, Any] | None] = [None] * len(prompts)
+    grouped: dict[int, list[int]] = {}
+    for index, length in enumerate(answer_lengths):
+        if int(length) <= 0:
+            raise ValueError("answer lengths must be positive")
+        grouped.setdefault(int(length), []).append(index)
+    device = model_device(model)
+    mask_id = infer_mask_id(model)
+    pad_id = int(tokenizer.pad_token_id)
+    for answer_length, indices in grouped.items():
+        total_steps = int(steps or answer_length)
+        reveal_per_step = max(1, math.ceil(answer_length / total_steps))
+        for start in range(0, len(indices), batch_size):
+            member_indices = indices[start : start + batch_size]
+            prompt_ids = [
+                list(map(int, tokenizer(prompts[index], add_special_tokens=False)["input_ids"]))
+                for index in member_indices
+            ]
+            rows = [
+                {"input_ids": ids + [mask_id] * answer_length}
+                for ids in prompt_ids
+            ]
+            batch = pad_batch(rows, pad_id, device)
+            state = batch["input_ids"]
+            attention = batch["attention_mask"]
+            offsets = batch["left_offsets"].tolist()
+            answer_positions = [
+                list(
+                    range(
+                        int(offsets[row_index]) + len(prompt_ids[row_index]),
+                        int(offsets[row_index]) + len(prompt_ids[row_index]) + answer_length,
+                    )
+                )
+                for row_index in range(len(member_indices))
+            ]
+            eval_counts = [0] * len(member_indices)
+            trajectories: list[list[dict[str, Any]]] = [
+                [] for _ in member_indices
+            ]
+            for step_index in range(total_steps):
+                masked_by_row = [
+                    [
+                        position
+                        for position in answer_positions[row_index]
+                        if int(state[row_index, position]) == mask_id
+                    ]
+                    for row_index in range(len(member_indices))
+                ]
+                if not any(masked_by_row):
+                    break
+                logits = model(input_ids=state, attention_mask=attention).logits.float()
+                for row_index, masked in enumerate(masked_by_row):
+                    if not masked:
+                        continue
+                    eval_counts[row_index] += 1
+                    proposals: list[tuple[float, int, int]] = []
+                    for position in masked:
+                        probs = F.softmax(logits[row_index, position], dim=-1)
+                        confidence, token_id = probs.max(dim=-1)
+                        proposals.append((float(confidence), position, int(token_id)))
+                    proposals.sort(reverse=True)
+                    committed = proposals[: min(reveal_per_step, len(proposals))]
+                    for confidence, position, token_id in committed:
+                        state[row_index, position] = token_id
+                    trajectories[row_index].append(
+                        {
+                            "step": step_index,
+                            "masked_before": len(masked),
+                            "committed": [
+                                {
+                                    "position": position - answer_positions[row_index][0],
+                                    "token_id": token_id,
+                                    "confidence": confidence,
+                                }
+                                for confidence, position, token_id in committed
+                            ],
+                        }
+                    )
+            for row_index, original_index in enumerate(member_indices):
+                ids = state[row_index, answer_positions[row_index]].detach().cpu().tolist()
+                output[original_index] = {
+                    "output_text": tokenizer.decode(ids, skip_special_tokens=True).strip(),
+                    "output_token_ids": ids,
+                    "malformed": any(token_id == mask_id for token_id in ids),
+                    "model_eval_count": eval_counts[row_index],
+                    "trajectory": trajectories[row_index],
+                }
+    if any(item is None for item in output):
+        raise RuntimeError("Batched denoising did not produce every row")
+    return [dict(item) for item in output if item is not None]
 
 
 def normalized_hit(output: str, target: str) -> bool:

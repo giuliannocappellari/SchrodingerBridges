@@ -2,12 +2,15 @@ from __future__ import annotations
 
 import math
 import random
+from types import SimpleNamespace
 
 import torch
 from torch import nn
 
 from scripts.mdm_memit_editor import (
     WeightRollback,
+    denoise_answer_span,
+    denoise_answer_spans_batch,
     exact_mask_pattern_bridge,
     find_last_subject_token,
     get_module,
@@ -35,6 +38,9 @@ class TinyTokenizer:
             result["offset_mapping"] = offsets
         return result
 
+    def decode(self, ids, skip_special_tokens=True):
+        return " ".join(map(str, ids))
+
 
 class TinyBlock(nn.Module):
     def __init__(self):
@@ -58,6 +64,18 @@ class TinyModel(nn.Module):
     def __init__(self):
         super().__init__()
         self.model = TinyInner()
+
+
+class TinyDenoiser(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.anchor = nn.Parameter(torch.zeros(()))
+        self.config = SimpleNamespace(mask_token_id=99)
+
+    def forward(self, input_ids, attention_mask=None):
+        logits = torch.zeros((*input_ids.shape, 128), device=input_ids.device)
+        logits[..., 7] = 10.0 + self.anchor
+        return SimpleNamespace(logits=logits)
 
 
 def test_subject_locator_returns_last_subject_token():
@@ -160,3 +178,21 @@ def test_exact_mask_pattern_dp_normalizes_and_beta_zero_matches_reference():
     assert beta_zero[0] == {0: 1 / 3, 1: 1 / 3, 2: 1 / 3}
     controlled = exact_mask_pattern_bridge(costs, n, beta=2.0)
     assert controlled[0][0] > controlled[0][2]
+
+
+def test_batched_denoising_matches_scalar_for_variable_prompt_and_span_lengths():
+    model = TinyDenoiser()
+    tokenizer = TinyTokenizer()
+    prompts = ["Ada works as", "Grace Hopper worked as a"]
+    lengths = [1, 2]
+    scalar = [
+        denoise_answer_span(model, tokenizer, prompt, length)
+        for prompt, length in zip(prompts, lengths)
+    ]
+    batched = denoise_answer_spans_batch(
+        model, tokenizer, prompts, lengths, batch_size=2
+    )
+    assert [row["output_token_ids"] for row in batched] == [
+        row["output_token_ids"] for row in scalar
+    ]
+    assert [row["model_eval_count"] for row in batched] == [1, 2]
