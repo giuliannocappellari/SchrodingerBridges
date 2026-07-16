@@ -22,6 +22,7 @@ if str(ROOT) not in sys.path:
 from scripts.mdm_memit_common import (
     CAMPAIGN_ID,
     MODEL_ID,
+    MODEL_REVISION,
     PROTOCOL_ROOT,
     collect_historical_exclusions,
     git_commit,
@@ -374,6 +375,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--output_dir", type=Path, default=PROTOCOL_ROOT)
     parser.add_argument("--model_id", default=MODEL_ID)
+    parser.add_argument("--model_revision", default=MODEL_REVISION)
     parser.add_argument("--counterfact_dataset", default="azhx/counterfact")
     parser.add_argument("--seed", type=int, default=260603924)
     parser.add_argument("--build_kamel", type=int, choices=[0, 1], default=1)
@@ -388,7 +390,9 @@ def main() -> None:
 
     from transformers import AutoTokenizer
 
-    tokenizer = AutoTokenizer.from_pretrained(args.model_id, trust_remote_code=True)
+    tokenizer = AutoTokenizer.from_pretrained(
+        args.model_id, revision=args.model_revision, trust_remote_code=True
+    )
     cf_splits = build_counterfact(tokenizer, args.counterfact_dataset, args.seed)
     all_splits: dict[str, list[dict[str, Any]]] = dict(cf_splits)
     kamel_source: dict[str, Any] = {"built": False}
@@ -435,6 +439,7 @@ def main() -> None:
         "created_at_utc": now_utc(),
         "git_commit": git_commit(),
         "model_id_for_tokenization": args.model_id,
+        "model_revision_for_tokenization": args.model_revision,
         "counterfact_dataset": args.counterfact_dataset,
         "selection_seed": args.seed,
         "old_analysis_500_used": False,

@@ -22,6 +22,7 @@ from scripts.mdm_memit_common import (
     CAMPAIGN_ID,
     CAMPAIGN_ROOT,
     MODEL_ID,
+    MODEL_REVISION,
     PROTOCOL_ROOT,
     git_commit,
     now_utc,
@@ -54,7 +55,7 @@ def parse_layers(value: str) -> tuple[int, ...]:
     return layers
 
 
-def load_model(model_id: str, dtype_name: str):
+def load_model(model_id: str, model_revision: str, dtype_name: str):
     import torch
     from transformers import AutoModel, AutoTokenizer
 
@@ -63,6 +64,7 @@ def load_model(model_id: str, dtype_name: str):
     dtype = torch.float16 if dtype_name == "float16" else torch.bfloat16
     model = AutoModel.from_pretrained(
         model_id,
+        revision=model_revision,
         trust_remote_code=True,
         torch_dtype=dtype,
         device_map=None,
@@ -70,7 +72,9 @@ def load_model(model_id: str, dtype_name: str):
     model.eval()
     for parameter in model.parameters():
         parameter.requires_grad_(False)
-    tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
+    tokenizer = AutoTokenizer.from_pretrained(
+        model_id, revision=model_revision, trust_remote_code=True
+    )
     if tokenizer.pad_token_id is None or tokenizer.pad_token_id == infer_mask_id(model):
         tokenizer.pad_token_id = tokenizer.eos_token_id
     tokenizer.padding_side = "left"
@@ -238,6 +242,7 @@ def main() -> None:
     parser.add_argument("--manifest", type=Path, default=PROTOCOL_ROOT / "cf_memit_smoke_20.jsonl")
     parser.add_argument("--output_dir", type=Path, required=True)
     parser.add_argument("--model_id", default=MODEL_ID)
+    parser.add_argument("--model_revision", default=MODEL_REVISION)
     parser.add_argument("--dtype", choices=["float16", "bfloat16"], default="float16")
     parser.add_argument("--layers", type=parse_layers, default=parse_layers("4,5,6,7"))
     parser.add_argument("--covariance_dir", type=Path, default=CAMPAIGN_ROOT / "covariance_cache_v1")
@@ -273,7 +278,7 @@ def main() -> None:
     import torch
     import transformers
 
-    model, tokenizer = load_model(args.model_id, args.dtype)
+    model, tokenizer = load_model(args.model_id, args.model_revision, args.dtype)
     config = MemitConfig(
         layers=args.layers,
         learning_rate=args.learning_rate,
@@ -348,6 +353,7 @@ def main() -> None:
         "manifest_sha256": sha256_file(args.manifest),
         "num_edits": len(rows),
         "model_id": args.model_id,
+        "model_revision": args.model_revision,
         "dtype": args.dtype,
         "use_4bit": False,
         "layers": list(args.layers),

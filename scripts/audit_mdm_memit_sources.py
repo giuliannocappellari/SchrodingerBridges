@@ -21,6 +21,7 @@ from scripts.mdm_memit_common import (
     CAMPAIGN_ID,
     CAMPAIGN_ROOT,
     MODEL_ID,
+    MODEL_REVISION,
     git_commit,
     now_utc,
     record_stage,
@@ -90,6 +91,7 @@ def official_code_search() -> dict[str, Any]:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_id", default=MODEL_ID)
+    parser.add_argument("--model_revision", default=MODEL_REVISION)
     parser.add_argument("--dtype", choices=["float16", "bfloat16"], default="float16")
     parser.add_argument("--output_dir", type=Path, default=SOURCE_ROOT)
     args = parser.parse_args()
@@ -126,6 +128,7 @@ def main() -> None:
     dtype = torch.float16 if args.dtype == "float16" else torch.bfloat16
     model = AutoModel.from_pretrained(
         args.model_id,
+        revision=args.model_revision,
         trust_remote_code=True,
         torch_dtype=dtype,
         device_map=None,
@@ -133,7 +136,9 @@ def main() -> None:
     if torch.cuda.is_available():
         model = model.to("cuda")
     model.eval()
-    tokenizer = AutoTokenizer.from_pretrained(args.model_id, trust_remote_code=True)
+    tokenizer = AutoTokenizer.from_pretrained(
+        args.model_id, revision=args.model_revision, trust_remote_code=True
+    )
     if tokenizer.pad_token_id is None or tokenizer.pad_token_id == infer_mask_id(model):
         tokenizer.pad_token_id = tokenizer.eos_token_id
 
@@ -160,6 +165,7 @@ def main() -> None:
         )
     map_payload = {
         "model_id": args.model_id,
+        "model_revision": args.model_revision,
         "architecture": type(model).__name__,
         "n_layers": int(model.config.n_layers),
         "d_model": int(model.config.d_model),

@@ -21,6 +21,7 @@ CAMPAIGN_ROOT = Path("runs") / CAMPAIGN_ID
 STATE_ROOT = CAMPAIGN_ROOT / "autonomous_campaign_v1"
 PROTOCOL_ROOT = CAMPAIGN_ROOT / "protocol"
 MODEL_ID = "GSAI-ML/LLaDA-8B-Instruct"
+MODEL_REVISION = "08b83a6feb34df1a6011b80c3c00c7563e963b07"
 
 TRACKS = {
     "M1": "M1_mdm_memit_reproduction_v1",
@@ -371,4 +372,3 @@ def record_stage(
 
 def histogram(values: Iterable[Any]) -> dict[str, int]:
     return dict(sorted(Counter(map(str, values)).items()))
-

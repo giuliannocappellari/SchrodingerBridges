@@ -18,6 +18,7 @@ from scripts.mdm_memit_common import (
     CAMPAIGN_ID,
     CAMPAIGN_ROOT,
     MODEL_ID,
+    MODEL_REVISION,
     git_commit,
     now_utc,
     record_stage,
@@ -50,6 +51,7 @@ def wikipedia_texts(dataset_name: str, config_name: str) -> Iterable[str]:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_id", default=MODEL_ID)
+    parser.add_argument("--model_revision", default=MODEL_REVISION)
     parser.add_argument("--layers", type=parse_layers, default=parse_layers("4,5,6,7"))
     parser.add_argument("--sample_size", type=int, default=100_000)
     parser.add_argument("--batch_size", type=int, default=2)
@@ -75,6 +77,7 @@ def main() -> None:
 
     model = AutoModel.from_pretrained(
         args.model_id,
+        revision=args.model_revision,
         trust_remote_code=True,
         torch_dtype=torch.float16,
         device_map=None,
@@ -82,7 +85,9 @@ def main() -> None:
     if not torch.cuda.is_available():
         raise RuntimeError("CUDA is required for covariance estimation")
     model = model.to("cuda").eval()
-    tokenizer = AutoTokenizer.from_pretrained(args.model_id, trust_remote_code=True)
+    tokenizer = AutoTokenizer.from_pretrained(
+        args.model_id, revision=args.model_revision, trust_remote_code=True
+    )
     if tokenizer.pad_token_id is None or tokenizer.pad_token_id == model.config.mask_token_id:
         tokenizer.pad_token_id = tokenizer.eos_token_id
     tokenizer.padding_side = "right"
@@ -169,6 +174,7 @@ def main() -> None:
         "created_at_utc": now_utc(),
         "git_commit": git_commit(),
         "model_id": args.model_id,
+        "model_revision": args.model_revision,
         "model_dtype": "float16",
         "quantized": False,
         "dataset_name": args.dataset_name,
@@ -199,6 +205,7 @@ def main() -> None:
         args.output_dir / "run_config.json",
         {
             "model_id": args.model_id,
+            "model_revision": args.model_revision,
             "layers": args.layers,
             "sample_size": args.sample_size,
             "batch_size": args.batch_size,
