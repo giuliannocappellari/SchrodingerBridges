@@ -5,6 +5,7 @@ from pathlib import Path
 
 import torch
 
+import scripts.finalize_mdm_memit_campaign as campaign_finalizer
 from scripts.mdm_memit_editor import sparse_support_kl
 from scripts.finalize_mdm_memit_campaign import _latest_stage_outcomes
 from scripts.run_mask_pattern_sb_track import _analytical_tests, _scheduled_bridge
@@ -66,6 +67,28 @@ def test_terminal_stage_ledger_uses_latest_audited_outcome():
     )
     assert completed == ["M4_complete"]
     assert failed == ["M3_complete"]
+
+
+def test_terminal_plotter_writes_every_required_plot(tmp_path: Path, monkeypatch):
+    monkeypatch.setattr(campaign_finalizer, "FINAL_ROOT", tmp_path)
+    campaign_finalizer._plot_packages(
+        {"efficacy": 0.8, "generalization": 0.5},
+        [
+            {
+                "label": "fully_masked",
+                "bucket": "rewrite",
+                "target_length": "2",
+                "full_target_exact": "0.2",
+            }
+        ],
+        [],
+        [{"mean_trajectory_target_cost": "1.0"}],
+    )
+    assert {path.name for path in tmp_path.glob("*.png")} == {
+        "rewrite_generalization_plot.png",
+        "partial_mask_gain_plot.png",
+        "path_cost_locality_pareto.png",
+    }
 
 
 def test_m3_bounded_rescue_uses_nearest_lower_predeclared_path_weight():

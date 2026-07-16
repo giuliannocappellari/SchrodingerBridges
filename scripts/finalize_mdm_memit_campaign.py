@@ -142,21 +142,6 @@ def _plot_packages(
     fig.tight_layout()
     fig.savefig(FINAL_ROOT / "rewrite_generalization_plot.png", dpi=180)
     plt.close(fig)
-
-
-def _latest_stage_outcomes(history_rows: list[dict[str, Any]]) -> tuple[list[str], list[str]]:
-    """Return disjoint terminal lists using the latest audit for each stage."""
-
-    latest: dict[str, bool] = {}
-    for row in history_rows:
-        stage = str(row.get("stage") or "")
-        value = str(row.get("acceptance_pass", "")).casefold()
-        if stage and value in {"true", "false"}:
-            latest[stage] = value == "true"
-    completed = [stage for stage, accepted in latest.items() if accepted]
-    failed = [stage for stage, accepted in latest.items() if not accepted]
-    return completed, failed
-
     fig, ax = plt.subplots(figsize=(6.4, 4.2))
     for label, color in (("fully_masked", "#6C757D"), ("partial_seed1", "#2A9D8F")):
         points = sorted(
@@ -195,6 +180,20 @@ def _latest_stage_outcomes(history_rows: list[dict[str, Any]]) -> tuple[list[str
     fig.tight_layout()
     fig.savefig(FINAL_ROOT / "path_cost_locality_pareto.png", dpi=180)
     plt.close(fig)
+
+
+def _latest_stage_outcomes(history_rows: list[dict[str, Any]]) -> tuple[list[str], list[str]]:
+    """Return disjoint terminal lists using the latest audit for each stage."""
+
+    latest: dict[str, bool] = {}
+    for row in history_rows:
+        stage = str(row.get("stage") or "")
+        value = str(row.get("acceptance_pass", "")).casefold()
+        if stage and value in {"true", "false"}:
+            latest[stage] = value == "true"
+    completed = [stage for stage, accepted in latest.items() if accepted]
+    failed = [stage for stage, accepted in latest.items() if not accepted]
+    return completed, failed
 
 
 def main() -> None:
