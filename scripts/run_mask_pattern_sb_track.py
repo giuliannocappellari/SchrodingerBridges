@@ -473,8 +473,11 @@ def _edit_model(
 def _analytical_tests(output_dir: Path) -> bool:
     n = 3
     terminal = (1 << n) - 1
+    # Make complete trajectory costs order-dependent. The previous fixture added
+    # the same step-count offset to every permutation, so all full paths had the
+    # same total cost and no first-action preference was mathematically implied.
     costs = {
-        (mask, index): float(index + 1 + mask.bit_count() * 0.1)
+        (mask, index): float(index + 1) if mask == 0 else 0.0
         for mask in range(terminal)
         for index in range(n)
         if not mask & (1 << index)

@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import math
+from pathlib import Path
 
 import torch
 
 from scripts.mdm_memit_editor import sparse_support_kl
-from scripts.run_mask_pattern_sb_track import _scheduled_bridge
+from scripts.run_mask_pattern_sb_track import _analytical_tests, _scheduled_bridge
 from scripts.run_sb_regularized_memit_track import (
     _nearest_lower_path_weight,
     _retains_dev_efficacy,
@@ -48,6 +49,10 @@ def test_state_dependent_bridge_schedules_normalize():
     for schedule in ("early_strong", "late_strong"):
         policy = _scheduled_bridge(costs, n, reference, beta=1.0, schedule=schedule)
         assert all(abs(sum(row.values()) - 1.0) < 1e-10 for row in policy.values())
+
+
+def test_m4_analytical_fixture_has_order_dependent_path_cost(tmp_path: Path):
+    assert _analytical_tests(tmp_path)
 
 
 def test_m3_bounded_rescue_uses_nearest_lower_predeclared_path_weight():
