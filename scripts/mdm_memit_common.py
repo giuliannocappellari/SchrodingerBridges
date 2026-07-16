@@ -368,6 +368,52 @@ def record_stage(
         },
     )
     append_log(f"{stage}: {status}; acceptance_pass={acceptance_pass}. {notes}")
+    state_path = repo_path(STATE_ROOT / "campaign_state.json")
+    if state_path.exists():
+        state = read_json(state_path)
+        completed = list(state.get("completed_stages") or [])
+        failed = list(state.get("failed_stages") or [])
+        target = completed if acceptance_pass else failed
+        if stage not in target:
+            target.append(stage)
+        state["completed_stages"] = completed
+        state["failed_stages"] = failed
+        state["current_stage"] = stage
+        state["next_stage"] = ""
+        terminal_stage_by_track = {
+            "M1": "M1_locked_reproduction_500",
+            "M2": "M2_partial_mask_complete",
+            "M3": "M3_complete",
+            "M4": "M4_complete",
+            "F1": "F1_complete",
+            "F2": "F2_toy_text_csbm",
+        }
+        if track in terminal_stage_by_track and stage == terminal_stage_by_track[track]:
+            track_status = dict(state.get("track_status") or {})
+            track_status[track] = "passed" if acceptance_pass else "formal_negative"
+            state["track_status"] = track_status
+        state["updated_at_utc"] = now_utc()
+        state["last_git_commit"] = git_commit()
+        write_json(STATE_ROOT / "campaign_state.json", state)
+
+    artifact_path = repo_path(STATE_ROOT / "artifact_availability.json")
+    if artifact_path.exists():
+        manifest = read_json(artifact_path)
+        artifacts = list(manifest.get("artifacts") or [])
+        report_path = repo_path(output_dir) / "report_summary.json"
+        entry = {
+            "stage": stage,
+            "track": track,
+            "output_dir": str(output_dir),
+            "report_summary_exists": report_path.exists(),
+            "report_summary_sha256": sha256_file(report_path) if report_path.exists() else "",
+            "acceptance_pass": acceptance_pass,
+        }
+        artifacts = [row for row in artifacts if row.get("stage") != stage]
+        artifacts.append(entry)
+        manifest["artifacts"] = artifacts
+        manifest["updated_at_utc"] = now_utc()
+        write_json(STATE_ROOT / "artifact_availability.json", manifest)
 
 
 def histogram(values: Iterable[Any]) -> dict[str, int]:
