@@ -1,26 +1,34 @@
-# Schrödinger-Bridge Alternatives Autonomous Campaign Bundle
+# Masked-Diffusion MEMIT + Schrödinger Goal Bundle
 
-Place all files in this directory directly in the repository root:
+Place every file in this bundle at the repository root.
+
+## Active goal
+
+Obtain a strong positive factual-editing result in a masked diffusion language model, then test whether Schrödinger-style path control improves locality or denoising trajectory quality.
+
+## Required execution order
 
 ```text
-AGENTS.md
-ACTIVE_RESEARCH_CAMPAIGN.json
-ALTERNATIVE_PROTOCOL_REGISTRY.json
-SB_ALTERNATIVES_AUTONOMOUS_RESEARCH_PLAN.md
-LEARNED_GATE_RAW_BRIDGE_PLAN.md
-ACTIVATION_SPACE_SB_PLAN.md
-CONDITIONAL_ANSWER_SPAN_CSBM_PLAN.md
-UNBALANCED_PARTIAL_CSBM_PLAN.md
-PARAMETER_SPACE_SB_PLAN.md
-START_SB_ALTERNATIVES_GOAL.md
-NO_BUDGET_GUARD_MIGRATION.md
+M1 MDM-MEMIT reproduction
+M2 partial-mask MEMIT
+M3 Schrodinger/path-KL regularization
+M4 exact mask-pattern SB
+F1 adaptive edit-memory fallback, only if M1 fails
+F2 toy text CSBM fallback, only if M3 and M4 both fail
+final cross-track package
 ```
 
-The five protocols are new and independent of the closed Direction 1, Direction 2 v1, and Direction 3 v1 protocols. Historical artifacts remain read-only.
+## Autonomous Pod policy
 
-Use Codex Goal mode with the prompt in `START_SB_ALTERNATIVES_GOAL.md` after configuring the autonomous-mode and RunPod environment variables.
+The Pod stays running from campaign start until the entire goal is complete or an unrecoverable Pod/infrastructure issue remains after retries. Monetary cost does not stop or reorder the work.
 
-The Pod is deliberately retained throughout the umbrella campaign. There is no monetary budget guard: cost tracking is informational only. Codex must stop the Pod only after the complete goal and final package are finished, or after an unrecoverable Pod/infrastructure issue prevents execution. Scientific/data-integrity failures must first be documented in a validated terminal package, which completes the goal before shutdown.
+## Launch
 
+Set the RunPod variables and:
 
-If a previous run stopped only because of a budget guard, the updated campaign files supersede that stop. Codex must preserve validated stages and resume from the first incomplete stage.
+```bash
+export MDM_MEMIT_SB_AUTONOMOUS_MODE=1
+export MDM_MEMIT_SB_MAX_INFRA_RETRIES=3
+```
+
+Then use Codex Goal mode and paste `START_MDM_MEMIT_SB_GOAL.md`.

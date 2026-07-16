@@ -1,78 +1,36 @@
 {
-  "campaign_protocol": "counterfact_sb_alternatives_campaign_v1",
-  "campaign_status": "resume_configured_budget_guard_removed",
+  "campaign_id": "masked_diffusion_memit_sb_positive_result_v1",
+  "campaign_status": "ready_to_start",
   "execution_mode": "autonomous_goal",
-  "active_plan": "SB_ALTERNATIVES_AUTONOMOUS_RESEARCH_PLAN.md",
-  "current_phase": "resume_from_persisted_campaign_state",
-  "current_track": null,
-  "current_stage": "resume_first_incomplete_stage",
-  "historical_protocols": {
-    "counterfact_direction1_v1": {
-      "status": "closed_blocked_under_tested_rule_based_gates",
-      "resume_allowed": false
-    },
-    "counterfact_direction2_bridge_adapter_v1": {
-      "status": "closed_protocol_infeasible",
-      "adapter_science_executed": false,
-      "resume_allowed": false
-    },
-    "counterfact_direction3_controller_v1": {
-      "status": "closed_bounded_negative",
-      "learned_gate_promising": true,
-      "value_controller_failed_representation_use": true,
-      "resume_allowed": false
-    }
-  },
-  "tracks": {
-    "learned_gate_raw_bridge": {
-      "protocol": "counterfact_learned_gate_raw_bridge_v1",
-      "plan": "LEARNED_GATE_RAW_BRIDGE_PLAN.md",
-      "status": "read_from_persisted_campaign_state",
-      "priority": 1
-    },
-    "activation_space_sb": {
-      "protocol": "counterfact_activation_space_sb_v1",
-      "plan": "ACTIVATION_SPACE_SB_PLAN.md",
-      "status": "read_from_persisted_campaign_state",
-      "priority": 2
-    },
-    "conditional_answer_span_csbm": {
-      "protocol": "counterfact_conditional_answer_span_csbm_v1",
-      "plan": "CONDITIONAL_ANSWER_SPAN_CSBM_PLAN.md",
-      "status": "read_from_persisted_campaign_state",
-      "priority": 3
-    },
-    "unbalanced_partial_csbm": {
-      "protocol": "counterfact_unbalanced_partial_csbm_v1",
-      "plan": "UNBALANCED_PARTIAL_CSBM_PLAN.md",
-      "status": "read_from_persisted_campaign_state",
-      "priority": 4
-    },
-    "parameter_space_sb": {
-      "protocol": "counterfact_parameter_space_sb_v1",
-      "plan": "PARAMETER_SPACE_SB_PLAN.md",
-      "status": "read_from_persisted_campaign_state",
-      "priority": 5
-    }
-  },
-  "breadth_first_pilots_required": true,
-  "analysis_500_locked": true,
-  "final_test_500_locked": true,
-  "final_test_full_locked": true,
-  "pod_retention_until_campaign_terminal": true,
-  "new_protocol_creation_allowed": false,
-  "user_notification_policy": "final_campaign_report_only",
-  "resume_from_persisted_state": true,
-  "previous_budget_stop_superseded": true,
-  "budget_guard_enabled": false,
-  "cost_tracking_policy": "informational_only_non_blocking",
-  "pod_stop_for_budget_forbidden": true,
-  "pod_stop_conditions": [
-    "entire_campaign_goal_complete_and_final_package_validated",
-    "unrecoverable_pod_or_infrastructure_issue_after_retries"
+  "active_protocol": "masked_diffusion_memit_sb_positive_result_v1",
+  "active_plan": "MDM_MEMIT_SB_AUTONOMOUS_RESEARCH_PLAN.md",
+  "current_stage": "A1_campaign_bootstrap",
+  "primary_model": "GSAI-ML/LLaDA-8B-Instruct",
+  "mandatory_tracks": [
+    "M1_mdm_memit_reproduction",
+    "M2_partial_mask_memit",
+    "M3_schrodinger_regularized_memit",
+    "M4_mask_pattern_sb"
   ],
-  "persisted_campaign_state_authoritative_for_progress": true,
-  "do_not_reset_completed_stages": true,
-  "root_track_statuses_are_defaults_only": true,
-  "scientific_or_data_integrity_failure_policy": "write_and_validate_formal_terminal_package_then_stop_as_goal_complete"
+  "conditional_fallback_tracks": [
+    "F1_adaptive_edit_memory_guidance",
+    "F2_toy_text_csbm"
+  ],
+  "historical_protocols": {
+    "counterfact_direction1_v1": "closed_blocked",
+    "counterfact_direction2_bridge_adapter_v1": "closed_protocol_infeasible",
+    "counterfact_direction3_controller_v1": "closed_bounded_negative",
+    "counterfact_sb_alternatives_campaign_v1": "closed_scientific_negative"
+  },
+  "historical_protocols_are_read_only": true,
+  "old_analysis_500_locked": true,
+  "old_final_test_500_locked": true,
+  "old_final_test_full_locked": true,
+  "monetary_budget_guard_enabled": false,
+  "keep_pod_running_until_campaign_terminal": true,
+  "stop_pod_only_after_full_goal_or_unrecoverable_pod_issue": true,
+  "analysis_500_used": false,
+  "final_test_used": false,
+  "requires_new_campaign_manifests": true,
+  "last_updated_utc": null
 }

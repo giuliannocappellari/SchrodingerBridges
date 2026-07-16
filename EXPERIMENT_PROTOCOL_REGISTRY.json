@@ -1,0 +1,56 @@
+{
+  "registry_version": "masked_diffusion_memit_sb_positive_result_v1",
+  "tracks": [
+    {
+      "track_id": "M1",
+      "protocol_version": "llada_mdm_memit_reproduction_v1",
+      "plan": "MEMIT_REPRODUCTION_PLAN.md",
+      "mandatory": true,
+      "initial_status": "pending"
+    },
+    {
+      "track_id": "M2",
+      "protocol_version": "llada_partial_mask_memit_v1",
+      "plan": "PARTIAL_MASK_MEMIT_PLAN.md",
+      "mandatory": true,
+      "initial_status": "pending"
+    },
+    {
+      "track_id": "M3",
+      "protocol_version": "llada_schrodinger_regularized_memit_v1",
+      "plan": "SB_REGULARIZED_MEMIT_PLAN.md",
+      "mandatory": true,
+      "initial_status": "pending"
+    },
+    {
+      "track_id": "M4",
+      "protocol_version": "llada_mask_pattern_sb_v1",
+      "plan": "MASK_PATTERN_SB_PLAN.md",
+      "mandatory": true,
+      "initial_status": "pending"
+    },
+    {
+      "track_id": "F1",
+      "protocol_version": "llada_adaptive_edit_memory_v1",
+      "plan": "ADAPTIVE_EDIT_MEMORY_FALLBACK_PLAN.md",
+      "mandatory": false,
+      "trigger": "M1 fails after bounded rescue",
+      "initial_status": "conditional"
+    },
+    {
+      "track_id": "F2",
+      "protocol_version": "toy_text_csbm_v1",
+      "plan": "TOY_TEXT_CSBM_FALLBACK_PLAN.md",
+      "mandatory": false,
+      "trigger": "M3 and M4 both fail to establish an SB-specific positive result",
+      "initial_status": "conditional"
+    }
+  ],
+  "track_terminal_statuses": [
+    "passed",
+    "formal_negative",
+    "protocol_infeasible",
+    "not_triggered",
+    "infrastructure_blocked"
+  ]
+}
