@@ -25,6 +25,7 @@ from scripts.mask_pattern_publication_common import (
     SECONDARY_MODEL_REVISION,
     git_commit,
     now_utc,
+    protocol_split_summary,
     read_json,
     read_jsonl,
     record_stage,
@@ -312,7 +313,8 @@ def main() -> None:
     manifests = {n: PROTOCOL_ROOT / f"{prefix}_n{n}.jsonl" for n in (3, 4, 5)}
     protocol = read_json(PROTOCOL_ROOT / "report_summary.json")
     expected_hashes = {
-        n: protocol["splits"][f"{prefix}_n{n}"]["sha256"] for n in manifests
+        n: protocol_split_summary(protocol, f"{prefix}_n{n}")["sha256"]
+        for n in manifests
     }
     for n, path in manifests.items():
         if sha256_file(path) != expected_hashes[n]:

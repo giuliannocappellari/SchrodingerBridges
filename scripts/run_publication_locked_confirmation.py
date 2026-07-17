@@ -27,6 +27,7 @@ from scripts.mask_pattern_publication_common import (
     PROTOCOL_ROOT,
     git_commit,
     now_utc,
+    protocol_split_summary,
     read_json,
     read_jsonl,
     record_stage,
@@ -270,7 +271,11 @@ def main() -> None:
     }
     protocol_report = read_json(PROTOCOL_ROOT / "report_summary.json")
     expected_hashes = {
-        length: str(protocol_report["splits"][f"kamel_pub_locked_n{length}"]["sha256"])
+        length: str(
+            protocol_split_summary(
+                protocol_report, f"kamel_pub_locked_n{length}"
+            )["sha256"]
+        )
         for length in lengths
     }
     for length, path in manifests.items():

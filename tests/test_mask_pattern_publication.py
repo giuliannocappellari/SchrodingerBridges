@@ -398,3 +398,18 @@ def test_every_finite_planner_reference_has_beta_zero_comparator(profile: str) -
     finite_references = {spec.reference for spec in specs if spec.kind == "finite_beta"}
     beta_zero_references = {spec.reference for spec in specs if spec.kind == "beta_zero"}
     assert finite_references <= beta_zero_references
+
+
+@pytest.mark.parametrize("container", ["split_summaries", "splits"])
+def test_protocol_split_summary_supports_frozen_and_legacy_schema(container: str) -> None:
+    from scripts.mask_pattern_publication_common import protocol_split_summary
+
+    report = {container: {"locked_n3": {"sha256": "abc", "count": 500}}}
+    assert protocol_split_summary(report, "locked_n3")["sha256"] == "abc"
+
+
+def test_protocol_split_summary_rejects_missing_split() -> None:
+    from scripts.mask_pattern_publication_common import protocol_split_summary
+
+    with pytest.raises(KeyError, match="missing split metadata"):
+        protocol_split_summary({"split_summaries": {}}, "locked_n3")

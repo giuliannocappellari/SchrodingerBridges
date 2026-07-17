@@ -62,6 +62,22 @@ def read_jsonl(path: Path) -> list[dict[str, Any]]:
         return [json.loads(line) for line in handle if line.strip()]
 
 
+def protocol_split_summary(
+    report: Mapping[str, Any], split_name: str
+) -> Mapping[str, Any]:
+    """Return frozen split metadata from the current or legacy report schema."""
+
+    summaries = report.get("split_summaries")
+    if summaries is None:
+        summaries = report.get("splits")
+    if not isinstance(summaries, Mapping) or split_name not in summaries:
+        raise KeyError(f"Protocol summary is missing split metadata for {split_name}")
+    summary = summaries[split_name]
+    if not isinstance(summary, Mapping):
+        raise TypeError(f"Protocol split metadata is not a mapping for {split_name}")
+    return summary
+
+
 def write_json(path: Path, payload: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
