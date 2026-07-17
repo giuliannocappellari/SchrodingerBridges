@@ -10,6 +10,7 @@ import torch
 from torch import nn
 
 from scripts.build_mask_pattern_publication_protocol import _balanced_select
+from scripts.download_publication_model import _validate_snapshot
 from scripts.run_publication_planner_dev import _planner_specs
 from scripts.mask_pattern_kl_control import (
     beam_search_paths,
@@ -445,3 +446,24 @@ def test_llada_base_secondary_fallback_is_pinned_and_bounded() -> None:
     assert profile["locked_prefix"] == "kamel_pub_locked"
     assert profile["profile_limits"] == {"smoke": 5, "dev": 100, "locked": 300}
     assert profile["bounded_mapping_repair"] is False
+
+
+def test_pinned_model_snapshot_validation_requires_every_indexed_shard(tmp_path: Path) -> None:
+    (tmp_path / "model.safetensors.index.json").write_text(
+        json.dumps(
+            {
+                "weight_map": {
+                    "layer.0": "model-00001-of-00002.safetensors",
+                    "layer.1": "model-00002-of-00002.safetensors",
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    (tmp_path / "model-00001-of-00002.safetensors").write_bytes(b"one")
+    with pytest.raises(RuntimeError, match="missing shards"):
+        _validate_snapshot(tmp_path)
+    (tmp_path / "model-00002-of-00002.safetensors").write_bytes(b"two")
+    report = _validate_snapshot(tmp_path)
+    assert report["num_shards"] == 2
+    assert report["all_indexed_shards_present"] is True
