@@ -9,6 +9,7 @@ from torch import nn
 
 from scripts.mdm_memit_editor import (
     WeightRollback,
+    base_target_confidence,
     denoise_answer_span,
     denoise_answer_spans_batch,
     exact_mask_pattern_bridge,
@@ -134,6 +135,15 @@ def test_random_partial_mask_is_seed_reproducible():
         rng=random.Random(55),
     )
     assert left == right
+
+
+def test_base_target_confidence_returns_one_finite_score_per_target_token():
+    scores = base_target_confidence(
+        TinyDenoiser(), TinyTokenizer(), "Ada works as", [7, 8], 99
+    )
+    assert len(scores) == 2
+    assert all(math.isfinite(score) for score in scores)
+    assert scores[0] > scores[1]
 
 
 def test_closed_form_update_has_expected_shape_and_reduces_residual():

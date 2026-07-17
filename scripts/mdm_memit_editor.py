@@ -234,6 +234,27 @@ def render_masked_input(
     }
 
 
+@torch.no_grad()
+def base_target_confidence(
+    model: torch.nn.Module,
+    tokenizer: Any,
+    prompt: str,
+    target_ids: Sequence[int],
+    mask_id: int,
+) -> list[float]:
+    """Score each target token at its fully masked answer position."""
+
+    rendered = render_masked_input(tokenizer, prompt, target_ids, mask_id)
+    ids = torch.tensor(
+        [rendered["input_ids"]], dtype=torch.long, device=model_device(model)
+    )
+    logits = model(input_ids=ids).logits[0].float()
+    return [
+        float(F.softmax(logits[position], dim=-1)[int(token_id)])
+        for position, token_id in zip(rendered["answer_positions"], target_ids)
+    ]
+
+
 def pad_batch(rows: Sequence[Mapping[str, Any]], pad_id: int, device: torch.device) -> dict[str, torch.Tensor]:
     width = max(len(row["input_ids"]) for row in rows)
     ids = torch.full((len(rows), width), int(pad_id), dtype=torch.long, device=device)
@@ -365,14 +386,9 @@ def optimize_target_value(
     rng = random.Random(config.seed + int(stable_request_int(request)))
     confidence: list[float] | None = None
     if config.reveal_policy == "base_confidence":
-        rendered = render_masked_input(tokenizer, prompt, target_ids, mask_id)
-        ids = torch.tensor([rendered["input_ids"]], dtype=torch.long, device=device)
-        with torch.no_grad():
-            base_logits = model(input_ids=ids).logits[0].float()
-        confidence = [
-            float(F.softmax(base_logits[position], dim=-1)[int(token_id)])
-            for position, token_id in zip(rendered["answer_positions"], target_ids)
-        ]
+        confidence = base_target_confidence(
+            model, tokenizer, prompt, target_ids, mask_id
+        )
     for step in range(config.target_optimization_steps):
         optimizer.zero_grad(set_to_none=True)
         rows, lookup_unpadded, rewrite_count = _masked_context_rows(
@@ -587,6 +603,11 @@ def extract_keys_and_outputs(
             subject = str(request["subject"])
             base_prompt = str(request.get("rewrite_prompt") or str(request["rewrite_template"]).format(subject))
             target_ids = list(request.get("target_new_token_ids") or contextual_target_ids(tokenizer, base_prompt, request["target_new"]))
+            confidence = None
+            if reveal_policy == "base_confidence":
+                confidence = base_target_confidence(
+                    model, tokenizer, base_prompt, target_ids, mask_id
+                )
             for prefix_index, prefix in enumerate(DEFAULT_CONTEXT_PREFIXES):
                 prompt = prefix.format(base_prompt)
                 rows.append(
@@ -599,6 +620,7 @@ def extract_keys_and_outputs(
                         schedule=partial_mask_schedule,
                         reveal_policy=reveal_policy,
                         rng=random.Random(seed + stable_request_int(request) + prefix_index),
+                        confidence=confidence,
                     )
                 )
                 lookups.append(find_last_subject_token(tokenizer, prompt, subject))
