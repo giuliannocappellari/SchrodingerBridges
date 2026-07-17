@@ -24,6 +24,7 @@ from scripts.mask_pattern_publication_common import (
     PRIMARY_MODEL_ID,
     PRIMARY_MODEL_REVISION,
     SECONDARY_MODEL_ID,
+    SECONDARY_MODEL_REVISION,
     git_commit,
     initialize_state,
     now_utc,
@@ -200,7 +201,7 @@ def main() -> None:
         },
         "dream": {
             "model_id": SECONDARY_MODEL_ID,
-            "model_revision": None,
+            "model_revision": SECONDARY_MODEL_REVISION,
             "repository": "https://github.com/DreamLM/Dream",
             "repository_head": _git_head("https://github.com/DreamLM/Dream.git"),
         },
@@ -219,9 +220,13 @@ def main() -> None:
         "mask_pattern_solver_commit": git_commit(),
     }
     try:
-        source_registry["dream"]["model_revision"] = _json_url(
+        resolved_revision = _json_url(
             "https://huggingface.co/api/models/" + urllib.parse.quote(SECONDARY_MODEL_ID, safe="/")
         ).get("sha")
+        source_registry["dream"]["resolved_model_revision"] = resolved_revision
+        source_registry["dream"]["revision_matches_pin"] = (
+            resolved_revision == SECONDARY_MODEL_REVISION
+        )
     except Exception as exc:  # source remains pinned by repository if HF API is unavailable
         source_registry["dream"]["revision_lookup_error"] = f"{type(exc).__name__}: {exc}"
     write_json(args.output_dir / "source_registry.json", source_registry)

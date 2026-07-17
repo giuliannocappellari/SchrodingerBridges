@@ -23,6 +23,7 @@ from scripts.mask_pattern_publication_common import (
     PRIMARY_MODEL_REVISION,
     PROTOCOL_ROOT,
     SECONDARY_MODEL_ID,
+    SECONDARY_MODEL_REVISION,
     collect_historical_kamel_exclusions,
     contextual_target_ids,
     git_commit,
@@ -265,6 +266,7 @@ def main() -> None:
     parser.add_argument("--llada_model_id", default=PRIMARY_MODEL_ID)
     parser.add_argument("--llada_revision", default=PRIMARY_MODEL_REVISION)
     parser.add_argument("--dream_model_id", default=SECONDARY_MODEL_ID)
+    parser.add_argument("--dream_revision", default=SECONDARY_MODEL_REVISION)
     parser.add_argument("--allow_overwrite", type=int, choices=(0, 1), default=0)
     args = parser.parse_args()
     started = now_utc()
@@ -278,7 +280,9 @@ def main() -> None:
     llada = AutoTokenizer.from_pretrained(
         args.llada_model_id, revision=args.llada_revision, trust_remote_code=True
     )
-    dream = AutoTokenizer.from_pretrained(args.dream_model_id, trust_remote_code=True)
+    dream = AutoTokenizer.from_pretrained(
+        args.dream_model_id, revision=args.dream_revision, trust_remote_code=True
+    )
     raw_rows, templates, source = load_kamel_sources(args.cache_dir)
     exclusions = collect_historical_kamel_exclusions()
     llada_candidates, llada_filter = _candidate_pool(
@@ -370,7 +374,10 @@ def main() -> None:
                 "model_id": args.llada_model_id,
                 "revision": args.llada_revision,
             },
-            "dream_tokenizer": {"model_id": args.dream_model_id},
+            "dream_tokenizer": {
+                "model_id": args.dream_model_id,
+                "revision": args.dream_revision,
+            },
             "llada_filter_counts": llada_filter,
             "dream_filter_counts": dream_filter,
         },

@@ -16,6 +16,7 @@ from scripts.mask_pattern_kl_control import (
     solve_exact_kl_control,
     uniform_reference,
 )
+from scripts.mask_pattern_publication_common import SECONDARY_MODEL_REVISION
 
 
 def fixture_costs(n: int) -> dict[tuple[int, int], float]:
@@ -106,6 +107,7 @@ def test_active_campaign_and_registry_are_publication_protocol() -> None:
     assert active["active_campaign"] == "mask_pattern_sb_publication_confirmation_v1"
     assert registry["campaign"] == "mask_pattern_sb_publication_confirmation_v1"
     assert [track["id"] for track in registry["tracks"]] == [f"P{i}" for i in range(9)]
+    assert len(SECONDARY_MODEL_REVISION) == 40
 
 
 def test_publication_protocol_does_not_name_historical_locked_inputs() -> None:

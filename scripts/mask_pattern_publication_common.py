@@ -23,6 +23,7 @@ HISTORICAL_ROOT = REPO_ROOT / "runs" / "masked_diffusion_memit_sb_positive_resul
 PRIMARY_MODEL_ID = "GSAI-ML/LLaDA-8B-Instruct"
 PRIMARY_MODEL_REVISION = "08b83a6feb34df1a6011b80c3c00c7563e963b07"
 SECONDARY_MODEL_ID = "Dream-org/Dream-v0-Instruct-7B"
+SECONDARY_MODEL_REVISION = "05334cb9faaf763692dcf9d8737c642be2b2a6ae"
 TRACKS = tuple(f"P{index}" for index in range(9))
 
 
