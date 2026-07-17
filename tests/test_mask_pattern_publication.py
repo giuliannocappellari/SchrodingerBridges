@@ -31,6 +31,7 @@ from scripts.run_publication_planner_dev import _safety_pass
 from scripts.mask_pattern_publication_stats import holm_adjust, paired_bootstrap, paired_values
 from scripts.mdm_memit_editor import model_hidden_size, resolved_block_name, resolved_key_module_name
 from reproduce_paper import check_dp
+from scripts.validate_publication_campaign import REPORTS
 
 
 def fixture_costs(n: int) -> dict[tuple[int, int], float]:
@@ -307,3 +308,17 @@ def test_reproduce_paper_dp_check_is_model_free_and_exact() -> None:
     assert report["acceptance_pass"]
     assert report["llada_loaded"] is False
     assert report["maximum_probability_error"] < 1e-10
+
+
+def test_terminal_validator_requires_every_publication_track() -> None:
+    assert set(REPORTS) == {
+        "P0_source_audit",
+        "P1_partial_state",
+        "P2_theory",
+        "P3_planners",
+        "P4_llada_locked",
+        "P5_dream_locked",
+        "P6_editor_generality",
+        "P7_approximation",
+        "P8_package",
+    }
