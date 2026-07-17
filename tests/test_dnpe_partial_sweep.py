@@ -1,6 +1,10 @@
 from __future__ import annotations
 
-from scripts.run_dnpe_partial_state_sweep import POLICIES
+from pathlib import Path
+
+import pytest
+
+from scripts.run_dnpe_partial_state_sweep import POLICIES, should_run
 
 
 def test_partial_state_policy_grid_is_exactly_predeclared() -> None:
@@ -12,3 +16,18 @@ def test_partial_state_policy_grid_is_exactly_predeclared() -> None:
     }
     assert POLICIES["all_mask_counts_random_positions"][:2] == ("cycle", "random")
     assert POLICIES["confidence_trajectory_states"][:2] == ("cycle", "base_confidence")
+
+
+def test_resume_skips_only_complete_outputs(tmp_path: Path) -> None:
+    missing = tmp_path / "missing"
+    assert should_run(missing, resume=True)
+
+    complete = tmp_path / "complete"
+    complete.mkdir()
+    (complete / "report_summary.json").write_text("{}", encoding="utf-8")
+    assert not should_run(complete, resume=True)
+
+    incomplete = tmp_path / "incomplete"
+    incomplete.mkdir()
+    with pytest.raises(FileExistsError):
+        should_run(incomplete, resume=True)

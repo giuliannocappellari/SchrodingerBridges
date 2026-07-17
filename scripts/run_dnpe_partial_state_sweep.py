@@ -58,6 +58,14 @@ def run_one(*, manifest: Path, output: Path, policy: str) -> None:
     subprocess.run(command, cwd=ROOT, check=True)
 
 
+def should_run(output: Path, *, resume: bool) -> bool:
+    if not output.exists():
+        return True
+    if resume and (output / "report_summary.json").exists():
+        return False
+    raise FileExistsError(output)
+
+
 def select_smoke(root: Path) -> dict[str, Any]:
     selection = {}
     table = []
@@ -102,6 +110,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--phase", choices=("smoke", "dev"), required=True)
     parser.add_argument("--root", type=Path, default=CAMPAIGN_ROOT / "B2_partial_state_mdm_memit_v1")
+    parser.add_argument("--resume", type=int, choices=(0, 1), default=0)
     args = parser.parse_args()
     args.root.mkdir(parents=True, exist_ok=True)
     protocol = CAMPAIGN_ROOT / "protocol_v1"
@@ -110,9 +119,8 @@ def main() -> None:
             manifest = protocol / f"dnpe_kamel_smoke_20_n{length}.jsonl"
             for policy in POLICIES:
                 output = args.root / f"smoke_n{length}_{policy}"
-                if output.exists():
-                    raise FileExistsError(output)
-                run_one(manifest=manifest, output=output, policy=policy)
+                if should_run(output, resume=bool(args.resume)):
+                    run_one(manifest=manifest, output=output, policy=policy)
         payload = select_smoke(args.root)
         print(json.dumps(payload["selected_policy_by_length"], sort_keys=True))
         return
@@ -121,9 +129,8 @@ def main() -> None:
         manifest = protocol / f"dnpe_kamel_dev_100_n{length}.jsonl"
         for policy in ("fully_masked_only", str(selection[str(length)])):
             output = args.root / f"dev_n{length}_{policy}"
-            if output.exists():
-                raise FileExistsError(output)
-            run_one(manifest=manifest, output=output, policy=policy)
+            if should_run(output, resume=bool(args.resume)):
+                run_one(manifest=manifest, output=output, policy=policy)
     print(json.dumps({"dev_runs_complete": True, "selected_policy_by_length": selection}, sort_keys=True))
 
 
