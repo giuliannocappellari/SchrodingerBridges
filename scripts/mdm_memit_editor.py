@@ -43,6 +43,8 @@ class MemitConfig:
     lambda_weight: float = 0.0
     sparse_kl_top_k: int = 32
     seed: int = 260603924
+    block_module_template: str | None = None
+    key_module_template: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         payload = asdict(self)
@@ -70,6 +72,38 @@ def key_module_name(layer: int) -> str:
 
 def editable_weight_name(layer: int) -> str:
     return key_module_name(layer) + ".weight"
+
+
+def resolved_block_name(
+    model: torch.nn.Module, layer: int, template: str | None = None
+) -> str:
+    if template:
+        return template.format(layer=int(layer))
+    if hasattr(getattr(model, "model", None), "transformer"):
+        return block_name(layer)
+    if hasattr(getattr(model, "model", None), "layers"):
+        return f"model.layers.{int(layer)}"
+    raise AttributeError("Unsupported masked-diffusion block layout")
+
+
+def resolved_key_module_name(
+    model: torch.nn.Module, layer: int, template: str | None = None
+) -> str:
+    if template:
+        return template.format(layer=int(layer))
+    if hasattr(getattr(model, "model", None), "transformer"):
+        return key_module_name(layer)
+    if hasattr(getattr(model, "model", None), "layers"):
+        return f"model.layers.{int(layer)}.self_attn.o_proj"
+    raise AttributeError("Unsupported masked-diffusion editable-module layout")
+
+
+def model_hidden_size(model: torch.nn.Module) -> int:
+    for key in ("d_model", "hidden_size"):
+        value = getattr(model.config, key, None)
+        if value is not None:
+            return int(value)
+    raise AttributeError("Model config has neither d_model nor hidden_size")
 
 
 def infer_mask_id(model: Any) -> int:
@@ -316,8 +350,10 @@ def optimize_target_value(
     if not target_ids:
         raise ValueError("Target tokenization is empty")
     layer = config.layers[-1]
-    module = get_module(model, block_name(layer))
-    hidden_size = int(getattr(model.config, "d_model", 4096))
+    module = get_module(
+        model, resolved_block_name(model, layer, config.block_module_template)
+    )
+    hidden_size = model_hidden_size(model)
     delta = torch.zeros(hidden_size, dtype=torch.float32, device=device, requires_grad=True)
     optimizer = torch.optim.Adam([delta], lr=config.learning_rate)
     target_init_box: list[torch.Tensor] = []
@@ -484,14 +520,20 @@ def extract_keys_and_outputs(
     *,
     key_layer: int,
     output_layer: int,
+    block_module_template: str | None = None,
+    key_module_template: str | None = None,
     batch_size: int = 8,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """Extract context-averaged ff_out inputs and final edit-layer outputs."""
 
     device = model_device(model)
     mask_id = infer_mask_id(model)
-    key_module = get_module(model, key_module_name(key_layer))
-    output_module = get_module(model, block_name(output_layer))
+    key_module = get_module(
+        model, resolved_key_module_name(model, key_layer, key_module_template)
+    )
+    output_module = get_module(
+        model, resolved_block_name(model, output_layer, block_module_template)
+    )
     all_keys: list[torch.Tensor] = []
     all_outputs: list[torch.Tensor] = []
     for start in range(0, len(requests), batch_size):
@@ -573,16 +615,31 @@ def solve_memit_update(
 
 
 class WeightRollback:
-    def __init__(self, model: torch.nn.Module, layers: Sequence[int]) -> None:
+    def __init__(
+        self,
+        model: torch.nn.Module,
+        layers: Sequence[int],
+        *,
+        key_module_template: str | None = None,
+    ) -> None:
         self.model = model
         self.layers = list(map(int, layers))
+        self.key_module_template = key_module_template
         self.originals = {
-            layer: get_module(model, key_module_name(layer)).weight.detach().cpu().clone()
+            layer: get_module(
+                model, resolved_key_module_name(model, layer, key_module_template)
+            )
+            .weight.detach()
+            .cpu()
+            .clone()
             for layer in self.layers
         }
 
     def apply(self, layer: int, update: torch.Tensor) -> None:
-        weight = get_module(self.model, key_module_name(layer)).weight
+        weight = get_module(
+            self.model,
+            resolved_key_module_name(self.model, layer, self.key_module_template),
+        ).weight
         if update.shape != weight.shape:
             if update.T.shape == weight.shape:
                 update = update.T
@@ -594,12 +651,26 @@ class WeightRollback:
     def rollback(self) -> None:
         with torch.no_grad():
             for layer, original in self.originals.items():
-                weight = get_module(self.model, key_module_name(layer)).weight
+                weight = get_module(
+                    self.model,
+                    resolved_key_module_name(
+                        self.model, layer, self.key_module_template
+                    ),
+                ).weight
                 weight.copy_(original.to(device=weight.device, dtype=weight.dtype))
 
     def checksum_matches(self, atol: float = 0.0) -> bool:
         for layer, original in self.originals.items():
-            current = get_module(self.model, key_module_name(layer)).weight.detach().cpu()
+            current = (
+                get_module(
+                    self.model,
+                    resolved_key_module_name(
+                        self.model, layer, self.key_module_template
+                    ),
+                )
+                .weight.detach()
+                .cpu()
+            )
             if not torch.allclose(current, original, atol=atol, rtol=0):
                 return False
         return True
@@ -616,7 +687,9 @@ def apply_memit_batch(
 ) -> tuple[WeightRollback, dict[str, Any]]:
     """Optimize values and apply a multi-layer MEMIT update in place."""
 
-    rollback = WeightRollback(model, config.layers)
+    rollback = WeightRollback(
+        model, config.layers, key_module_template=config.key_module_template
+    )
     target_values: list[torch.Tensor] = []
     optimization: list[dict[str, Any]] = []
     for request in requests:
@@ -645,6 +718,8 @@ def apply_memit_batch(
                 requests,
                 key_layer=layer,
                 output_layer=config.layers[-1],
+                block_module_template=config.block_module_template,
+                key_module_template=config.key_module_template,
             )
             residual = (target_matrix - current_outputs) / float(len(config.layers) - index)
             covariance = covariance_loader(layer)
@@ -657,7 +732,16 @@ def apply_memit_batch(
                     "key_width": keys.shape[1],
                     "mean_residual_norm": float(residual.norm(dim=1).mean()),
                     "update_norm": float(update.norm()),
-                    "weight_norm": float(get_module(model, key_module_name(layer)).weight.float().norm()),
+                    "weight_norm": float(
+                        get_module(
+                            model,
+                            resolved_key_module_name(
+                                model, layer, config.key_module_template
+                            ),
+                        )
+                        .weight.float()
+                        .norm()
+                    ),
                 }
             )
     except Exception:

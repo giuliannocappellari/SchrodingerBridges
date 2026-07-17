@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import itertools
 import json
+from types import SimpleNamespace
 from pathlib import Path
 
 import pytest
@@ -27,6 +28,7 @@ from scripts.mask_pattern_publication_runtime import (
 from scripts.run_partial_state_publication_audit import _schedule_unit_tests
 from scripts.run_publication_planner_dev import _safety_pass
 from scripts.mask_pattern_publication_stats import holm_adjust, paired_bootstrap, paired_values
+from scripts.mdm_memit_editor import model_hidden_size, resolved_block_name, resolved_key_module_name
 
 
 def fixture_costs(n: int) -> dict[tuple[int, int], float]:
@@ -266,3 +268,17 @@ def test_holm_adjustment_is_monotone_in_sorted_p_values() -> None:
     )
     assert rows[0]["holm_adjusted_p"] == pytest.approx(0.02)
     assert rows[1]["holm_adjusted_p"] == pytest.approx(0.03)
+
+
+def test_dream_module_map_uses_runtime_available_hidden_width() -> None:
+    model = SimpleNamespace(
+        model=SimpleNamespace(layers=[object()]),
+        config=SimpleNamespace(hidden_size=3584),
+    )
+    assert resolved_block_name(model, 4) == "model.layers.4"
+    assert resolved_key_module_name(model, 4) == "model.layers.4.self_attn.o_proj"
+    assert model_hidden_size(model) == 3584
+    assert (
+        resolved_key_module_name(model, 2, "custom.blocks.{layer}.projection")
+        == "custom.blocks.2.projection"
+    )
