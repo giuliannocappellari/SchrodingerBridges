@@ -48,6 +48,7 @@ CF_COUNTS = {
     "dnpe_pilot_100": 100,
     "dnpe_dev_200": 200,
     "dnpe_anchor_train_500": 500,
+    "dnpe_locality_eval_300": 300,
 }
 KAMEL_COUNTS = {
     "smoke": 20,
@@ -166,6 +167,25 @@ def _select_counterfact(candidates: Sequence[dict[str, Any]]) -> dict[str, list[
             }
             selected[rank] = row
         result[role] = selected
+    locality_pool = result["dnpe_locality_eval_300"]
+    for role in ("dnpe_smoke_20", "dnpe_pilot_100", "dnpe_dev_200"):
+        for row in result[role]:
+            ordered = sorted(
+                locality_pool,
+                key=lambda candidate: stable_hash(
+                    SEED, role, row["case_id"], candidate["case_id"]
+                ),
+            )[:3]
+            row["far_locality_cases"] = [
+                {
+                    "case_id": candidate["case_id"],
+                    "prompt": candidate["rewrite_prompt"],
+                    "target": candidate["target_true"],
+                    "source_index": candidate["source_index"],
+                    "prompt_provenance": "fresh_disjoint_counterfact_eval_pool",
+                }
+                for candidate in ordered
+            ]
     return result
 
 

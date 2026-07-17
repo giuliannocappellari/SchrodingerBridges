@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from scripts import dnpe_common
-from scripts.build_dnpe_protocol import _overlap_audit
+from scripts.build_dnpe_protocol import CF_COUNTS, _overlap_audit
 
 
 def test_dnpe_identity_matches_active_registry() -> None:
@@ -44,3 +44,8 @@ def test_locked_names_never_count_as_tuning_roles() -> None:
         "final_test_full",
     }
     assert all("dev" not in name for name in dnpe_common.LOCKED_SPLIT_NAMES)
+
+
+def test_protocol_reserves_disjoint_far_locality_pool() -> None:
+    assert CF_COUNTS["dnpe_locality_eval_300"] == 300
+    assert CF_COUNTS["dnpe_anchor_train_500"] == 500
