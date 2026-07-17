@@ -102,7 +102,10 @@ def contextual_target_ids(tokenizer: Any, prompt: str, target: str) -> list[int]
 
 
 def autonomous_enabled() -> bool:
-    return os.environ.get("MASK_PATTERN_SB_PUBLICATION_AUTONOMOUS_MODE") == "1"
+    return (
+        os.environ.get("MASK_PATTERN_SB_PUBLICATION_AUTONOMOUS_MODE") == "1"
+        or os.environ.get("SB_ALT_AUTONOMOUS_MODE") == "1"
+    )
 
 
 def initial_campaign_state() -> dict[str, Any]:

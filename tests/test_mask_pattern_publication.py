@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import itertools
 import json
-from types import SimpleNamespace
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -17,7 +17,7 @@ from scripts.mask_pattern_kl_control import (
     solve_exact_kl_control,
     uniform_reference,
 )
-from scripts.mask_pattern_publication_common import SECONDARY_MODEL_REVISION
+from scripts.mask_pattern_publication_common import SECONDARY_MODEL_REVISION, autonomous_enabled
 from scripts.mask_pattern_publication_runtime import (
     PlannerSpec,
     bounded_beam_order,
@@ -322,3 +322,9 @@ def test_terminal_validator_requires_every_publication_track() -> None:
         "P7_approximation",
         "P8_package",
     }
+
+
+def test_publication_autonomous_mode_accepts_goal_launch_alias(monkeypatch) -> None:
+    monkeypatch.delenv("MASK_PATTERN_SB_PUBLICATION_AUTONOMOUS_MODE", raising=False)
+    monkeypatch.setenv("SB_ALT_AUTONOMOUS_MODE", "1")
+    assert autonomous_enabled()
