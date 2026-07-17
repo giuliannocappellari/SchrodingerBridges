@@ -42,32 +42,46 @@ def main() -> None:
     temporal_sorted = sorted(temporal, key=lambda row: float(row["mean_normalized_aie"]), reverse=True)
     best_standard = standard_sorted[0]
     best_temporal = temporal_sorted[0]
-    top_temporal = temporal_sorted[: max(3, min(12, len(temporal_sorted)))]
+    editable_standard = [
+        row
+        for row in standard_sorted
+        if row["component"] == "mlp" and row["position"] == "last_subject"
+    ]
+    editable_temporal = [
+        row
+        for row in temporal_sorted
+        if row["component"] == "mlp" and row["position"] == "last_subject"
+    ]
+    if not editable_standard or not editable_temporal:
+        raise RuntimeError("Causal tracing did not produce an editable MLP/last-subject coordinate")
+    best_editable_standard = editable_standard[0]
+    best_editable_temporal = editable_temporal[0]
+    top_temporal = editable_temporal[: max(3, min(12, len(editable_temporal)))]
     layer_counts = Counter(int(row["layer"]) for row in top_temporal)
     stable_layers = sorted(layer for layer, _count in layer_counts.most_common(4))
-    fixed_center = int(best_standard["layer"])
+    fixed_center = int(best_editable_standard["layer"])
     fixed_window = sorted({max(0, min(31, fixed_center + offset)) for offset in (-1, 0, 1, 2)})
     policies = [
         {
             "policy_id": "fixed_global_site",
             "layers": fixed_window,
-            "position": best_standard["position"],
-            "component": best_standard["component"],
+            "position": "last_subject",
+            "component": "mlp",
             "selection_source": "standard_causal_tracing_dev_only",
         },
         {
             "policy_id": "per_edit_top_tie_site",
-            "layers": [int(best_temporal["layer"])],
-            "position": best_temporal["position"],
-            "component": best_temporal["component"],
+            "layers": [int(best_editable_temporal["layer"])],
+            "position": "last_subject",
+            "component": "mlp",
             "selection_source": "temporal_causal_tracing_dev_only",
             "runtime_rule": "per-edit argmax within frozen temporal coordinates",
         },
         {
             "policy_id": "stable_temporal_site_set",
             "layers": stable_layers,
-            "position": best_temporal["position"],
-            "component": best_temporal["component"],
+            "position": "last_subject",
+            "component": "mlp",
             "selection_source": "top temporal coordinate coverage",
         },
     ]
@@ -81,6 +95,9 @@ def main() -> None:
         "created_at_utc": now_utc(),
         "git_commit": git_commit(),
         "policies": policies,
+        "best_overall_standard_site": best_standard,
+        "best_overall_temporal_site": best_temporal,
+        "edit_compatibility_filter": "MLP contribution at last subject token",
         "controls": controls,
         "policy_count": len(policies),
         "no_more_site_policies_after_pilot_inspection": True,
