@@ -44,6 +44,7 @@ class MemitConfig:
     sparse_kl_top_k: int = 32
     state_consistency_weight: float = 0.0
     old_target_suppression_weight: float = 0.0
+    update_ridge: float = 0.0
     seed: int = 260603924
     block_module_template: str | None = None
     key_module_template: str | None = None
@@ -653,6 +654,7 @@ def solve_memit_update(
     residuals: torch.Tensor,
     covariance: torch.Tensor,
     covariance_weight: float,
+    ridge: float = 0.0,
 ) -> torch.Tensor:
     """Solve MEMIT's closed-form update in a numerically stable dtype."""
 
@@ -663,7 +665,7 @@ def solve_memit_update(
     cov = covariance.to(dtype=torch.float64)
     validate_covariance(cov, key_matrix.shape[0])
     if cov.ndim == 1:
-        scaled_diagonal = float(covariance_weight) * cov
+        scaled_diagonal = float(covariance_weight) * cov + float(ridge)
         inverse_diagonal_keys = key_matrix / scaled_diagonal[:, None]
         small_system = (
             torch.eye(key_matrix.shape[1], dtype=torch.float64, device=device)
@@ -678,7 +680,7 @@ def solve_memit_update(
         return update.float()
     system = float(covariance_weight) * cov + key_matrix @ key_matrix.T
     jitter = max(1e-8, float(system.diagonal().mean().abs()) * 1e-10)
-    system = system + torch.eye(system.shape[0], dtype=system.dtype, device=system.device) * jitter
+    system = system + torch.eye(system.shape[0], dtype=system.dtype, device=system.device) * (jitter + float(ridge))
     adjusted_keys = torch.linalg.solve(system, key_matrix)
     update = residual_matrix @ adjusted_keys.T
     if not torch.isfinite(update).all():
@@ -861,7 +863,13 @@ def apply_memit_batch(
             )
             residual = (target_matrix - current_outputs) / float(len(config.layers) - index)
             covariance = covariance_loader(layer)
-            update = solve_memit_update(keys, residual, covariance, config.covariance_weight)
+            update = solve_memit_update(
+                keys,
+                residual,
+                covariance,
+                config.covariance_weight,
+                config.update_ridge,
+            )
             projection_report: dict[str, Any] | None = None
             if protected_basis_loader is not None:
                 basis = protected_basis_loader(layer)

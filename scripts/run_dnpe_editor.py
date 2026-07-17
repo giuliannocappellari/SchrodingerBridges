@@ -256,6 +256,7 @@ def main() -> None:
     parser.add_argument("--lambda_path", type=float, default=0.0)
     parser.add_argument("--lambda_identity", type=float, default=0.0)
     parser.add_argument("--covariance_weight", type=float, default=15000.0)
+    parser.add_argument("--update_ridge", type=float, default=0.0)
     parser.add_argument("--update_scale", type=float, default=1.0)
     parser.add_argument("--limit", type=int, default=0)
     parser.add_argument("--include_locality", type=int, choices=(0, 1), default=1)
@@ -295,6 +296,7 @@ def main() -> None:
         lambda_identity=args.lambda_identity,
         state_consistency_weight=args.state_consistency_weight,
         old_target_suppression_weight=args.old_target_suppression_weight,
+        update_ridge=args.update_ridge,
         seed=args.seed,
     )
     rollback, diagnostics = apply_memit_batch(

@@ -11,7 +11,11 @@ from scripts.dnpe_editor import (
     protected_key_drift,
     state_bank,
 )
-from scripts.mdm_memit_editor import build_protected_basis, project_update_to_nullspace
+from scripts.mdm_memit_editor import (
+    build_protected_basis,
+    project_update_to_nullspace,
+    solve_memit_update,
+)
 
 
 def test_state_bank_has_every_mask_count() -> None:
@@ -48,3 +52,13 @@ def test_nullspace_projection_removes_protected_energy() -> None:
 def test_projector_rejects_invalid_variance() -> None:
     with pytest.raises(ValueError):
         build_protected_basis(torch.randn(3, 4), 0.0)
+
+
+def test_update_ridge_is_an_explicit_finite_solve_term() -> None:
+    keys = torch.tensor([[1.0, 0.0], [0.0, 1.0]])
+    residuals = torch.tensor([[1.0, 2.0], [2.0, 1.0]])
+    covariance = torch.ones(2)
+    plain = solve_memit_update(keys, residuals, covariance, 1.0, ridge=0.0)
+    ridged = solve_memit_update(keys, residuals, covariance, 1.0, ridge=1.0)
+    assert torch.isfinite(ridged).all()
+    assert ridged.norm() < plain.norm()
