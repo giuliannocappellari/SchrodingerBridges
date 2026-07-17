@@ -148,6 +148,20 @@ def test_closed_form_update_has_expected_shape_and_reduces_residual():
     assert after < before
 
 
+def test_diagonal_covariance_woodbury_matches_dense_diagonal_solve():
+    torch.manual_seed(3)
+    keys = torch.randn(4, 7)
+    residuals = torch.randn(4, 3)
+    diagonal = torch.rand(7) + 0.5
+    dense = solve_memit_update(
+        keys, residuals, torch.diag(diagonal), covariance_weight=2.5
+    )
+    woodbury = solve_memit_update(
+        keys, residuals, diagonal, covariance_weight=2.5
+    )
+    assert torch.allclose(woodbury, dense, atol=1e-5, rtol=1e-5)
+
+
 def test_weight_rollback_restores_exactly():
     model = TinyModel()
     original = get_module(model, "model.transformer.blocks.0.ff_out").weight.detach().clone()

@@ -62,7 +62,7 @@ from scripts.run_publication_locked_confirmation import (
 
 LAYERS = (4, 5, 6, 7)
 BLOCK_TEMPLATE = "model.layers.{layer}"
-KEY_TEMPLATE = "model.layers.{layer}.self_attn.o_proj"
+KEY_TEMPLATE = "model.layers.{layer}.mlp.down_proj"
 REFERENCES = ("uniform", "edited_target_confidence", "edited_max_confidence")
 
 
@@ -95,9 +95,12 @@ def _module_map(model: Any) -> dict[str, Any]:
         "block_module_template": BLOCK_TEMPLATE,
         "key_module_template": KEY_TEMPLATE,
         "module_mapping_repair": (
-            "Use self-attention output projection so the editable input width is hidden_size; "
-            "Dream's MLP down projection has an impractical intermediate-width covariance."
+            "Use the architecture-faithful MLP down projection with a positive diagonal "
+            "second-moment covariance and an exact Woodbury solve; a dense intermediate-width "
+            "covariance is computationally infeasible."
         ),
+        "covariance_representation": "positive_diagonal_second_moment",
+        "linear_solve": "exact_woodbury_for_diagonal_plus_low_rank_edit_keys",
         "bounded_module_mapping_repair_used": True,
         "layers": layers,
         "acceptance_pass": all(row["editable_weight_floating_point"] for row in layers),
@@ -129,7 +132,7 @@ def _build_covariance_cache(
         module_name = KEY_TEMPLATE.format(layer=layer)
         module = get_module(model, module_name)
         width = int(module.weight.shape[1])
-        accumulator = torch.zeros((width, width), dtype=torch.float64, device=device)
+        accumulator = torch.zeros(width, dtype=torch.float64, device=device)
         count = 0
         for start in range(0, len(rendered), batch_size):
             subset = rendered[start : start + batch_size]
@@ -158,11 +161,11 @@ def _build_covariance_cache(
                     for index in range(len(subset))
                 ]
             )
-            accumulator.add_(vectors.T @ vectors)
+            accumulator.add_(vectors.square().sum(dim=0))
             count += vectors.shape[0]
         covariance = (accumulator / max(count, 1)).float()
-        ridge = max(1e-5, float(covariance.diagonal().mean()) * 1e-4)
-        covariance.diagonal().add_(ridge)
+        ridge = max(1e-5, float(covariance.mean()) * 1e-4)
+        covariance.add_(ridge)
         path = output_dir / f"layer_{layer}_covariance.pt"
         torch.save(covariance.cpu(), path)
         reports.append(

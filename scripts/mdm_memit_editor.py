@@ -581,6 +581,12 @@ def extract_keys_and_outputs(
 
 
 def validate_covariance(covariance: torch.Tensor, key_width: int) -> None:
+    if covariance.ndim == 1:
+        if covariance.shape != (key_width,):
+            raise ValueError(f"Covariance diagonal shape {tuple(covariance.shape)} != {(key_width,)}")
+        if not torch.isfinite(covariance).all() or bool((covariance <= 0).any()):
+            raise FloatingPointError("Covariance diagonal must be finite and positive")
+        return
     if covariance.shape != (key_width, key_width):
         raise ValueError(f"Covariance shape {tuple(covariance.shape)} != {(key_width, key_width)}")
     if not torch.isfinite(covariance).all():
@@ -604,6 +610,20 @@ def solve_memit_update(
     residual_matrix = residuals.T.to(device=device, dtype=torch.float64)
     cov = covariance.to(dtype=torch.float64)
     validate_covariance(cov, key_matrix.shape[0])
+    if cov.ndim == 1:
+        scaled_diagonal = float(covariance_weight) * cov
+        inverse_diagonal_keys = key_matrix / scaled_diagonal[:, None]
+        small_system = (
+            torch.eye(key_matrix.shape[1], dtype=torch.float64, device=device)
+            + key_matrix.T @ inverse_diagonal_keys
+        )
+        adjusted_keys = torch.linalg.solve(
+            small_system, inverse_diagonal_keys.T
+        ).T
+        update = residual_matrix @ adjusted_keys.T
+        if not torch.isfinite(update).all():
+            raise FloatingPointError("MEMIT diagonal-covariance update contains non-finite values")
+        return update.float()
     system = float(covariance_weight) * cov + key_matrix @ key_matrix.T
     jitter = max(1e-8, float(system.diagonal().mean().abs()) * 1e-10)
     system = system + torch.eye(system.shape[0], dtype=system.dtype, device=system.device) * jitter
