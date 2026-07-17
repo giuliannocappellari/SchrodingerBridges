@@ -6,6 +6,8 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+import torch
+from torch import nn
 
 from scripts.build_mask_pattern_publication_protocol import _balanced_select
 from scripts.mask_pattern_kl_control import (
@@ -23,6 +25,7 @@ from scripts.mask_pattern_publication_runtime import (
     bounded_beam_order,
     bounded_kl_beam_order,
     bounded_random_order,
+    decode_with_planner,
     planner_policy,
     planner_spec_from_label,
 )
@@ -328,3 +331,61 @@ def test_publication_autonomous_mode_accepts_goal_launch_alias(monkeypatch) -> N
     monkeypatch.delenv("MASK_PATTERN_SB_PUBLICATION_AUTONOMOUS_MODE", raising=False)
     monkeypatch.setenv("SB_ALT_AUTONOMOUS_MODE", "1")
     assert autonomous_enabled()
+
+
+class TinyPlannerTokenizer:
+    pad_token_id = 0
+
+    def __call__(self, text, add_special_tokens=False):
+        return {"input_ids": [10 + index for index, _ in enumerate(str(text).split())]}
+
+    def decode(self, ids, skip_special_tokens=True):
+        return " ".join(map(str, ids))
+
+
+class TinyPlannerModel(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.anchor = nn.Parameter(torch.zeros(()))
+        self.config = SimpleNamespace(mask_token_id=99)
+
+    def forward(self, input_ids, attention_mask=None):
+        logits = torch.zeros((*input_ids.shape, 128), device=input_ids.device)
+        logits[..., 7] = 8.0 + self.anchor
+        return SimpleNamespace(logits=logits)
+
+
+def test_planner_decode_records_exact_success_old_target_and_query_cost() -> None:
+    item = {
+        "row": {
+            "case_id": "tiny_case",
+            "relation_id": "P1",
+            "rewrite_prompt": "Ada works as",
+            "target_new_token_ids": [7, 7],
+            "target_true_token_ids": [8, 8],
+            "target_length": 2,
+        },
+        "bucket": "rewrite",
+        "prompt": "Ada works as",
+    }
+    table = {
+        "n": 2,
+        "target_ids": [7, 7],
+        "costs": {"0:0": 0.1, "0:1": 0.2, "1:1": 0.1, "2:0": 0.1},
+        "target_probabilities": {"0:0": 0.9, "0:1": 0.8, "1:1": 0.9, "2:0": 0.9},
+        "maximum_confidences": {"0:0": 0.9, "0:1": 0.8, "1:1": 0.9, "2:0": 0.9},
+        "entropies": {"0:0": 0.2, "0:1": 0.3, "1:1": 0.2, "2:0": 0.2},
+    }
+    rows = decode_with_planner(
+        TinyPlannerModel(),
+        TinyPlannerTokenizer(),
+        [item],
+        {"tiny_case::rewrite": table},
+        PlannerSpec("finite_uniform_beta1", "finite_beta", beta=1.0, reference="uniform"),
+        batch_size=1,
+    )
+    assert rows[0]["full_target_exact"] is True
+    assert rows[0]["old_target_exact"] is False
+    assert rows[0]["old_target_suppression"] is True
+    assert rows[0]["unique_state_queries"] == 3
+    assert rows[0]["model_evaluations"] == 5
