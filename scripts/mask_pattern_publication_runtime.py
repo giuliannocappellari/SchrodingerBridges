@@ -309,6 +309,20 @@ def planner_policy(
             costs[(sum(1 << prior for prior in order[:step]), index)]
             for step, index in enumerate(order)
         )
+    elif spec.kind == "bounded_kl_beam":
+        reference = reference_table(table, str(spec.reference))
+        order, state_queries, candidate_paths = bounded_kl_beam_order(
+            costs,
+            n,
+            reference=reference,
+            beta=float(spec.beta),
+            beam_width=int(spec.beam_width),
+            state_budget=int(spec.query_budget),
+        )
+        expected_cost = sum(
+            costs[(sum(1 << prior for prior in order[:step]), index)]
+            for step, index in enumerate(order)
+        )
     return policy, order, {
         "planner_cpu_seconds": time.monotonic() - started,
         "expected_path_cost": expected_cost,
@@ -390,6 +404,44 @@ def bounded_random_order(
     return best[2], len(queried), len(candidates)
 
 
+def bounded_kl_beam_order(
+    costs: Mapping[tuple[int, int], float],
+    n: int,
+    *,
+    reference: Mapping[tuple[int, int], float],
+    beta: float,
+    beam_width: int,
+    state_budget: int,
+) -> tuple[tuple[int, ...], int, int]:
+    """Beam-truncate the finite-beta controlled path weight under a state budget."""
+
+    queried: set[int] = set()
+    beam: list[tuple[tuple[int, ...], int, float]] = [((), 0, 0.0)]
+    expansions = 0
+    for _ in range(n):
+        expanded = []
+        for order, mask, log_weight in beam:
+            if mask not in queried and len(queried) < state_budget:
+                queried.add(mask)
+            if mask in queried:
+                for index in range(n):
+                    if mask & (1 << index):
+                        continue
+                    q = float(reference[(mask, index)])
+                    score = log_weight + math.log(q) - float(beta) * float(
+                        costs[(mask, index)]
+                    )
+                    expanded.append((order + (index,), mask | (1 << index), score))
+                    expansions += 1
+            else:
+                remaining = tuple(index for index in range(n) if not mask & (1 << index))
+                expanded.append((order + remaining, (1 << n) - 1, log_weight))
+        beam = sorted(expanded, key=lambda row: (-row[2], row[0]))[:beam_width]
+        if all(len(row[0]) == n for row in beam):
+            break
+    return beam[0][0], len(queried), expansions
+
+
 def decode_with_planner(
     model: Any,
     tokenizer: Any,
@@ -446,7 +498,7 @@ def decode_with_planner(
                 costs = _tuple_table(table["costs"])
                 available = [position for position in range(n) if not mask & (1 << position)]
                 policy, order, diagnostics = planner_data[row_index]
-                if spec.kind in {"left_to_right", "right_to_left", "fixed_order", "deterministic_global", "beam", "random_search", "bounded_beam", "bounded_random"}:
+                if spec.kind in {"left_to_right", "right_to_left", "fixed_order", "deterministic_global", "beam", "random_search", "bounded_beam", "bounded_random", "bounded_kl_beam"}:
                     assert order is not None
                     chosen = next(position for position in order if position in available)
                 elif spec.kind in {"finite_beta", "beta_zero"}:

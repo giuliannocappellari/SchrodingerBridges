@@ -21,6 +21,7 @@ from scripts.mask_pattern_publication_common import SECONDARY_MODEL_REVISION
 from scripts.mask_pattern_publication_runtime import (
     PlannerSpec,
     bounded_beam_order,
+    bounded_kl_beam_order,
     bounded_random_order,
     planner_policy,
     planner_spec_from_label,
@@ -29,6 +30,7 @@ from scripts.run_partial_state_publication_audit import _schedule_unit_tests
 from scripts.run_publication_planner_dev import _safety_pass
 from scripts.mask_pattern_publication_stats import holm_adjust, paired_bootstrap, paired_values
 from scripts.mdm_memit_editor import model_hidden_size, resolved_block_name, resolved_key_module_name
+from reproduce_paper import check_dp
 
 
 def fixture_costs(n: int) -> dict[tuple[int, int], float]:
@@ -168,6 +170,22 @@ def test_bounded_planners_respect_unique_state_budget() -> None:
         assert random_queries <= budget
 
 
+def test_bounded_kl_beam_preserves_reference_cost_score_and_budget() -> None:
+    n = 5
+    costs = fixture_costs(n)
+    order, queries, expansions = bounded_kl_beam_order(
+        costs,
+        n,
+        reference=uniform_reference(n),
+        beta=1.0,
+        beam_width=8,
+        state_budget=10,
+    )
+    assert sorted(order) == list(range(n))
+    assert queries <= 10
+    assert expansions > 0
+
+
 def test_planner_policy_reports_exact_full_table_queries() -> None:
     n = 4
     table = {
@@ -282,3 +300,10 @@ def test_dream_module_map_uses_runtime_available_hidden_width() -> None:
         resolved_key_module_name(model, 2, "custom.blocks.{layer}.projection")
         == "custom.blocks.2.projection"
     )
+
+
+def test_reproduce_paper_dp_check_is_model_free_and_exact() -> None:
+    report = check_dp()
+    assert report["acceptance_pass"]
+    assert report["llada_loaded"] is False
+    assert report["maximum_probability_error"] < 1e-10
