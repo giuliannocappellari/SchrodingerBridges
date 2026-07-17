@@ -42,6 +42,8 @@ class MemitConfig:
     lambda_identity: float = 0.0
     lambda_weight: float = 0.0
     sparse_kl_top_k: int = 32
+    state_consistency_weight: float = 0.0
+    old_target_suppression_weight: float = 0.0
     seed: int = 260603924
     block_module_template: str | None = None
     key_module_template: str | None = None
@@ -395,7 +397,10 @@ def optimize_target_value(
             logits = model(input_ids=batch["input_ids"], attention_mask=batch["attention_mask"]).logits.float()
 
         losses: list[torch.Tensor] = []
+        row_target_support: list[torch.Tensor] = []
+        old_suppression_terms: list[torch.Tensor] = []
         target_tensor = torch.tensor(target_ids, dtype=torch.long, device=device)
+        target_true_ids = list(map(int, request.get("target_true_token_ids") or []))
         for index, row in enumerate(rows[:rewrite_count]):
             offset = int(offsets[index])
             absolute_positions = [offset + int(pos) for pos in row["supervised_positions"]]
@@ -404,8 +409,37 @@ def optimize_target_value(
                 continue
             row_logits = logits[index, absolute_positions]
             row_targets = target_tensor[relative_positions]
-            losses.append(F.cross_entropy(row_logits, row_targets))
+            row_log_probs = F.log_softmax(row_logits, dim=-1)
+            losses.append(F.nll_loss(row_log_probs, row_targets))
+            selected = row_log_probs.gather(1, row_targets[:, None]).squeeze(1)
+            row_target_support.append(selected.mean())
+            if config.old_target_suppression_weight > 0 and target_true_ids:
+                old_ids = []
+                new_ids = []
+                logits_for_margin = []
+                for local_index, relative in enumerate(relative_positions):
+                    if relative < len(target_true_ids):
+                        old_ids.append(int(target_true_ids[relative]))
+                        new_ids.append(int(target_ids[relative]))
+                        logits_for_margin.append(row_log_probs[local_index])
+                if logits_for_margin:
+                    margin_logits = torch.stack(logits_for_margin)
+                    new_tensor = torch.tensor(new_ids, dtype=torch.long, device=device)
+                    old_tensor = torch.tensor(old_ids, dtype=torch.long, device=device)
+                    new_logp = margin_logits.gather(1, new_tensor[:, None]).squeeze(1)
+                    old_logp = margin_logits.gather(1, old_tensor[:, None]).squeeze(1)
+                    old_suppression_terms.append(F.relu(old_logp - new_logp + 0.5).mean())
         nll = torch.stack(losses).mean()
+        state_consistency = (
+            torch.stack(row_target_support).var(unbiased=False)
+            if len(row_target_support) > 1
+            else torch.zeros((), device=device)
+        )
+        old_suppression = (
+            torch.stack(old_suppression_terms).mean()
+            if old_suppression_terms
+            else torch.zeros((), device=device)
+        )
 
         anchor_index = rewrite_count
         anchor_offset = int(offsets[anchor_index])
@@ -471,6 +505,8 @@ def optimize_target_value(
             + config.lambda_path * path_kl
             + config.lambda_identity * identity_loss
             + config.lambda_weight * delta_l2
+            + config.state_consistency_weight * state_consistency
+            + config.old_target_suppression_weight * old_suppression
         )
         if not torch.isfinite(total):
             raise FloatingPointError("Non-finite target-value loss")
@@ -483,6 +519,8 @@ def optimize_target_value(
                 "weight_decay": float(decay.detach()),
                 "path_kl_loss": float(path_kl.detach()),
                 "identity_loss": float(identity_loss.detach()),
+                "state_consistency_loss": float(state_consistency.detach()),
+                "old_target_suppression_loss": float(old_suppression.detach()),
                 "delta_l2": float(delta_l2.detach()),
                 "delta_norm": float(delta.detach().norm()),
             }
@@ -523,6 +561,9 @@ def extract_keys_and_outputs(
     block_module_template: str | None = None,
     key_module_template: str | None = None,
     batch_size: int = 8,
+    partial_mask_schedule: str = "fully_masked",
+    reveal_policy: str = "random",
+    seed: int = 0,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """Extract context-averaged ff_out inputs and final edit-layer outputs."""
 
@@ -545,9 +586,20 @@ def extract_keys_and_outputs(
             subject = str(request["subject"])
             base_prompt = str(request.get("rewrite_prompt") or str(request["rewrite_template"]).format(subject))
             target_ids = list(request.get("target_new_token_ids") or contextual_target_ids(tokenizer, base_prompt, request["target_new"]))
-            for prefix in DEFAULT_CONTEXT_PREFIXES:
+            for prefix_index, prefix in enumerate(DEFAULT_CONTEXT_PREFIXES):
                 prompt = prefix.format(base_prompt)
-                rows.append(render_masked_input(tokenizer, prompt, target_ids, mask_id))
+                rows.append(
+                    render_masked_input(
+                        tokenizer,
+                        prompt,
+                        target_ids,
+                        mask_id,
+                        step=prefix_index,
+                        schedule=partial_mask_schedule,
+                        reveal_policy=reveal_policy,
+                        rng=random.Random(seed + stable_request_int(request) + prefix_index),
+                    )
+                )
                 lookups.append(find_last_subject_token(tokenizer, prompt, subject))
                 request_indices.append(request_index)
         batch = pad_batch(rows, int(tokenizer.pad_token_id), device)
@@ -634,6 +686,68 @@ def solve_memit_update(
     return update.float()
 
 
+def build_protected_basis(
+    protected_keys: torch.Tensor,
+    explained_variance: float,
+    *,
+    maximum_rank: int | None = None,
+) -> tuple[torch.Tensor, dict[str, float | int]]:
+    """Return an orthonormal key-space basis covering protected variance.
+
+    The basis is stored implicitly (key_width x rank), avoiding a dense
+    key_width-square projector for LLaDA's 12,288-dimensional MLP keys.
+    """
+
+    if protected_keys.ndim != 2 or protected_keys.shape[0] < 2:
+        raise ValueError("protected_keys must be a 2D tensor with at least two rows")
+    if not 0.0 < float(explained_variance) <= 1.0:
+        raise ValueError("explained_variance must be in (0, 1]")
+    keys = protected_keys.float()
+    if not torch.isfinite(keys).all():
+        raise FloatingPointError("protected_keys contain non-finite values")
+    centered = keys - keys.mean(dim=0, keepdim=True)
+    _u, singular_values, vh = torch.linalg.svd(centered, full_matrices=False)
+    energy = singular_values.square()
+    total = energy.sum().clamp_min(1e-12)
+    cumulative = torch.cumsum(energy, dim=0) / total
+    rank = int(torch.searchsorted(cumulative, torch.tensor(float(explained_variance), device=cumulative.device)).item()) + 1
+    if maximum_rank is not None:
+        rank = min(rank, int(maximum_rank))
+    basis = vh[:rank].T.contiguous()
+    captured = float(cumulative[rank - 1])
+    return basis, {
+        "protected_rank": rank,
+        "key_width": int(keys.shape[1]),
+        "remaining_editable_dimension": int(keys.shape[1] - rank),
+        "captured_variance": captured,
+    }
+
+
+def project_update_to_nullspace(
+    update: torch.Tensor, protected_basis: torch.Tensor
+) -> tuple[torch.Tensor, dict[str, float]]:
+    """Project a weight update away from the protected key subspace."""
+
+    if update.ndim != 2 or protected_basis.ndim != 2:
+        raise ValueError("update and protected_basis must be matrices")
+    basis = protected_basis.to(device=update.device, dtype=torch.float32)
+    value = update.float()
+    if value.shape[1] != basis.shape[0]:
+        raise ValueError(
+            f"Update key width {value.shape[1]} != basis width {basis.shape[0]}"
+        )
+    projected = value - (value @ basis) @ basis.T
+    protected_before = (value @ basis).norm()
+    protected_after = (projected @ basis).norm()
+    return projected, {
+        "update_norm_before_projection": float(value.norm()),
+        "update_norm_after_projection": float(projected.norm()),
+        "protected_energy_before": float(protected_before),
+        "protected_energy_after": float(protected_after),
+        "projection_energy_ratio": float(projected.norm() / value.norm().clamp_min(1e-12)),
+    }
+
+
 class WeightRollback:
     def __init__(
         self,
@@ -704,6 +818,7 @@ def apply_memit_batch(
     covariance_loader: Callable[[int], torch.Tensor],
     *,
     target_cache_dir: Path | None = None,
+    protected_basis_loader: Callable[[int], torch.Tensor | None] | None = None,
 ) -> tuple[WeightRollback, dict[str, Any]]:
     """Optimize values and apply a multi-layer MEMIT update in place."""
 
@@ -740,10 +855,18 @@ def apply_memit_batch(
                 output_layer=config.layers[-1],
                 block_module_template=config.block_module_template,
                 key_module_template=config.key_module_template,
+                partial_mask_schedule=config.partial_mask_schedule,
+                reveal_policy=config.reveal_policy,
+                seed=config.seed,
             )
             residual = (target_matrix - current_outputs) / float(len(config.layers) - index)
             covariance = covariance_loader(layer)
             update = solve_memit_update(keys, residual, covariance, config.covariance_weight)
+            projection_report: dict[str, Any] | None = None
+            if protected_basis_loader is not None:
+                basis = protected_basis_loader(layer)
+                if basis is not None:
+                    update, projection_report = project_update_to_nullspace(update, basis)
             rollback.apply(layer, update)
             layer_reports.append(
                 {
@@ -752,6 +875,7 @@ def apply_memit_batch(
                     "key_width": keys.shape[1],
                     "mean_residual_norm": float(residual.norm(dim=1).mean()),
                     "update_norm": float(update.norm()),
+                    "projection": projection_report,
                     "weight_norm": float(
                         get_module(
                             model,
