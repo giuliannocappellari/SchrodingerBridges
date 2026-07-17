@@ -301,6 +301,8 @@ def main() -> None:
     parser.add_argument("--dtype", choices=("float16", "bfloat16"), default="float16")
     parser.add_argument("--allow_overwrite", type=int, choices=(0, 1), default=0)
     args = parser.parse_args()
+    if not args.output_dir.is_absolute():
+        args.output_dir = (ROOT / args.output_dir).resolve()
     started = now_utc()
     start = time.monotonic()
     if args.output_dir.exists() and not args.allow_overwrite:

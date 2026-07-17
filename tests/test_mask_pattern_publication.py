@@ -138,6 +138,17 @@ def test_paper_partial_state_schedule_contract() -> None:
     assert all(report["checks"].values())
 
 
+def test_publication_gpu_runners_normalize_relative_output_paths() -> None:
+    root = Path(__file__).resolve().parents[1]
+    for name in (
+        "run_partial_state_publication_audit.py",
+        "run_publication_planner_dev.py",
+    ):
+        source = (root / "scripts" / name).read_text(encoding="utf-8")
+        assert "if not args.output_dir.is_absolute():" in source
+        assert "(ROOT / args.output_dir).resolve()" in source
+
+
 def test_bounded_planners_respect_unique_state_budget() -> None:
     costs = fixture_costs(5)
     for budget in (5, 10, 20):
