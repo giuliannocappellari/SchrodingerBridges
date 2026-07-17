@@ -551,6 +551,62 @@ def optimize_target_value(
             if delta.norm() > max_norm:
                 delta.mul_(max_norm / delta.norm().clamp_min(1e-8))
     target = target_init_box[0].float() + delta.detach()
+    heldout_rows, heldout_lookups, heldout_rewrite_count = _masked_context_rows(
+        tokenizer,
+        request,
+        target_ids,
+        mask_id,
+        config=config,
+        step=config.target_optimization_steps + 104729,
+        rng=random.Random(config.seed + int(stable_request_int(request)) + 104729),
+        confidence=confidence,
+    )
+    heldout_batch = pad_batch(
+        heldout_rows, int(tokenizer.pad_token_id), device
+    )
+    heldout_offsets = heldout_batch["left_offsets"].tolist()
+    heldout_padded_lookups = [
+        int(heldout_offsets[index]) + int(value)
+        for index, value in enumerate(heldout_lookups)
+    ]
+    with torch.no_grad():
+        heldout_base_logits = model(
+            input_ids=heldout_batch["input_ids"],
+            attention_mask=heldout_batch["attention_mask"],
+        ).logits.float()
+        with intervene_block_output(
+            module, heldout_padded_lookups, delta.detach(), target_init_box
+        ):
+            heldout_edited_logits = model(
+                input_ids=heldout_batch["input_ids"],
+                attention_mask=heldout_batch["attention_mask"],
+            ).logits.float()
+
+    def heldout_nll(logits: torch.Tensor) -> float:
+        losses = []
+        for index, row in enumerate(heldout_rows[:heldout_rewrite_count]):
+            offset = int(heldout_offsets[index])
+            absolute = [offset + int(pos) for pos in row["supervised_positions"]]
+            relative = [
+                int(pos) - int(row["prompt_len"])
+                for pos in row["supervised_positions"]
+            ]
+            if not absolute:
+                continue
+            row_targets = torch.tensor(
+                [target_ids[position] for position in relative],
+                dtype=torch.long,
+                device=device,
+            )
+            losses.append(
+                F.cross_entropy(logits[index, absolute], row_targets)
+            )
+        if not losses:
+            raise RuntimeError("Held-out partial state has no supervised target positions")
+        return float(torch.stack(losses).mean())
+
+    heldout_base_nll = heldout_nll(heldout_base_logits)
+    heldout_edited_nll = heldout_nll(heldout_edited_logits)
     return target.detach(), {
         "target_ids": target_ids,
         "history": history,
@@ -559,6 +615,12 @@ def optimize_target_value(
         "target_value_norm": float(target.norm()),
         "mask_count": len(target_ids),
         "shared_masked_context": True,
+        "heldout_partial_state_seed_offset": 104729,
+        "heldout_base_nll": heldout_base_nll,
+        "heldout_edited_nll": heldout_edited_nll,
+        "heldout_base_target_probability": math.exp(-heldout_base_nll),
+        "heldout_edited_target_probability": math.exp(-heldout_edited_nll),
+        "heldout_target_probability_improved": heldout_edited_nll < heldout_base_nll,
     }
 
 
