@@ -11,6 +11,7 @@ import shutil
 import sys
 import time
 from pathlib import Path
+from types import MethodType
 from typing import Any, Mapping, Sequence
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -65,6 +66,30 @@ LAYERS = (4, 5, 6, 7)
 BLOCK_TEMPLATE = "model.layers.{layer}"
 KEY_TEMPLATE = "model.layers.{layer}.mlp.down_proj"
 REFERENCES = ("uniform", "edited_target_confidence", "edited_max_confidence")
+
+
+def _install_dream_attention_mask_adapter(model: Any) -> bool:
+    """Adapt shared integer attention masks to Dream's SDPA mask contract."""
+    import torch
+
+    if bool(getattr(model, "_dream_attention_mask_adapter_installed", False)):
+        return False
+    original_forward = model.forward
+
+    def adapted_forward(self: Any, *args: Any, **kwargs: Any) -> Any:
+        del self
+        attention_mask = kwargs.get("attention_mask")
+        if (
+            attention_mask is not None
+            and not attention_mask.dtype.is_floating_point
+            and attention_mask.dtype != torch.bool
+        ):
+            kwargs["attention_mask"] = attention_mask.bool()
+        return original_forward(*args, **kwargs)
+
+    model.forward = MethodType(adapted_forward, model)
+    model._dream_attention_mask_adapter_installed = True
+    return True
 
 
 def _module_map(model: Any) -> dict[str, Any]:
@@ -330,7 +355,13 @@ def main() -> None:
         )
 
     model, tokenizer = load_model(SECONDARY_MODEL_ID, SECONDARY_MODEL_REVISION, args.dtype)
+    attention_mask_adapter_installed = _install_dream_attention_mask_adapter(model)
     module_map = _module_map(model)
+    module_map["attention_mask_adapter_installed"] = attention_mask_adapter_installed
+    module_map["attention_mask_adapter"] = (
+        "Cast shared integer attention masks to bool at the Dream model boundary "
+        "to satisfy scaled_dot_product_attention without changing token inputs."
+    )
     if not module_map["acceptance_pass"]:
         raise RuntimeError("Dream module mapping failed")
     write_json(args.output_dir / "model_module_map.json", module_map)
@@ -535,6 +566,12 @@ thresholds were unchanged.
         "manifest_hashes": expected_hashes,
         "num_edits_by_length": {str(n): len(selected_rows[n]) for n in (3, 4, 5)},
         "module_mapping_repair_used": True,
+        "bounded_model_integration_repair": {
+            "single_repair_package": True,
+            "mlp_down_projection_mapping": True,
+            "positive_diagonal_covariance": True,
+            "boolean_attention_mask_adapter": True,
+        },
         "selected_finite_controller": selected_finite,
         "classification": classification,
         "locked_outcomes_used_for_tuning": False,

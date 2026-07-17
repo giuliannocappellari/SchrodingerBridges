@@ -32,6 +32,7 @@ from scripts.mask_pattern_publication_runtime import (
 )
 from scripts.run_partial_state_publication_audit import _schedule_unit_tests
 from scripts.run_publication_planner_dev import _safety_pass
+from scripts.run_publication_dream import _install_dream_attention_mask_adapter
 from scripts.mask_pattern_publication_stats import holm_adjust, paired_bootstrap, paired_values
 from scripts.mdm_memit_editor import model_hidden_size, resolved_block_name, resolved_key_module_name
 from reproduce_paper import check_dp
@@ -413,3 +414,24 @@ def test_protocol_split_summary_rejects_missing_split() -> None:
 
     with pytest.raises(KeyError, match="missing split metadata"):
         protocol_split_summary({"split_summaries": {}}, "locked_n3")
+
+
+def test_dream_attention_mask_adapter_casts_integer_mask_once() -> None:
+    class StrictMaskModel(nn.Module):
+        def __init__(self) -> None:
+            super().__init__()
+            self.anchor = nn.Parameter(torch.zeros(()))
+
+        def forward(self, input_ids, attention_mask=None):
+            assert attention_mask is not None
+            assert attention_mask.dtype == torch.bool
+            return input_ids + self.anchor
+
+    model = StrictMaskModel()
+    assert _install_dream_attention_mask_adapter(model) is True
+    assert _install_dream_attention_mask_adapter(model) is False
+    output = model(
+        torch.ones((1, 2), dtype=torch.long),
+        attention_mask=torch.ones((1, 2), dtype=torch.long),
+    )
+    assert output.shape == (1, 2)
