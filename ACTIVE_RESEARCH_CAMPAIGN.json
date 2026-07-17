@@ -1,74 +1,42 @@
 {
-  "active_campaign": "mask_pattern_sb_publication_confirmation_v1",
-  "protocol_version": "mask_pattern_sb_publication_confirmation_v1",
+  "campaign_id": "diffusion_native_causal_partial_state_editor_v1",
+  "active_direction": "diffusion_native_parametric_editing",
+  "active_protocol": "diffusion_native_causal_partial_state_editor_v1",
+  "active_plan": "DIFFUSION_NATIVE_PARAMETRIC_EDITOR_AUTONOMOUS_PLAN.md",
   "execution_mode": "autonomous_goal",
   "campaign_status": "ready_to_start",
-  "current_stage": "P0_bootstrap_and_source_audit",
-  "next_stage": "P1_partial_state_memit_discrepancy",
-  "active_plan": "MASK_PATTERN_SB_PUBLICATION_AUTONOMOUS_PLAN.md",
-  "required_root_files": [
-    "AGENTS.md",
-    "ACTIVE_RESEARCH_CAMPAIGN.json",
-    "PUBLICATION_PROTOCOL_REGISTRY.json",
-    "MASK_PATTERN_SB_PUBLICATION_AUTONOMOUS_PLAN.md",
-    "PARTIAL_STATE_MEMIT_AUDIT_PLAN.md",
-    "THEORY_AND_NAMING_PLAN.md",
-    "COMPUTE_MATCHED_BASELINES_PLAN.md",
-    "LOCKED_LLADA_CONFIRMATION_PLAN.md",
-    "SECOND_BACKBONE_DREAM_PLAN.md",
-    "EDITOR_GENERALITY_PLAN.md",
-    "APPROXIMATE_SOLVER_PLAN.md",
-    "PAPER_REPRODUCIBILITY_PLAN.md"
-  ],
-  "starting_evidence": {
-    "historical_campaign": "masked_diffusion_memit_sb_positive_result_v1",
-    "mdm_memit_rewrite_exact": 0.864,
-    "mdm_memit_paraphrase_exact": 0.491,
-    "mask_pattern_sb_length3_rewrite_gain": 0.09,
-    "mask_pattern_sb_length4_rewrite_gain_range": [
-      0.065,
-      0.075
-    ],
-    "trajectory_target_cost_reduction_range": [
-      0.24,
-      0.26
-    ],
-    "historical_analysis_500_used": false,
-    "historical_final_test_used": false
-  },
+  "current_stage": "A0_bootstrap_and_source_audit",
+  "next_stage": "A1_fresh_protocol_manifests",
+  "research_question": "Can a diffusion-native parametric editor preserve locality by optimizing updates over causal internal representations and partial denoising states?",
+  "primary_model": "GSAI-ML/LLaDA-8B-Instruct",
+  "secondary_model": "Dream-v0-Instruct-7B",
+  "primary_method": "causal_partial_state_nullspace_memit",
   "historical_protocols": {
     "counterfact_direction1_v1": "closed",
     "counterfact_direction2_bridge_adapter_v1": "closed_protocol_infeasible",
     "counterfact_direction3_controller_v1": "closed_bounded_negative",
     "counterfact_sb_alternatives_campaign_v1": "closed_scientific_negative",
-    "masked_diffusion_memit_sb_positive_result_v1": "closed_positive_seed"
+    "masked_diffusion_memit_sb_positive_result_v1": "closed_positive_reproduction_and_pilot",
+    "mask_pattern_sb_publication_confirmation_v1": "closed_fresh_confirmation_failed"
   },
-  "primary_hypothesis": "An exact finite-state entropy-regularized controller over answer-span mask patterns improves multi-token factual-edit realization over the best compute-matched non-SB reveal planner.",
-  "primary_backbone": "GSAI-ML/LLaDA-8B-Instruct",
-  "secondary_backbone": "Dream-v0-Instruct-7B",
-  "primary_target_lengths": [
-    3,
-    4
-  ],
-  "secondary_target_lengths": [
-    2,
-    5,
-    6
-  ],
-  "historical_locked_splits_allowed": false,
-  "fresh_locked_confirmation_required": true,
-  "runpod_policy": {
-    "monetary_budget_guard": false,
+  "historical_protocols_read_only": true,
+  "monetary_budget_guard_enabled": false,
+  "cost_logging_informational_only": true,
+  "pod_policy": {
+    "start_existing_pod": true,
     "keep_running_between_stages": true,
-    "stop_only_after_terminal_package_or_unrecoverable_pod_issue": true
+    "stop_only_after_terminal_package_or_unrecoverable_infrastructure": true,
+    "create_or_delete_pod": false
   },
-  "terminal_states": [
-    "top_tier_ready",
-    "narrow_method_ready",
-    "diagnostic_only",
-    "fresh_confirmation_failed",
-    "publication_blocked_baseline_discrepancy",
-    "publication_blocked_infrastructure",
+  "analysis_500_locked": true,
+  "final_test_500_locked": true,
+  "allow_per_stage_user_approval_requests": false,
+  "max_infrastructure_retries": 3,
+  "max_scientific_rescues_per_stage": 1,
+  "terminal_statuses": [
+    "positive_completion",
+    "formal_negative_completion",
+    "infrastructure_blocked",
     "unsafe_data_integrity_stop"
   ]
 }

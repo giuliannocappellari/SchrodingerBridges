@@ -1,181 +1,146 @@
-# P8 — Statistics, Reproducibility, and Publication Package
+# Paper and Reproducibility Plan
 
-## Objective
-
-Produce a self-contained package that supports a precise readiness decision and
-can reproduce every paper table and figure.
-
-## Statistical analysis
-
-Required:
-
-```text
-paired bootstrap by edit_id
-10,000 resamples
-95% confidence intervals
-Holm correction for primary N=3/N=4 tests
-micro average
-macro-by-relation average
-macro-by-target-length average
-seed-level variability
-effect sizes
-```
-
-Do not report only aggregate point estimates.
-
-## Required analyses
-
-```text
-beta sweep and beta limits
-finite beta vs deterministic planning
-full-table vs online compute-matched
-target length 2 through 6
-base target rank/probability buckets
-relation buckets
-token-frequency buckets
-shared-prefix/subword structure
-number of plausible reveal orders
-trajectory cost vs exact-success correlation
-same-subject and locality safety
-malformed and partial-target failures
-```
-
-## Trajectory examples
-
-For successful and failed edits, show:
-
-```text
-default confidence trajectory
-one-step myopic trajectory
-deterministic global trajectory
-finite-beta trajectory
-```
-
-At every state report:
-
-```text
-revealed positions
-target-token probabilities
-immediate cost
-backward value/partition
-transition probabilities
-remaining expected cost
-```
-
-## Reproducibility
-
-Freeze and record:
-
-```text
-Git commit
-model revisions
-tokenizer hashes
-dataset/source fingerprints
-split manifests
-MEMIT configuration
-edited layer window
-covariance source/hash
-cost definition
-reference process
-beta
-planner/query budget
-generation schedule
-seeds
-package versions
-RunPod image/CUDA/GPU
-```
-
-Required commands:
-
-```text
-python reproduce_paper.py --table main
-python reproduce_paper.py --figure main
-python reproduce_paper.py --check-dp
-```
-
-`--check-dp` must run cheaply without loading LLaDA.
+Protocol: `diffusion_native_causal_partial_state_editor_v1`
 
 ## Final package
 
 Create:
 
 ```text
-runs/mask_pattern_sb_publication_confirmation_v1/
-  final_publication_package_v1/
+runs/diffusion_native_causal_partial_state_editor_v1/final_research_package_v1/
 ```
 
-Required:
+Required artifacts:
 
 ```text
 report_summary.json
-top_tier_readiness.json
-main_results_table.csv
-compute_matched_table.csv
-second_backbone_table.csv
-editor_generality_table.csv
-target_length_table.csv
-beta_ablation.csv
-planner_ablation.csv
-same_subject_stress_table.csv
-malformed_and_locality_table.csv
-paired_bootstrap.csv
-holm_corrected_tests.csv
-power_analysis.json
-theory_statement.md
-naming_decision.md
-complexity_analysis.md
-trajectory_examples.md
-failure_cases.csv
-artifact_availability.json
-reproducibility_manifest.json
 final_research_report.md
-paper_outline.md
 paper_claim_recommendation.md
+main_results_table.csv
+same_subject_stress_table.csv
+multi_token_table.csv
+causal_localization_table.csv
+locality_distribution_table.csv
+compute_storage_table.csv
+sequential_edit_table.csv
+paired_bootstrap.csv
+rewrite_locality_pareto.png
+causal_heatmap.png
+partial_state_plot.png
+update_norm_locality_plot.png
+failure_cases.csv
+artifact_availability_manifest.json
+reproducibility_manifest.json
+terminal_package_validation.json
 ```
 
-## Readiness decision
+## Reproducibility manifest
 
-### `top_tier_ready`
-
-All:
+Record:
 
 ```text
-partial-state discrepancy resolved or concretely explained
-fresh locked LLaDA primary test passes
-best compute-matched non-SB planner is beaten
-finite beta adds value beyond beta=0 and beta=infinity
-second backbone has consistent positive evidence
-positive result under at least two editor conditions
-formal naming is defensible
-locality and malformed constraints pass
-complete reproducibility package validates
+Git commit and tag
+all model/tokenizer revisions
+Python/CUDA/PyTorch/Transformers versions
+RunPod GPU type
+all split and prompt fingerprints
+all source-code hashes
+all selected hyperparameters
+all random seeds
+all update/checkpoint hashes
+all result artifact hashes
+commands for every main table and figure
 ```
 
-### `narrow_method_ready`
+## One-command reproduction
 
-Examples:
+Provide commands such as:
+
+```bash
+python reproduce_dnpe_paper.py --table main
+python reproduce_dnpe_paper.py --figure causal_heatmap
+python reproduce_dnpe_paper.py --validate-terminal-package
+```
+
+Add CPU-safe toy tests for:
 
 ```text
-fresh LLaDA result passes but second backbone is unavailable/inconclusive
-method beats fixed schedules but not best compute-matched global planning
-formal result is entropy-regularized planning rather than classical SB
-approximate solver fails but exact short-span method is positive
+causal restoration accounting
+partial-state enumeration
+null-space projector correctness
+constrained update closed form
+train/eval leakage
+paired bootstrap
 ```
 
-### `diagnostic_only`
+## Main figures
 
-Examples:
+### Figure 1 — Temporal causal localization
+
+Heatmap over layers, token positions, and mask counts.
+
+### Figure 2 — Rewrite/locality Pareto
+
+Show ordinary MDM-MEMIT, partial-state, AlphaEdit-style, TimeROME-style, and the main editor.
+
+### Figure 3 — Multi-token robustness
+
+Target lengths 2–4 with full-span exact and paraphrase.
+
+### Figure 4 — Update geometry
+
+Protected dimension, update norm, and same-subject drift.
+
+### Figure 5 — Sequential scaling
+
+Edit count versus efficacy/locality/interference.
+
+## Claim matrix
+
+Classify each claim as:
 
 ```text
-fresh gain disappears under compute matching
-deterministic global planning explains all gain
-finite beta adds no value
-benefit occurs at only one target length
-second backbone reverses the result
+supported
+partially supported
+rejected under bounded protocol
+not tested
+protocol-infeasible
+infrastructure-blocked
 ```
 
-### `fresh_confirmation_failed`
+Potential positive claims:
 
-The fresh locked LLaDA primary result fails.
+```text
+causal temporal localization improves parametric edit efficiency
+partial-state optimization improves multi-token editing
+null-space constrained updates improve same-subject locality
+full diffusion-native editor improves the joint efficacy/locality trade-off
+```
 
-After package validation, update campaign state and stop the Pod.
+Do not claim a strong editor unless locked analysis/final results pass.
+
+## Failure report requirements
+
+A negative result must separate:
+
+```text
+baseline reproduction failure
+causal localization failure
+partial-state optimization failure
+locality projection failure
+editability/locality incompatibility
+second-backbone integration failure
+analysis generalization failure
+```
+
+## Final shutdown
+
+After terminal package validation:
+
+```text
+mark campaign state terminal
+write final Pod/cost state
+verify no active tmux/Python GPU job
+stop the configured Pod
+record stopped status
+```

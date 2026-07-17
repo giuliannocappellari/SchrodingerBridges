@@ -121,11 +121,15 @@ def test_balanced_split_selection_is_deterministic_and_disjoint() -> None:
     ) <= 3
 
 
-def test_active_campaign_and_registry_are_publication_protocol() -> None:
+def test_publication_protocol_remains_registered_as_closed_history() -> None:
     root = Path(__file__).resolve().parents[1]
     active = json.loads((root / "ACTIVE_RESEARCH_CAMPAIGN.json").read_text())
     registry = json.loads((root / "PUBLICATION_PROTOCOL_REGISTRY.json").read_text())
-    assert active["active_campaign"] == "mask_pattern_sb_publication_confirmation_v1"
+    assert active["active_protocol"] == "diffusion_native_causal_partial_state_editor_v1"
+    assert (
+        active["historical_protocols"]["mask_pattern_sb_publication_confirmation_v1"]
+        == "closed_fresh_confirmation_failed"
+    )
     assert registry["campaign"] == "mask_pattern_sb_publication_confirmation_v1"
     assert [track["id"] for track in registry["tracks"]] == [f"P{i}" for i in range(9)]
     assert len(SECONDARY_MODEL_REVISION) == 40
