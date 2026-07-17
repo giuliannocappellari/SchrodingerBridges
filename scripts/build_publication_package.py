@@ -318,6 +318,7 @@ def main() -> None:
         "layers": lock["layers"],
         "reference_process": lock["reference_process"],
         "beta": lock["beta"],
+        "controller_action_rule": lock["controller_action_rule"],
         "span_policy": lock["span_policy"],
         "random_seeds": lock["random_policy_seeds"],
         "bootstrap_resamples": lock["bootstrap_resamples"],

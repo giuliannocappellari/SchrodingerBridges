@@ -259,6 +259,8 @@ def main() -> None:
         raise RuntimeError("P4 requires an unopened, validated dev method lock")
     if int(lock.get("bootstrap_resamples", 0)) != 10_000:
         raise RuntimeError("Dev lock does not freeze the required bootstrap count")
+    if lock.get("controller_action_rule") != "greedy_argmax_of_exact_controlled_transition":
+        raise RuntimeError("Dev lock has an unknown finite-controller action rule")
     p3_report = read_json(CAMPAIGN_ROOT / "planner_baselines_dev_v1" / "report_summary.json")
     if p3_report.get("planner_profile") != "full":
         raise RuntimeError("P4 requires the complete P3 planner suite, not a smoke lock")
@@ -562,6 +564,7 @@ or thresholds.
         "generation_seeds": list(GENERATION_SEEDS),
         "random_policy_seeds": list(RANDOM_SEEDS),
         "finite_controller": finite,
+        "controller_action_rule": lock["controller_action_rule"],
         "compute_matched_baseline": baseline,
         "pooled_primary_bootstrap": pooled,
         "holm_tests": holm,
