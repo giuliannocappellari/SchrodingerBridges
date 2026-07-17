@@ -1,34 +1,53 @@
-# Masked-Diffusion MEMIT + Schrödinger Goal Bundle
+# Mask-Pattern Path-Control Publication Campaign
 
-Place every file in this bundle at the repository root.
+This package turns the historical MDM-MEMIT + mask-pattern controller pilot
+into a fresh, locked, compute-matched, second-backbone publication
+confirmation.
 
-## Active goal
-
-Obtain a strong positive factual-editing result in a masked diffusion language model, then test whether Schrödinger-style path control improves locality or denoising trajectory quality.
-
-## Required execution order
+## Put these files in the repository root
 
 ```text
-M1 MDM-MEMIT reproduction
-M2 partial-mask MEMIT
-M3 Schrodinger/path-KL regularization
-M4 exact mask-pattern SB
-F1 adaptive edit-memory fallback, only if M1 fails
-F2 toy text CSBM fallback, only if M3 and M4 both fail
-final cross-track package
+AGENTS.md
+ACTIVE_RESEARCH_CAMPAIGN.json
+PUBLICATION_PROTOCOL_REGISTRY.json
+MASK_PATTERN_SB_PUBLICATION_AUTONOMOUS_PLAN.md
+PARTIAL_STATE_MEMIT_AUDIT_PLAN.md
+THEORY_AND_NAMING_PLAN.md
+COMPUTE_MATCHED_BASELINES_PLAN.md
+LOCKED_LLADA_CONFIRMATION_PLAN.md
+SECOND_BACKBONE_DREAM_PLAN.md
+EDITOR_GENERALITY_PLAN.md
+APPROXIMATE_SOLVER_PLAN.md
+PAPER_REPRODUCIBILITY_PLAN.md
+START_MASK_PATTERN_SB_PUBLICATION_GOAL.md
+PRIMARY_SOURCES.md
 ```
 
-## Autonomous Pod policy
-
-The Pod stays running from campaign start until the entire goal is complete or an unrecoverable Pod/infrastructure issue remains after retries. Monetary cost does not stop or reorder the work.
-
-## Launch
-
-Set the RunPod variables and:
+## Environment
 
 ```bash
-export MDM_MEMIT_SB_AUTONOMOUS_MODE=1
-export MDM_MEMIT_SB_MAX_INFRA_RETRIES=3
+export MASK_PATTERN_SB_PUBLICATION_AUTONOMOUS_MODE=1
+export MASK_PATTERN_SB_MAX_INFRA_RETRIES="3"
+export MASK_PATTERN_SB_MAX_SCIENTIFIC_RESCUES_PER_TRACK="1"
+
+export RUNPOD_POD_ID="<existing-pod-id>"
+export RUNPOD_SSH_KEY="$HOME/.ssh/<private-key-file>"
+export RUNPOD_SSH_USER="root"
+export RUNPOD_SSH_HOST="<current-host>"
+export RUNPOD_SSH_PORT="<current-port>"
+export REMOTE_REPO_DIR="/workspace/SB"
 ```
 
-Then use Codex Goal mode and paste `START_MDM_MEMIT_SB_GOAL.md`.
+Configure `runpodctl` with the RunPod API key.
+
+## Start
+
+Open Codex in Goal mode and paste the content of:
+
+```text
+START_MASK_PATTERN_SB_PUBLICATION_GOAL.md
+```
+
+Codex is instructed to keep the Pod running until the whole campaign and final
+publication package are terminal, or an unrecoverable Pod/infrastructure issue
+remains.

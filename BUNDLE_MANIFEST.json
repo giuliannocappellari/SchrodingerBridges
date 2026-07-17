@@ -1,0 +1,66 @@
+{
+  "created_at_utc": "2026-07-17T01:09:09.377015+00:00",
+  "campaign": "mask_pattern_sb_publication_confirmation_v1",
+  "files": {
+    "ACTIVE_RESEARCH_CAMPAIGN.json": {
+      "size_bytes": 2661,
+      "sha256": "b474145f2c958db09b098ca06f6904dbdfb3a39bd4a60ef66308fb47a5e82aae"
+    },
+    "AGENTS.md": {
+      "size_bytes": 14833,
+      "sha256": "d0609ba7b7687e5e2a47f51d90c86adadc2acd83d2373fc8347768a25409d7f4"
+    },
+    "APPROXIMATE_SOLVER_PLAN.md": {
+      "size_bytes": 1845,
+      "sha256": "e4f0c49a2f3050d87067b64694931774902508be579e19cffcdb25b7de1159b2"
+    },
+    "COMPUTE_MATCHED_BASELINES_PLAN.md": {
+      "size_bytes": 3082,
+      "sha256": "184ebe003a3676d277dbb5cf21897bbe2271e27161a385099ef72fc9b843ba74"
+    },
+    "EDITOR_GENERALITY_PLAN.md": {
+      "size_bytes": 1436,
+      "sha256": "e1858b64a03ce9175c7f3b1ee9ce357216cc6c9b8e251298b84f15072c56709b"
+    },
+    "LOCKED_LLADA_CONFIRMATION_PLAN.md": {
+      "size_bytes": 3309,
+      "sha256": "b17b47a583ddd60345ad80f8c2145c88b36097b9a26cc32671d342fa8e2a6bf9"
+    },
+    "MASK_PATTERN_SB_PUBLICATION_AUTONOMOUS_PLAN.md": {
+      "size_bytes": 10266,
+      "sha256": "861bc3d9676981fffd982ed25978fc3ed121a203f05d445571fdee43656fee3e"
+    },
+    "PAPER_REPRODUCIBILITY_PLAN.md": {
+      "size_bytes": 3749,
+      "sha256": "42ccdb8db1997d53c2eb66147b12a349e2692db52f29caac71ce2578d998499d"
+    },
+    "PARTIAL_STATE_MEMIT_AUDIT_PLAN.md": {
+      "size_bytes": 3344,
+      "sha256": "fd4bc1d941382d8d51dd1ddb717f07f05d61367b529b387edbb54211346927ef"
+    },
+    "PRIMARY_SOURCES.md": {
+      "size_bytes": 1072,
+      "sha256": "17b3ff8bc2ade3566e4220eb49e6dc8cc46ede8518528ef761915c940946efe2"
+    },
+    "PUBLICATION_PROTOCOL_REGISTRY.json": {
+      "size_bytes": 2399,
+      "sha256": "5e7c170ad40f106e7e0095ca07702252f29d0f48810f243f4147ccc6ac501186"
+    },
+    "README.md": {
+      "size_bytes": 1451,
+      "sha256": "94b905d20d5efb9e97c48d456750c93e0667959c951271cb9213addfc3ece25b"
+    },
+    "SECOND_BACKBONE_DREAM_PLAN.md": {
+      "size_bytes": 2219,
+      "sha256": "60b49877566ddeccd146cfca7bb61f5646b429711198b9484dd043a4d44a365b"
+    },
+    "START_MASK_PATTERN_SB_PUBLICATION_GOAL.md": {
+      "size_bytes": 2066,
+      "sha256": "039fe90637d1c6a2f1a91e259045fe30359de6a5b0569fd97b8c6fb8b60c7682"
+    },
+    "THEORY_AND_NAMING_PLAN.md": {
+      "size_bytes": 3243,
+      "sha256": "64f82fff10ef7ca74e4f60460e18d17a1b7242016d41500f2dbe9f277d30e152"
+    }
+  }
+}

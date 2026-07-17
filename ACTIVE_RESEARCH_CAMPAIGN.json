@@ -1,36 +1,74 @@
 {
-  "campaign_id": "masked_diffusion_memit_sb_positive_result_v1",
-  "campaign_status": "ready_to_start",
+  "active_campaign": "mask_pattern_sb_publication_confirmation_v1",
+  "protocol_version": "mask_pattern_sb_publication_confirmation_v1",
   "execution_mode": "autonomous_goal",
-  "active_protocol": "masked_diffusion_memit_sb_positive_result_v1",
-  "active_plan": "MDM_MEMIT_SB_AUTONOMOUS_RESEARCH_PLAN.md",
-  "current_stage": "A1_campaign_bootstrap",
-  "primary_model": "GSAI-ML/LLaDA-8B-Instruct",
-  "mandatory_tracks": [
-    "M1_mdm_memit_reproduction",
-    "M2_partial_mask_memit",
-    "M3_schrodinger_regularized_memit",
-    "M4_mask_pattern_sb"
+  "campaign_status": "ready_to_start",
+  "current_stage": "P0_bootstrap_and_source_audit",
+  "next_stage": "P1_partial_state_memit_discrepancy",
+  "active_plan": "MASK_PATTERN_SB_PUBLICATION_AUTONOMOUS_PLAN.md",
+  "required_root_files": [
+    "AGENTS.md",
+    "ACTIVE_RESEARCH_CAMPAIGN.json",
+    "PUBLICATION_PROTOCOL_REGISTRY.json",
+    "MASK_PATTERN_SB_PUBLICATION_AUTONOMOUS_PLAN.md",
+    "PARTIAL_STATE_MEMIT_AUDIT_PLAN.md",
+    "THEORY_AND_NAMING_PLAN.md",
+    "COMPUTE_MATCHED_BASELINES_PLAN.md",
+    "LOCKED_LLADA_CONFIRMATION_PLAN.md",
+    "SECOND_BACKBONE_DREAM_PLAN.md",
+    "EDITOR_GENERALITY_PLAN.md",
+    "APPROXIMATE_SOLVER_PLAN.md",
+    "PAPER_REPRODUCIBILITY_PLAN.md"
   ],
-  "conditional_fallback_tracks": [
-    "F1_adaptive_edit_memory_guidance",
-    "F2_toy_text_csbm"
-  ],
+  "starting_evidence": {
+    "historical_campaign": "masked_diffusion_memit_sb_positive_result_v1",
+    "mdm_memit_rewrite_exact": 0.864,
+    "mdm_memit_paraphrase_exact": 0.491,
+    "mask_pattern_sb_length3_rewrite_gain": 0.09,
+    "mask_pattern_sb_length4_rewrite_gain_range": [
+      0.065,
+      0.075
+    ],
+    "trajectory_target_cost_reduction_range": [
+      0.24,
+      0.26
+    ],
+    "historical_analysis_500_used": false,
+    "historical_final_test_used": false
+  },
   "historical_protocols": {
-    "counterfact_direction1_v1": "closed_blocked",
+    "counterfact_direction1_v1": "closed",
     "counterfact_direction2_bridge_adapter_v1": "closed_protocol_infeasible",
     "counterfact_direction3_controller_v1": "closed_bounded_negative",
-    "counterfact_sb_alternatives_campaign_v1": "closed_scientific_negative"
+    "counterfact_sb_alternatives_campaign_v1": "closed_scientific_negative",
+    "masked_diffusion_memit_sb_positive_result_v1": "closed_positive_seed"
   },
-  "historical_protocols_are_read_only": true,
-  "old_analysis_500_locked": true,
-  "old_final_test_500_locked": true,
-  "old_final_test_full_locked": true,
-  "monetary_budget_guard_enabled": false,
-  "keep_pod_running_until_campaign_terminal": true,
-  "stop_pod_only_after_full_goal_or_unrecoverable_pod_issue": true,
-  "analysis_500_used": false,
-  "final_test_used": false,
-  "requires_new_campaign_manifests": true,
-  "last_updated_utc": null
+  "primary_hypothesis": "An exact finite-state entropy-regularized controller over answer-span mask patterns improves multi-token factual-edit realization over the best compute-matched non-SB reveal planner.",
+  "primary_backbone": "GSAI-ML/LLaDA-8B-Instruct",
+  "secondary_backbone": "Dream-v0-Instruct-7B",
+  "primary_target_lengths": [
+    3,
+    4
+  ],
+  "secondary_target_lengths": [
+    2,
+    5,
+    6
+  ],
+  "historical_locked_splits_allowed": false,
+  "fresh_locked_confirmation_required": true,
+  "runpod_policy": {
+    "monetary_budget_guard": false,
+    "keep_running_between_stages": true,
+    "stop_only_after_terminal_package_or_unrecoverable_pod_issue": true
+  },
+  "terminal_states": [
+    "top_tier_ready",
+    "narrow_method_ready",
+    "diagnostic_only",
+    "fresh_confirmation_failed",
+    "publication_blocked_baseline_discrepancy",
+    "publication_blocked_infrastructure",
+    "unsafe_data_integrity_stop"
+  ]
 }

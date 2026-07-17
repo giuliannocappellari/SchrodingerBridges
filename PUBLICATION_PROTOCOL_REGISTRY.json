@@ -1,0 +1,84 @@
+{
+  "campaign": "mask_pattern_sb_publication_confirmation_v1",
+  "tracks": [
+    {
+      "id": "P0",
+      "name": "Source, artifact, and implementation audit",
+      "plan": "MASK_PATTERN_SB_PUBLICATION_AUTONOMOUS_PLAN.md",
+      "mandatory": true,
+      "status": "pending"
+    },
+    {
+      "id": "P1",
+      "name": "Paper-matched partial-state MDM-MEMIT discrepancy resolution",
+      "plan": "PARTIAL_STATE_MEMIT_AUDIT_PLAN.md",
+      "mandatory": true,
+      "hard_prerequisite_for_top_tier": true,
+      "status": "pending"
+    },
+    {
+      "id": "P2",
+      "name": "Theory, exact solver, and naming audit",
+      "plan": "THEORY_AND_NAMING_PLAN.md",
+      "mandatory": true,
+      "hard_prerequisite_for_top_tier": true,
+      "status": "pending"
+    },
+    {
+      "id": "P3",
+      "name": "Reveal-order and compute-matched baseline suite",
+      "plan": "COMPUTE_MATCHED_BASELINES_PLAN.md",
+      "mandatory": true,
+      "hard_prerequisite_for_top_tier": true,
+      "status": "pending"
+    },
+    {
+      "id": "P4",
+      "name": "Fresh locked LLaDA confirmation",
+      "plan": "LOCKED_LLADA_CONFIRMATION_PLAN.md",
+      "mandatory": true,
+      "hard_prerequisite_for_top_tier": true,
+      "status": "pending"
+    },
+    {
+      "id": "P5",
+      "name": "Second-backbone Dream confirmation",
+      "plan": "SECOND_BACKBONE_DREAM_PLAN.md",
+      "mandatory": true,
+      "hard_prerequisite_for_top_tier": true,
+      "status": "pending"
+    },
+    {
+      "id": "P6",
+      "name": "Editor-generality evaluation",
+      "plan": "EDITOR_GENERALITY_PLAN.md",
+      "mandatory": true,
+      "status": "pending"
+    },
+    {
+      "id": "P7",
+      "name": "Approximate solver and target-length scaling",
+      "plan": "APPROXIMATE_SOLVER_PLAN.md",
+      "mandatory": true,
+      "status": "pending"
+    },
+    {
+      "id": "P8",
+      "name": "Statistics, reproducibility, and paper package",
+      "plan": "PAPER_REPRODUCIBILITY_PLAN.md",
+      "mandatory": true,
+      "status": "pending"
+    }
+  ],
+  "selection_rules": {
+    "dev_data_only_for_tuning": true,
+    "locked_confirmation_once": true,
+    "primary_comparison": "finite-beta exact controller vs best compute-matched non-SB planner",
+    "primary_lengths": [
+      3,
+      4
+    ],
+    "bootstrap_resamples": 10000,
+    "multiple_comparison_correction": "Holm over primary length-3 and length-4 comparisons"
+  }
+}
