@@ -17,6 +17,7 @@ from scripts.mask_pattern_kl_control import (
     uniform_reference,
 )
 from scripts.mask_pattern_publication_common import SECONDARY_MODEL_REVISION
+from scripts.run_partial_state_publication_audit import _schedule_unit_tests
 
 
 def fixture_costs(n: int) -> dict[tuple[int, int], float]:
@@ -122,3 +123,9 @@ def test_publication_protocol_does_not_name_historical_locked_inputs() -> None:
         assert "analysis_500.jsonl" not in text
         assert "final_test_500.jsonl" not in text
         assert "final_test_full.jsonl" not in text
+
+
+def test_paper_partial_state_schedule_contract() -> None:
+    report = _schedule_unit_tests()
+    assert report["acceptance_pass"]
+    assert all(report["checks"].values())
