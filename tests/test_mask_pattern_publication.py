@@ -32,7 +32,7 @@ from scripts.mask_pattern_publication_runtime import (
 )
 from scripts.run_partial_state_publication_audit import _schedule_unit_tests
 from scripts.run_publication_planner_dev import _safety_pass
-from scripts.run_publication_dream import _install_dream_attention_mask_adapter
+from scripts.run_publication_dream import _backbone_profile, _install_dream_attention_mask_adapter
 from scripts.mask_pattern_publication_stats import holm_adjust, paired_bootstrap, paired_values
 from scripts.mdm_memit_editor import model_hidden_size, resolved_block_name, resolved_key_module_name
 from reproduce_paper import check_dp
@@ -435,3 +435,13 @@ def test_dream_attention_mask_adapter_casts_integer_mask_once() -> None:
         attention_mask=torch.ones((1, 2), dtype=torch.long),
     )
     assert output.shape == (1, 2)
+
+
+def test_llada_base_secondary_fallback_is_pinned_and_bounded() -> None:
+    profile = _backbone_profile("llada_base_fallback")
+    assert profile["model_id"] == "GSAI-ML/LLaDA-8B-Base"
+    assert profile["model_revision"] == "0f2787f2d87eac5eed8a087d5ecd24277e6255b2"
+    assert profile["dev_prefix"] == "kamel_pub_dev"
+    assert profile["locked_prefix"] == "kamel_pub_locked"
+    assert profile["profile_limits"] == {"smoke": 5, "dev": 100, "locked": 300}
+    assert profile["bounded_mapping_repair"] is False

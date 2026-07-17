@@ -24,11 +24,24 @@ PRIMARY_MODEL_ID = "GSAI-ML/LLaDA-8B-Instruct"
 PRIMARY_MODEL_REVISION = "08b83a6feb34df1a6011b80c3c00c7563e963b07"
 SECONDARY_MODEL_ID = "Dream-org/Dream-v0-Instruct-7B"
 SECONDARY_MODEL_REVISION = "05334cb9faaf763692dcf9d8737c642be2b2a6ae"
+SECONDARY_FALLBACK_MODEL_ID = "GSAI-ML/LLaDA-8B-Base"
+SECONDARY_FALLBACK_MODEL_REVISION = "0f2787f2d87eac5eed8a087d5ecd24277e6255b2"
 TRACKS = tuple(f"P{index}" for index in range(9))
 
 
 def now_utc() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def secondary_backbone_terminal_dir() -> Path:
+    """Resolve Dream output or the predeclared LLaDA-Base fallback transparently."""
+    dream = CAMPAIGN_ROOT / "dream_confirmation_v1"
+    fallback = CAMPAIGN_ROOT / "secondary_backbone_fallback_v1"
+    if (dream / "report_summary.json").exists():
+        return dream
+    if (fallback / "report_summary.json").exists():
+        return fallback
+    return dream
 
 
 def git_commit() -> str:

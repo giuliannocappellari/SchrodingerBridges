@@ -22,6 +22,8 @@ from scripts.mask_pattern_publication_common import (
     CAMPAIGN_ID,
     CAMPAIGN_ROOT,
     PROTOCOL_ROOT,
+    SECONDARY_FALLBACK_MODEL_ID,
+    SECONDARY_FALLBACK_MODEL_REVISION,
     SECONDARY_MODEL_ID,
     SECONDARY_MODEL_REVISION,
     git_commit,
@@ -65,6 +67,8 @@ from scripts.run_publication_locked_confirmation import (
 LAYERS = (4, 5, 6, 7)
 BLOCK_TEMPLATE = "model.layers.{layer}"
 KEY_TEMPLATE = "model.layers.{layer}.mlp.down_proj"
+LLADA_BLOCK_TEMPLATE = "model.transformer.blocks.{layer}"
+LLADA_KEY_TEMPLATE = "model.transformer.blocks.{layer}.ff_out"
 REFERENCES = ("uniform", "edited_target_confidence", "edited_max_confidence")
 
 
@@ -92,11 +96,55 @@ def _install_dream_attention_mask_adapter(model: Any) -> bool:
     return True
 
 
-def _module_map(model: Any) -> dict[str, Any]:
+def _backbone_profile(backbone: str) -> dict[str, Any]:
+    if backbone == "dream":
+        return {
+            "model_id": SECONDARY_MODEL_ID,
+            "model_revision": SECONDARY_MODEL_REVISION,
+            "block_template": BLOCK_TEMPLATE,
+            "key_template": KEY_TEMPLATE,
+            "dev_prefix": "dream_pub_dev",
+            "locked_prefix": "dream_pub_locked",
+            "smoke_dir": "dream_integration_smoke_v1",
+            "dev_dir": "dream_confirmation_dev_v1",
+            "locked_dir": "dream_confirmation_v1",
+            "lock_filename": "dream_dev_lock.json",
+            "default_label": "dream_default",
+            "bounded_mapping_repair": True,
+            "profile_limits": {"smoke": 5, "dev": 0, "locked": 0},
+        }
+    if backbone == "llada_base_fallback":
+        return {
+            "model_id": SECONDARY_FALLBACK_MODEL_ID,
+            "model_revision": SECONDARY_FALLBACK_MODEL_REVISION,
+            "block_template": LLADA_BLOCK_TEMPLATE,
+            "key_template": LLADA_KEY_TEMPLATE,
+            "dev_prefix": "kamel_pub_dev",
+            "locked_prefix": "kamel_pub_locked",
+            "smoke_dir": "secondary_backbone_fallback_smoke_v1",
+            "dev_dir": "secondary_backbone_fallback_dev_v1",
+            "locked_dir": "secondary_backbone_fallback_v1",
+            "lock_filename": "secondary_dev_lock.json",
+            "default_label": "llada_base_default",
+            "bounded_mapping_repair": False,
+            "profile_limits": {"smoke": 5, "dev": 100, "locked": 300},
+        }
+    raise ValueError(f"Unsupported secondary backbone profile: {backbone}")
+
+
+def _module_map(
+    model: Any,
+    *,
+    model_id: str = SECONDARY_MODEL_ID,
+    model_revision: str = SECONDARY_MODEL_REVISION,
+    block_template: str = BLOCK_TEMPLATE,
+    key_template: str = KEY_TEMPLATE,
+    bounded_mapping_repair: bool = True,
+) -> dict[str, Any]:
     layers = []
     for layer in LAYERS:
-        block_name = BLOCK_TEMPLATE.format(layer=layer)
-        key_name = KEY_TEMPLATE.format(layer=layer)
+        block_name = block_template.format(layer=layer)
+        key_name = key_template.format(layer=layer)
         block = get_module(model, block_name)
         key = get_module(model, key_name)
         layers.append(
@@ -112,14 +160,18 @@ def _module_map(model: Any) -> dict[str, Any]:
             }
         )
     return {
-        "model_id": SECONDARY_MODEL_ID,
-        "model_revision": SECONDARY_MODEL_REVISION,
+        "model_id": model_id,
+        "model_revision": model_revision,
         "architecture": type(model).__name__,
         "mask_token_id": infer_mask_id(model),
-        "num_hidden_layers": int(model.config.num_hidden_layers),
-        "hidden_size": int(model.config.hidden_size),
-        "block_module_template": BLOCK_TEMPLATE,
-        "key_module_template": KEY_TEMPLATE,
+        "num_hidden_layers": int(
+            getattr(model.config, "num_hidden_layers", getattr(model.config, "n_layers", 0))
+        ),
+        "hidden_size": int(
+            getattr(model.config, "hidden_size", getattr(model.config, "d_model", 0))
+        ),
+        "block_module_template": block_template,
+        "key_module_template": key_template,
         "module_mapping_repair": (
             "Use the architecture-faithful MLP down projection with a positive diagonal "
             "second-moment covariance and an exact Woodbury solve; a dense intermediate-width "
@@ -127,7 +179,7 @@ def _module_map(model: Any) -> dict[str, Any]:
         ),
         "covariance_representation": "positive_diagonal_second_moment",
         "linear_solve": "exact_woodbury_for_diagonal_plus_low_rank_edit_keys",
-        "bounded_module_mapping_repair_used": True,
+        "bounded_module_mapping_repair_used": bounded_mapping_repair,
         "layers": layers,
         "acceptance_pass": all(row["editable_weight_floating_point"] for row in layers),
     }
@@ -140,6 +192,7 @@ def _build_covariance_cache(
     output_dir: Path,
     *,
     batch_size: int = 8,
+    key_template: str = KEY_TEMPLATE,
 ) -> list[dict[str, Any]]:
     import torch
 
@@ -155,7 +208,7 @@ def _build_covariance_cache(
         lookups.append(find_last_subject_token(tokenizer, prompt, str(row["subject"])))
     reports = []
     for layer in LAYERS:
-        module_name = KEY_TEMPLATE.format(layer=layer)
+        module_name = key_template.format(layer=layer)
         module = get_module(model, module_name)
         width = int(module.weight.shape[1])
         accumulator = torch.zeros(width, dtype=torch.float64, device=device)
@@ -217,7 +270,12 @@ def _load_covariance(cache_dir: Path, layer: int):
     return torch.load(path, map_location="cpu", weights_only=True).to("cuda")
 
 
-def _partial_config(llada_lock: Mapping[str, Any]) -> MemitConfig:
+def _partial_config(
+    llada_lock: Mapping[str, Any],
+    *,
+    block_template: str = BLOCK_TEMPLATE,
+    key_template: str = KEY_TEMPLATE,
+) -> MemitConfig:
     editor = llada_lock["editor"]
     return MemitConfig(
         layers=LAYERS,
@@ -228,8 +286,8 @@ def _partial_config(llada_lock: Mapping[str, Any]) -> MemitConfig:
         partial_mask_schedule=str(editor["partial_mask_schedule"]),
         reveal_policy=str(editor["reveal_policy"]),
         seed=260_717_810,
-        block_module_template=BLOCK_TEMPLATE,
-        key_module_template=KEY_TEMPLATE,
+        block_module_template=block_template,
+        key_module_template=key_template,
     )
 
 
@@ -239,12 +297,13 @@ def _planner_specs(
     n: int,
     llada_lock: Mapping[str, Any],
     dream_lock: Mapping[str, Any] | None,
+    default_label: str = "dream_default",
 ) -> list[PlannerSpec]:
     beta = float(llada_lock["beta"])
     fixed = llada_lock["fixed_orders"].get(str(n), list(range(n)))
     non_sb = str(llada_lock["best_non_sb_planner"])
     specs = [
-        PlannerSpec("dream_default", "default_confidence"),
+        PlannerSpec(default_label, "default_confidence"),
         PlannerSpec("one_step_myopic", "myopic"),
         PlannerSpec("deterministic_global", "deterministic_global"),
     ]
@@ -269,7 +328,7 @@ def _planner_specs(
         )
     else:
         if dream_lock is None:
-            raise RuntimeError("Dream locked run requires a validated Dream dev lock")
+            raise RuntimeError("Secondary locked run requires a validated dev lock")
         specs.append(
             PlannerSpec(
                 str(dream_lock["finite_controller_label"]),
@@ -308,15 +367,21 @@ def _summary(rows: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--stage", choices=("smoke", "dev", "locked"), required=True)
+    parser.add_argument(
+        "--backbone",
+        choices=("dream", "llada_base_fallback"),
+        default="dream",
+    )
     parser.add_argument("--output_dir", type=Path)
     parser.add_argument("--limit_per_length", type=int, default=0)
     parser.add_argument("--dtype", choices=("float16", "bfloat16"), default="float16")
     parser.add_argument("--allow_overwrite", type=int, choices=(0, 1), default=0)
     args = parser.parse_args()
+    profile = _backbone_profile(args.backbone)
     defaults = {
-        "smoke": CAMPAIGN_ROOT / "dream_integration_smoke_v1",
-        "dev": CAMPAIGN_ROOT / "dream_confirmation_dev_v1",
-        "locked": CAMPAIGN_ROOT / "dream_confirmation_v1",
+        "smoke": CAMPAIGN_ROOT / str(profile["smoke_dir"]),
+        "dev": CAMPAIGN_ROOT / str(profile["dev_dir"]),
+        "locked": CAMPAIGN_ROOT / str(profile["locked_dir"]),
     }
     args.output_dir = args.output_dir or defaults[args.stage]
     if not args.output_dir.is_absolute():
@@ -329,12 +394,14 @@ def main() -> None:
     llada_lock_path = CAMPAIGN_ROOT / "dev_method_lock.json"
     llada_lock = read_json(llada_lock_path)
     if not llada_lock.get("validation_pass"):
-        raise RuntimeError("Dream track requires the frozen LLaDA dev lock")
-    dream_lock_path = CAMPAIGN_ROOT / "dream_confirmation_dev_v1" / "dream_dev_lock.json"
-    dream_lock = read_json(dream_lock_path) if args.stage == "locked" else None
-    if dream_lock is not None and not dream_lock.get("validation_pass"):
-        raise RuntimeError("Dream dev lock did not validate")
-    prefix = "dream_pub_locked" if args.stage == "locked" else "dream_pub_dev"
+        raise RuntimeError("P5 track requires the frozen LLaDA dev lock")
+    secondary_lock_path = (
+        CAMPAIGN_ROOT / str(profile["dev_dir"]) / str(profile["lock_filename"])
+    )
+    secondary_lock = read_json(secondary_lock_path) if args.stage == "locked" else None
+    if secondary_lock is not None and not secondary_lock.get("validation_pass"):
+        raise RuntimeError("Secondary-backbone dev lock did not validate")
+    prefix = str(profile["locked_prefix"] if args.stage == "locked" else profile["dev_prefix"])
     manifests = {n: PROTOCOL_ROOT / f"{prefix}_n{n}.jsonl" for n in (3, 4, 5)}
     protocol = read_json(PROTOCOL_ROOT / "report_summary.json")
     expected_hashes = {
@@ -343,36 +410,50 @@ def main() -> None:
     }
     for n, path in manifests.items():
         if sha256_file(path) != expected_hashes[n]:
-            raise RuntimeError(f"Dream manifest hash mismatch at N={n}")
+            raise RuntimeError(f"Secondary-backbone manifest hash mismatch at N={n}")
     if args.stage == "locked":
         write_json(
             args.output_dir / "locked_open_record.json",
             {
-                "dream_dev_lock_sha256": sha256_file(dream_lock_path),
+                "secondary_dev_lock_sha256": sha256_file(secondary_lock_path),
                 "manifest_hashes": expected_hashes,
                 "selection_complete_before_open": True,
+                "backbone_profile": args.backbone,
             },
         )
 
-    model, tokenizer = load_model(SECONDARY_MODEL_ID, SECONDARY_MODEL_REVISION, args.dtype)
-    attention_mask_adapter_installed = _install_dream_attention_mask_adapter(model)
-    module_map = _module_map(model)
+    model, tokenizer = load_model(
+        str(profile["model_id"]), str(profile["model_revision"]), args.dtype
+    )
+    attention_mask_adapter_installed = (
+        _install_dream_attention_mask_adapter(model) if args.backbone == "dream" else False
+    )
+    module_map = _module_map(
+        model,
+        model_id=str(profile["model_id"]),
+        model_revision=str(profile["model_revision"]),
+        block_template=str(profile["block_template"]),
+        key_template=str(profile["key_template"]),
+        bounded_mapping_repair=bool(profile["bounded_mapping_repair"]),
+    )
     module_map["attention_mask_adapter_installed"] = attention_mask_adapter_installed
     module_map["attention_mask_adapter"] = (
         "Cast shared integer attention masks to bool at the Dream model boundary "
         "to satisfy scaled_dot_product_attention without changing token inputs."
+        if args.backbone == "dream"
+        else "not_required_for_llada_base_fallback"
     )
     if not module_map["acceptance_pass"]:
-        raise RuntimeError("Dream module mapping failed")
+        raise RuntimeError("Secondary-backbone module mapping failed")
     write_json(args.output_dir / "model_module_map.json", module_map)
     selected_rows: dict[int, list[dict[str, Any]]] = {}
     for n, manifest in manifests.items():
         rows = read_jsonl(manifest)
-        limit = args.limit_per_length or (5 if args.stage == "smoke" else 0)
+        limit = args.limit_per_length or int(profile["profile_limits"][args.stage])
         selected_rows[n] = rows[:limit] if limit else rows
 
     if args.stage == "locked":
-        covariance_dir = CAMPAIGN_ROOT / "dream_confirmation_dev_v1" / "covariance_cache"
+        covariance_dir = CAMPAIGN_ROOT / str(profile["dev_dir"]) / "covariance_cache"
         covariance_reports = list(
             csv.DictReader((covariance_dir / "covariance_summary.csv").open(newline=""))
         )
@@ -383,6 +464,7 @@ def main() -> None:
             tokenizer,
             [row for n in (3, 4, 5) for row in selected_rows[n]],
             covariance_dir,
+            key_template=str(profile["key_template"]),
         )
 
     all_rows: list[dict[str, Any]] = []
@@ -404,14 +486,22 @@ def main() -> None:
             model,
             tokenizer,
             rows,
-            _partial_config(llada_lock),
+            _partial_config(
+                llada_lock,
+                block_template=str(profile["block_template"]),
+                key_template=str(profile["key_template"]),
+            ),
             lambda layer: _load_covariance(covariance_dir, layer),
             target_cache_dir=args.output_dir / "target_value_cache" / f"n{n}",
         )
         try:
             tables, edited_account = build_full_cost_tables(model, tokenizer, items)
             for spec in _planner_specs(
-                stage=args.stage, n=n, llada_lock=llada_lock, dream_lock=dream_lock
+                stage=args.stage,
+                n=n,
+                llada_lock=llada_lock,
+                dream_lock=secondary_lock,
+                default_label=str(profile["default_label"]),
             ):
                 decoded = decode_with_planner(model, tokenizer, items, tables, spec)
                 all_rows.extend(_attach_base(_seed_rows(decoded), base_seeded))
@@ -426,7 +516,7 @@ def main() -> None:
         finally:
             rollback.rollback()
         if not rollback.checksum_matches(atol=0.0):
-            raise RuntimeError(f"Dream rollback failed at N={n}")
+            raise RuntimeError(f"Secondary-backbone rollback failed at N={n}")
 
     aggregate = _aggregate(all_rows)
     compact = _summary(all_rows)
@@ -438,12 +528,17 @@ def main() -> None:
             "target_length": n,
             "num_rows": len(selected_rows[n]),
             "all_contextual_lengths_match": all(int(row["target_length"]) == n for row in selected_rows[n]),
-            "tokenizer_model_id": SECONDARY_MODEL_ID,
-            "tokenizer_revision": SECONDARY_MODEL_REVISION,
+            "tokenizer_model_id": profile["model_id"],
+            "tokenizer_revision": profile["model_revision"],
         }
         for n in (3, 4, 5)
     ])
-    write_csv(args.output_dir / "dream_memit_smoke.csv", aggregate if args.stage == "smoke" else [])
+    smoke_name = (
+        "dream_memit_smoke.csv"
+        if args.backbone == "dream"
+        else "llada_base_memit_smoke.csv"
+    )
+    write_csv(args.output_dir / smoke_name, aggregate if args.stage == "smoke" else [])
 
     if args.stage in {"smoke", "dev"}:
         finite_candidates = sorted(
@@ -463,12 +558,13 @@ def main() -> None:
             scores[family] = sum(float(row["exact"]) for row in values)
         selected_finite = max(finite_candidates, key=lambda family: (scores[family], family))
         reference = selected_finite.removeprefix("finite_").rsplit("_beta", 1)[0]
-        dream_dev_lock = {
+        secondary_dev_lock = {
             "campaign_id": CAMPAIGN_ID,
             "created_at_utc": now_utc(),
             "stage": args.stage,
-            "model_id": SECONDARY_MODEL_ID,
-            "model_revision": SECONDARY_MODEL_REVISION,
+            "backbone_profile": args.backbone,
+            "model_id": profile["model_id"],
+            "model_revision": profile["model_revision"],
             "llada_dev_lock_sha256": sha256_file(llada_lock_path),
             "module_map_sha256": sha256_file(args.output_dir / "model_module_map.json"),
             "covariance_hashes": {str(row["layer"]): row["sha256"] for row in covariance_reports},
@@ -480,13 +576,18 @@ def main() -> None:
             "locked_split_opened": False,
             "validation_pass": args.stage == "dev",
         }
-        write_json(args.output_dir / "dream_dev_lock.json", dream_dev_lock)
+        write_json(args.output_dir / str(profile["lock_filename"]), secondary_dev_lock)
         acceptance = bool(module_map["acceptance_pass"]) and bool(all_rows)
-        classification = "integration_smoke_passed" if args.stage == "smoke" else "dream_dev_locked"
+        classification = (
+            "integration_smoke_passed"
+            if args.stage == "smoke"
+            else f"{args.backbone}_dev_locked"
+        )
         bootstrap_rows: list[dict[str, Any]] = []
     else:
-        finite = str(dream_lock["finite_controller_label"])
-        baseline = str(dream_lock["best_non_sb_planner"])
+        assert secondary_lock is not None
+        finite = str(secondary_lock["finite_controller_label"])
+        baseline = str(secondary_lock["best_non_sb_planner"])
         bootstrap_rows = []
         for n in (3, 4, 5):
             result = paired_bootstrap(
@@ -539,17 +640,29 @@ def main() -> None:
             if row["target_length"] != "pooled_3_4"
         )
         acceptance = same_direction and one_length and stress_delta <= 0.03 and malformed <= 0.05
-        classification = "cross_backbone_pass" if acceptance else "cross_backbone_not_confirmed"
+        if args.backbone == "dream":
+            classification = (
+                "cross_backbone_pass" if acceptance else "cross_backbone_not_confirmed"
+            )
+        else:
+            classification = (
+                "fallback_cross_checkpoint_pass"
+                if acceptance
+                else "fallback_cross_checkpoint_not_confirmed"
+            )
         selected_finite = finite
     write_csv(args.output_dir / "paired_bootstrap.csv", bootstrap_rows)
-    interpretation = f"""# Dream Cross-Backbone Interpretation
+    backbone_name = str(profile["model_id"])
+    evidence_tier = "second_architecture" if args.backbone == "dream" else "weaker_cross_checkpoint_fallback"
+    interpretation = f"""# Secondary-Backbone Interpretation
 
 Stage: `{args.stage}`. Classification: `{classification}`.
 
-The Dream model/tokenizer revision and module map were pinned before outcomes.
-Only the documented model-specific module mapping and reference-process choice
-were fit on Dream development data; the LLaDA-selected beta and scientific
-thresholds were unchanged.
+The `{backbone_name}` model/tokenizer revision and module map were pinned before
+outcomes. Evidence tier: `{evidence_tier}`. Only the documented model-specific
+module mapping and reference-process choice were fit on development data; the
+LLaDA-selected beta and scientific thresholds were unchanged. The fallback
+cannot establish top-tier cross-architecture readiness.
 """
     (args.output_dir / "cross_backbone_interpretation.md").write_text(
         interpretation, encoding="utf-8"
@@ -557,20 +670,26 @@ thresholds were unchanged.
     report = {
         "campaign_id": CAMPAIGN_ID,
         "track": "P5",
-        "stage": f"P5_dream_{args.stage}",
+        "stage": f"P5_{args.backbone}_{args.stage}",
         "created_at_utc": now_utc(),
         "git_commit": git_commit(),
-        "model_id": SECONDARY_MODEL_ID,
-        "model_revision": SECONDARY_MODEL_REVISION,
+        "backbone_profile": args.backbone,
+        "model_id": profile["model_id"],
+        "model_revision": profile["model_revision"],
+        "evidence_tier": evidence_tier,
+        "dream_integration_status": (
+            "completed" if args.backbone == "dream" else "technically_impossible_after_bounded_repair"
+        ),
+        "top_tier_ready_possible": args.backbone == "dream",
         "profile": args.stage,
         "manifest_hashes": expected_hashes,
         "num_edits_by_length": {str(n): len(selected_rows[n]) for n in (3, 4, 5)},
-        "module_mapping_repair_used": True,
+        "module_mapping_repair_used": bool(profile["bounded_mapping_repair"]),
         "bounded_model_integration_repair": {
-            "single_repair_package": True,
-            "mlp_down_projection_mapping": True,
+            "single_repair_package": args.backbone == "dream",
+            "mlp_down_projection_mapping": args.backbone == "dream",
             "positive_diagonal_covariance": True,
-            "boolean_attention_mask_adapter": True,
+            "boolean_attention_mask_adapter": args.backbone == "dream",
         },
         "selected_finite_controller": selected_finite,
         "classification": classification,
@@ -594,7 +713,11 @@ thresholds were unchanged.
         acceptance_pass=acceptance,
         started_at_utc=started,
         notes=f"profile={args.stage}; classification={classification}",
-        next_stage="P6_editor_generality" if args.stage == "locked" else f"P5_dream_{'dev' if args.stage == 'smoke' else 'locked'}",
+        next_stage=(
+            "P6_editor_generality"
+            if args.stage == "locked"
+            else f"P5_{args.backbone}_{'dev' if args.stage == 'smoke' else 'locked'}"
+        ),
     )
     print(json.dumps(report, sort_keys=True))
 

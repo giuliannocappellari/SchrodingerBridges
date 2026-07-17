@@ -18,6 +18,7 @@ from scripts.mask_pattern_publication_common import (
     STATE_ROOT,
     now_utc,
     read_json,
+    secondary_backbone_terminal_dir,
     sha256_file,
     write_json,
 )
@@ -29,7 +30,7 @@ REPORTS = {
     "P2_theory": CAMPAIGN_ROOT / "theory_and_naming_v1" / "report_summary.json",
     "P3_planners": CAMPAIGN_ROOT / "planner_baselines_dev_v1" / "report_summary.json",
     "P4_llada_locked": CAMPAIGN_ROOT / "llada_locked_confirmation_v1" / "report_summary.json",
-    "P5_dream_locked": CAMPAIGN_ROOT / "dream_confirmation_v1" / "report_summary.json",
+    "P5_dream_locked": secondary_backbone_terminal_dir() / "report_summary.json",
     "P6_editor_generality": CAMPAIGN_ROOT / "editor_generality_v1" / "report_summary.json",
     "P7_approximation": CAMPAIGN_ROOT / "approximate_solver_v1" / "report_summary.json",
     "P8_package": CAMPAIGN_ROOT / "final_publication_package_v1" / "report_summary.json",

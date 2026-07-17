@@ -32,6 +32,7 @@ from scripts.mask_pattern_publication_common import (
     git_commit,
     now_utc,
     read_json,
+    secondary_backbone_terminal_dir,
     record_stage,
     sha256_file,
     write_csv,
@@ -236,7 +237,7 @@ def main() -> None:
     p3 = read_json(p3_dir / "report_summary.json")
     p4_dir = CAMPAIGN_ROOT / "llada_locked_confirmation_v1"
     p4 = read_json(p4_dir / "report_summary.json")
-    p5_dir = CAMPAIGN_ROOT / "dream_confirmation_v1"
+    p5_dir = secondary_backbone_terminal_dir()
     p5 = read_json(p5_dir / "report_summary.json")
     p6_dir = CAMPAIGN_ROOT / "editor_generality_v1"
     p6 = read_json(p6_dir / "report_summary.json")
