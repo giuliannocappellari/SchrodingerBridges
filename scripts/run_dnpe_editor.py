@@ -87,10 +87,21 @@ def build_eval_tasks(
             for prompt in list(row.get("paraphrase_prompts") or [])
         ]
         if include_locality:
-            prompts += [
-                ("near_locality", str(prompt), str(row["target_true"]))
-                for prompt in list(row.get("near_locality_prompts") or row.get("neighborhood_prompts") or [])[:10]
-            ]
+            near_cases = list(row.get("near_locality_cases") or [])[:10]
+            if near_cases:
+                prompts += [
+                    ("near_locality", str(case["prompt"]), str(case["target"]))
+                    for case in near_cases
+                ]
+            else:
+                prompts += [
+                    ("near_locality", str(prompt), str(row["target_true"]))
+                    for prompt in list(
+                        row.get("near_locality_prompts")
+                        or row.get("neighborhood_prompts")
+                        or []
+                    )[:10]
+                ]
             prompts += [
                 ("far_locality", str(case["prompt"]), str(case["target"]))
                 for case in list(row.get("far_locality_cases") or [])
