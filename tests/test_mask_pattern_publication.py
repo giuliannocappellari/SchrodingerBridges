@@ -22,9 +22,11 @@ from scripts.mask_pattern_publication_runtime import (
     bounded_beam_order,
     bounded_random_order,
     planner_policy,
+    planner_spec_from_label,
 )
 from scripts.run_partial_state_publication_audit import _schedule_unit_tests
 from scripts.run_publication_planner_dev import _safety_pass
+from scripts.mask_pattern_publication_stats import holm_adjust, paired_bootstrap, paired_values
 
 
 def fixture_costs(n: int) -> dict[tuple[int, int], float]:
@@ -183,6 +185,30 @@ def test_planner_policy_reports_exact_full_table_queries() -> None:
     assert diagnostics["planner_state_queries"] == (1 << n) - 1
 
 
+@pytest.mark.parametrize(
+    ("label", "kind"),
+    [
+        ("finite_uniform_beta0.5", "finite_beta"),
+        ("beta0_edited_target_confidence", "beta_zero"),
+        ("beam_width8", "beam"),
+        ("random_search_full", "random_search"),
+        ("online_beam8_budget16", "bounded_beam"),
+        ("one_step_myopic", "myopic"),
+    ],
+)
+def test_frozen_planner_label_round_trip(label: str, kind: str) -> None:
+    spec = planner_spec_from_label(label, n=5, seed=11)
+    assert spec.label == label
+    assert spec.kind == kind
+
+
+def test_frozen_fixed_order_requires_lock_value() -> None:
+    with pytest.raises(ValueError, match="frozen order"):
+        planner_spec_from_label("best_fixed_permutation", n=4)
+    spec = planner_spec_from_label("best_fixed_permutation", n=4, fixed_order=[2, 0, 3, 1])
+    assert spec.fixed_order == (2, 0, 3, 1)
+
+
 def test_planner_safety_uses_base_relative_false_positive_budgets() -> None:
     base = {"same_subject_tfpr": 0.01, "far_tfpr": 0.02}
     candidate = {
@@ -196,3 +222,47 @@ def test_planner_safety_uses_base_relative_false_positive_budgets() -> None:
     assert thresholds["far_tfpr_budget"] == pytest.approx(0.05)
     candidate["same_subject_tfpr"] = 0.041
     assert not _safety_pass(candidate, base)[0]
+
+
+def test_paired_statistics_average_seed_rows_within_edit() -> None:
+    rows = []
+    for case_id, left, right in (("a", 1.0, 0.0), ("b", 0.5, 0.0)):
+        for value in (left, left):
+            rows.append(
+                {
+                    "family": "finite",
+                    "case_id": case_id,
+                    "bucket": "rewrite",
+                    "target_length": 3,
+                    "score": value,
+                }
+            )
+        rows.append(
+            {
+                "family": "baseline",
+                "case_id": case_id,
+                "bucket": "rewrite",
+                "target_length": 3,
+                "score": right,
+            }
+        )
+    pairs = paired_values(
+        rows,
+        left="finite",
+        right="baseline",
+        bucket="rewrite",
+        metric="score",
+        lengths={3},
+    )
+    assert pairs == [("a", 1.0, 0.0), ("b", 0.5, 0.0)]
+    result = paired_bootstrap(pairs, resamples=500, seed=1)
+    assert result["mean_delta"] == pytest.approx(0.75)
+    assert result["ci95_low"] > 0
+
+
+def test_holm_adjustment_is_monotone_in_sorted_p_values() -> None:
+    rows = holm_adjust(
+        [{"name": "a", "p_two_sided": 0.01}, {"name": "b", "p_two_sided": 0.03}]
+    )
+    assert rows[0]["holm_adjusted_p"] == pytest.approx(0.02)
+    assert rows[1]["holm_adjusted_p"] == pytest.approx(0.03)

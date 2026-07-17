@@ -171,6 +171,74 @@ def reference_table(table: Mapping[str, Any], kind: str) -> dict[tuple[int, int]
     raise ValueError(kind)
 
 
+def planner_spec_from_label(
+    label: str,
+    *,
+    n: int,
+    fixed_order: Sequence[int] | None = None,
+    seed: int = 0,
+) -> PlannerSpec:
+    """Reconstruct a frozen planner specification from a dev-lock label."""
+
+    if label.startswith("finite_"):
+        stem, beta = label.rsplit("_beta", 1)
+        return PlannerSpec(
+            label,
+            "finite_beta",
+            seed=seed,
+            beta=float(beta),
+            reference=stem.removeprefix("finite_"),
+        )
+    if label.startswith("beta0_"):
+        return PlannerSpec(
+            label,
+            "beta_zero",
+            seed=seed,
+            beta=0.0,
+            reference=label.removeprefix("beta0_"),
+        )
+    direct = {
+        "default_confidence": "default_confidence",
+        "maximum_confidence": "maximum_confidence",
+        "left_to_right": "left_to_right",
+        "right_to_left": "right_to_left",
+        "minimum_entropy": "minimum_entropy",
+        "one_step_myopic": "myopic",
+        "deterministic_global": "deterministic_global",
+        "uniform_random": "uniform_random",
+        "random_search_full": "random_search",
+    }
+    if label == "best_fixed_permutation":
+        if fixed_order is None:
+            raise ValueError("best_fixed_permutation requires its frozen order")
+        return PlannerSpec(label, "fixed_order", seed=seed, fixed_order=tuple(fixed_order))
+    if label.startswith("beam_width"):
+        return PlannerSpec(label, "beam", seed=seed, beam_width=int(label.removeprefix("beam_width")))
+    if label.startswith("online_beam8_budget"):
+        return PlannerSpec(
+            label,
+            "bounded_beam",
+            seed=seed,
+            beam_width=8,
+            query_budget=int(label.rsplit("budget", 1)[1]),
+            regime="online_compute_matched",
+        )
+    if label.startswith("online_random_budget"):
+        return PlannerSpec(
+            label,
+            "bounded_random",
+            seed=seed,
+            query_budget=int(label.rsplit("budget", 1)[1]),
+            regime="online_compute_matched",
+        )
+    if label not in direct:
+        raise ValueError(f"Unknown frozen planner label: {label}")
+    kwargs: dict[str, Any] = {}
+    if label == "random_search_full":
+        kwargs["random_paths"] = max(8, 1 << n)
+    return PlannerSpec(label, direct[label], seed=seed, **kwargs)
+
+
 def planner_policy(
     table: Mapping[str, Any], spec: PlannerSpec
 ) -> tuple[dict[int, dict[int, float]] | None, tuple[int, ...] | None, dict[str, Any]]:
@@ -448,6 +516,7 @@ def decode_with_planner(
         for row_index, item in enumerate(subset):
             ids = [int(state[row_index, position]) for position in answer_positions[row_index]]
             targets = list(map(int, cost_tables[item_key(item)]["target_ids"]))
+            old_targets = list(map(int, item["row"].get("target_true_token_ids") or []))
             exact_positions = sum(left == right for left, right in zip(ids, targets))
             _, _, planner_diagnostics = planner_data[row_index]
             state_queries = int(planner_diagnostics.get("planner_state_queries", 0))
@@ -471,6 +540,8 @@ def decode_with_planner(
                     "target_token_ids": json.dumps(targets),
                     "full_target_exact": ids == targets,
                     "target_token_f1": exact_positions / n,
+                    "old_target_exact": bool(old_targets) and ids == old_targets,
+                    "old_target_suppression": not old_targets or ids != old_targets,
                     "malformed": any(token == mask_id for token in ids),
                     "trajectory_target_cost": path_costs[row_index],
                     "unique_state_queries": state_queries,

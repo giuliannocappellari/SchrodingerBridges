@@ -45,6 +45,7 @@ from scripts.mask_pattern_publication_runtime import (
     decode_with_planner,
     item_key,
 )
+from scripts.mask_pattern_publication_stats import paired_bootstrap, paired_values
 from scripts.mdm_memit_editor import MemitConfig, apply_memit_batch
 from scripts.run_mdm_memit_stage import load_covariance, load_model
 
@@ -476,6 +477,24 @@ def main() -> None:
             row["family"],
         ),
     )
+    search_candidates = [
+        row
+        for row in non_sb
+        if str(row["family"]).startswith(("beam_width", "random_search"))
+    ]
+    if search_candidates:
+        selected_search = max(
+            search_candidates,
+            key=lambda row: (
+                float(row["rewrite_exact"]) + float(row["paraphrase_exact"]),
+                -float(row["mean_trajectory_target_cost"]),
+                row["family"],
+            ),
+        )
+    elif args.planner_profile == "smoke":
+        selected_search = selected_non_sb
+    else:
+        raise RuntimeError("P3 did not produce a full-table beam/random-search baseline")
     beta0_reference = "beta0_" + selected_finite["family"].split("_beta", 1)[0].removeprefix("finite_")
     beta0 = next(row for row in summaries if row["family"] == beta0_reference)
     base_result = next(row for row in summaries if row["family"] == "base_default_confidence")
@@ -485,8 +504,31 @@ def main() -> None:
     deterministic_rewrite = float(deterministic["rewrite_exact"])
     deterministic_cost = float(deterministic["mean_trajectory_target_cost"])
     finite_cost = float(selected_finite["mean_trajectory_target_cost"])
+    mechanism_bootstrap = []
+    for right in ("deterministic_global", "one_step_myopic"):
+        result = paired_bootstrap(
+            paired_values(
+                all_outputs,
+                left=str(selected_finite["family"]),
+                right=right,
+                bucket="rewrite",
+                metric="full_target_exact",
+                lengths=set(lengths),
+            ),
+            resamples=10_000,
+            seed=260_717_560 + len(mechanism_bootstrap),
+        )
+        mechanism_bootstrap.append(
+            {"left": selected_finite["family"], "right": right, **result}
+        )
+    finite_vs_deterministic = next(
+        row for row in mechanism_bootstrap if row["right"] == "deterministic_global"
+    )
     mechanism_pass = (
-        finite_rewrite - deterministic_rewrite >= 0.03
+        (
+            float(finite_vs_deterministic["mean_delta"]) >= 0.03
+            and float(finite_vs_deterministic["ci95_low"]) > 0
+        )
         or (
             finite_rewrite >= deterministic_rewrite - 0.02
             and finite_cost <= 0.80 * max(deterministic_cost, 1e-12)
@@ -518,6 +560,7 @@ def main() -> None:
         "beta": float(selected_finite["family"].rsplit("beta", 1)[1]),
         "finite_controller_label": selected_finite["family"],
         "best_non_sb_planner": selected_non_sb["family"],
+        "best_full_table_beam_or_random_planner": selected_search["family"],
         "online_primary_query_budget": "2^N-1 unique states",
         "beam_widths": [2, 4, 8],
         "fixed_orders": fixed_orders,
@@ -530,10 +573,11 @@ def main() -> None:
         "power_analysis_sha256": sha256_file(args.output_dir / "power_analysis.json"),
         "historical_analysis_500_used": False,
         "historical_final_test_used": False,
-        "validation_pass": True,
+        "validation_pass": args.planner_profile == "full",
     }
     write_json(args.output_dir / "dev_method_lock.json", lock)
-    write_json(CAMPAIGN_ROOT / "dev_method_lock.json", lock)
+    if args.planner_profile == "full":
+        write_json(CAMPAIGN_ROOT / "dev_method_lock.json", lock)
     write_csv(args.output_dir / "planner_results.csv", aggregate)
     write_csv(
         args.output_dir / "compute_matched_results.csv",
@@ -560,13 +604,18 @@ def main() -> None:
         args.output_dir / "path_entropy_kl.csv",
         [row for row in aggregate if row["family"].startswith(("finite_", "beta0_"))],
     )
+    write_csv(args.output_dir / "mechanism_bootstrap.csv", mechanism_bootstrap)
     with gzip.open(args.output_dir / "per_prompt_results.jsonl.gz", "wt", encoding="utf-8") as handle:
         for row in all_outputs:
             handle.write(json.dumps(row, sort_keys=True) + "\n")
     report = {
         "campaign_id": CAMPAIGN_ID,
         "track": "P3",
-        "stage": "P3_planner_baselines_dev",
+        "stage": (
+            "P3_planner_baselines_dev"
+            if args.planner_profile == "full"
+            else "P3_planner_baselines_smoke"
+        ),
         "created_at_utc": now_utc(),
         "git_commit": git_commit(),
         "target_lengths": list(lengths),
@@ -575,16 +624,18 @@ def main() -> None:
         "editor": editor,
         "selected_finite_controller": selected_finite,
         "selected_non_sb_planner": selected_non_sb,
+        "selected_full_table_beam_or_random_planner": selected_search,
         "base_result": base_result,
         "beta0_reference_result": beta0,
         "myopic_result": myopic,
         "deterministic_global_result": deterministic,
+        "mechanism_bootstrap": mechanism_bootstrap,
         "finite_beta_mechanism_pass": mechanism_pass,
         "safety_pass": safety_pass,
         "safety_thresholds": safety_thresholds,
         "full_cost_table_regime_complete": True,
         "online_compute_matched_regime_complete": args.planner_profile == "full",
-        "dev_method_lock_written": True,
+        "dev_method_lock_written": args.planner_profile == "full",
         "locked_confirmation_opened": False,
         "historical_analysis_500_used": False,
         "historical_final_test_used": False,
@@ -598,9 +649,15 @@ def main() -> None:
     }
     write_json(args.output_dir / "report_summary.json", report)
     record_stage(
-        stage="P3_planner_baselines_dev",
+        stage=str(report["stage"]),
         track="P3",
-        status="passed" if report["acceptance_pass"] else "mechanism_not_established_on_dev",
+        status=(
+            "passed"
+            if report["acceptance_pass"] and args.planner_profile == "full"
+            else "smoke_completed"
+            if args.planner_profile == "smoke"
+            else "mechanism_not_established_on_dev"
+        ),
         output_dir=args.output_dir,
         acceptance_pass=bool(report["acceptance_pass"]),
         started_at_utc=started,
