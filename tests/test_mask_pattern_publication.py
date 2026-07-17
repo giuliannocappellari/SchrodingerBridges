@@ -17,7 +17,14 @@ from scripts.mask_pattern_kl_control import (
     uniform_reference,
 )
 from scripts.mask_pattern_publication_common import SECONDARY_MODEL_REVISION
+from scripts.mask_pattern_publication_runtime import (
+    PlannerSpec,
+    bounded_beam_order,
+    bounded_random_order,
+    planner_policy,
+)
 from scripts.run_partial_state_publication_audit import _schedule_unit_tests
+from scripts.run_publication_planner_dev import _safety_pass
 
 
 def fixture_costs(n: int) -> dict[tuple[int, int], float]:
@@ -129,3 +136,52 @@ def test_paper_partial_state_schedule_contract() -> None:
     report = _schedule_unit_tests()
     assert report["acceptance_pass"]
     assert all(report["checks"].values())
+
+
+def test_bounded_planners_respect_unique_state_budget() -> None:
+    costs = fixture_costs(5)
+    for budget in (5, 10, 20):
+        beam_order, beam_queries, _ = bounded_beam_order(
+            costs, 5, beam_width=8, state_budget=budget
+        )
+        random_order, random_queries, _ = bounded_random_order(
+            costs, 5, state_budget=budget, seed=19
+        )
+        assert sorted(beam_order) == list(range(5))
+        assert sorted(random_order) == list(range(5))
+        assert beam_queries <= budget
+        assert random_queries <= budget
+
+
+def test_planner_policy_reports_exact_full_table_queries() -> None:
+    n = 4
+    table = {
+        "n": n,
+        "costs": {f"{mask}:{index}": value for (mask, index), value in fixture_costs(n).items()},
+        "target_probabilities": {
+            f"{mask}:{index}": 0.5 for mask, index in fixture_costs(n)
+        },
+        "maximum_confidences": {
+            f"{mask}:{index}": 0.5 for mask, index in fixture_costs(n)
+        },
+    }
+    _, order, diagnostics = planner_policy(
+        table, PlannerSpec("global", "deterministic_global")
+    )
+    assert sorted(order or ()) == list(range(n))
+    assert diagnostics["planner_state_queries"] == (1 << n) - 1
+
+
+def test_planner_safety_uses_base_relative_false_positive_budgets() -> None:
+    base = {"same_subject_tfpr": 0.01, "far_tfpr": 0.02}
+    candidate = {
+        "same_subject_tfpr": 0.039,
+        "far_tfpr": 0.049,
+        "malformed_rate": 0.05,
+    }
+    passed, thresholds = _safety_pass(candidate, base)
+    assert passed
+    assert thresholds["same_subject_tfpr_budget"] == pytest.approx(0.04)
+    assert thresholds["far_tfpr_budget"] == pytest.approx(0.05)
+    candidate["same_subject_tfpr"] = 0.041
+    assert not _safety_pass(candidate, base)[0]
