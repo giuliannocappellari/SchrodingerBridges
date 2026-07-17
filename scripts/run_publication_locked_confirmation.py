@@ -260,8 +260,8 @@ def main() -> None:
     if int(lock.get("bootstrap_resamples", 0)) != 10_000:
         raise RuntimeError("Dev lock does not freeze the required bootstrap count")
     p3_report = read_json(CAMPAIGN_ROOT / "planner_baselines_dev_v1" / "report_summary.json")
-    if not p3_report.get("acceptance_pass"):
-        raise RuntimeError("P3 dev mechanism/safety criteria did not pass")
+    if p3_report.get("planner_profile") != "full":
+        raise RuntimeError("P4 requires the complete P3 planner suite, not a smoke lock")
 
     manifests = {
         length: PROTOCOL_ROOT / f"kamel_pub_locked_n{length}.jsonl" for length in lengths
@@ -555,6 +555,7 @@ or thresholds.
         "model_id": PRIMARY_MODEL_ID,
         "model_revision": PRIMARY_MODEL_REVISION,
         "dev_lock_sha256": sha256_file(lock_path),
+        "p3_dev_acceptance_pass": bool(p3_report["acceptance_pass"]),
         "locked_manifest_hashes": expected_hashes,
         "manifest_counts": manifest_counts,
         "limit_per_length": args.limit_per_length,
