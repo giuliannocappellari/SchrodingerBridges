@@ -121,8 +121,12 @@ def solve_exact_kl_control(
                 next_mask = mask | (1 << index)
                 state_probability[next_mask] = state_probability.get(next_mask, 0.0) + transition_mass
                 expected_cost += transition_mass * float(costs[(mask, index)])
-                path_entropy -= transition_mass * math.log(probability)
-                kl += transition_mass * math.log(probability / q[(mask, index)])
+                # Under a very large beta, a dominated transition can underflow
+                # to exactly zero even though the log-space recursion is stable.
+                # Its entropy and KL contributions have the limiting value zero.
+                if transition_mass > 0.0 and probability > 0.0:
+                    path_entropy -= transition_mass * math.log(probability)
+                    kl += transition_mass * math.log(probability / q[(mask, index)])
     return PathSolution(
         n=n,
         beta=beta,

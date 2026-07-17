@@ -60,6 +60,13 @@ def test_beta_zero_is_reference() -> None:
             assert probability == pytest.approx(reference[(mask, index)], abs=1e-12)
 
 
+def test_large_beta_zero_mass_diagnostics_remain_finite() -> None:
+    solution = solve_exact_kl_control(fixture_costs(6), 6, beta=1000.0)
+    assert solution.expected_cost >= 0.0
+    assert solution.path_entropy >= 0.0
+    assert solution.kl_from_reference >= 0.0
+
+
 def test_reference_requires_positive_support() -> None:
     n = 2
     reference = uniform_reference(n)
