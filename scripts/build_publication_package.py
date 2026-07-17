@@ -312,6 +312,13 @@ def main() -> None:
         "models": {
             "llada": {"id": PRIMARY_MODEL_ID, "revision": PRIMARY_MODEL_REVISION},
             "dream": {"id": SECONDARY_MODEL_ID, "revision": SECONDARY_MODEL_REVISION},
+            "secondary_backbone_terminal": {
+                "id": p5.get("model_id", SECONDARY_MODEL_ID),
+                "revision": p5.get("model_revision", SECONDARY_MODEL_REVISION),
+                "backbone_profile": p5.get("backbone_profile", "dream"),
+                "evidence_tier": p5.get("evidence_tier", "top_tier_secondary_backbone"),
+                "classification": p5.get("classification", "unknown"),
+            },
         },
         "dev_method_lock_sha256": sha256_file(CAMPAIGN_ROOT / "dev_method_lock.json"),
         "protocol_report_sha256": sha256_file(CAMPAIGN_ROOT / "protocol_v1" / "report_summary.json"),
