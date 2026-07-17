@@ -10,6 +10,7 @@ import torch
 from torch import nn
 
 from scripts.build_mask_pattern_publication_protocol import _balanced_select
+from scripts.run_publication_planner_dev import _planner_specs
 from scripts.mask_pattern_kl_control import (
     beam_search_paths,
     enumerate_gibbs_paths,
@@ -389,3 +390,11 @@ def test_planner_decode_records_exact_success_old_target_and_query_cost() -> Non
     assert rows[0]["old_target_suppression"] is True
     assert rows[0]["unique_state_queries"] == 3
     assert rows[0]["model_evaluations"] == 5
+
+
+@pytest.mark.parametrize("profile", ["smoke", "full"])
+def test_every_finite_planner_reference_has_beta_zero_comparator(profile: str) -> None:
+    specs = _planner_specs(3, (0, 1, 2), profile)
+    finite_references = {spec.reference for spec in specs if spec.kind == "finite_beta"}
+    beta_zero_references = {spec.reference for spec in specs if spec.kind == "beta_zero"}
+    assert finite_references <= beta_zero_references

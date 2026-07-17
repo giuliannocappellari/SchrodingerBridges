@@ -80,6 +80,9 @@ def _planner_specs(n: int, fixed_order: tuple[int, ...], profile: str) -> list[P
             PlannerSpec("one_step_myopic", "myopic"),
             PlannerSpec("deterministic_global", "deterministic_global"),
             PlannerSpec(
+                "beta0_uniform", "beta_zero", beta=0.0, reference="uniform"
+            ),
+            PlannerSpec(
                 "finite_uniform_beta1", "finite_beta", beta=1.0, reference="uniform"
             ),
         ]
