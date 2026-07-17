@@ -59,12 +59,21 @@ def run_one(
     subprocess.run(command, cwd=ROOT, check=True)
 
 
+def should_run(output: Path, *, resume: bool) -> bool:
+    if not output.exists():
+        return True
+    if resume and (output / "report_summary.json").exists():
+        return False
+    raise FileExistsError(output)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--phase", choices=("smoke", "pilot"), required=True)
     parser.add_argument("--root", type=Path, default=CAMPAIGN_ROOT / "B3_alphaedit_style_mdm_memit_v1")
     parser.add_argument("--basis_dir", type=Path, default=CAMPAIGN_ROOT / "preservation_basis_v1")
     parser.add_argument("--baseline", type=Path, required=True)
+    parser.add_argument("--resume", type=int, choices=(0, 1), default=0)
     args = parser.parse_args()
     args.root.mkdir(parents=True, exist_ok=True)
     if args.phase == "smoke":
@@ -72,30 +81,27 @@ def main() -> None:
         for variance in VARIANCES:
             ridge = 1e-3
             output = args.root / _name("smoke", variance, ridge)
-            if output.exists():
-                raise FileExistsError(output)
-            run_one(manifest=manifest, output=output, basis_dir=args.basis_dir, variance=variance, ridge=ridge)
+            if should_run(output, resume=bool(args.resume)):
+                run_one(manifest=manifest, output=output, basis_dir=args.basis_dir, variance=variance, ridge=ridge)
         provisional = select_smoke(args.root, args.baseline)["selected"]
         best_variance = float(provisional["protected_variance"])
         for ridge in (1e-4, 1e-2):
             output = args.root / _name("smoke", best_variance, ridge)
-            if output.exists():
-                raise FileExistsError(output)
-            run_one(manifest=manifest, output=output, basis_dir=args.basis_dir, variance=best_variance, ridge=ridge)
+            if should_run(output, resume=bool(args.resume)):
+                run_one(manifest=manifest, output=output, basis_dir=args.basis_dir, variance=best_variance, ridge=ridge)
         final = select_smoke(args.root, args.baseline)
         print(final)
         return
     selected = select_smoke(args.root, args.baseline)["selected"]
     output = args.root / "pilot100_selected"
-    if output.exists():
-        raise FileExistsError(output)
-    run_one(
-        manifest=CAMPAIGN_ROOT / "protocol_v1" / "dnpe_pilot_100.jsonl",
-        output=output,
-        basis_dir=args.basis_dir,
-        variance=float(selected["protected_variance"]),
-        ridge=float(selected["update_ridge"]),
-    )
+    if should_run(output, resume=bool(args.resume)):
+        run_one(
+            manifest=CAMPAIGN_ROOT / "protocol_v1" / "dnpe_pilot_100.jsonl",
+            output=output,
+            basis_dir=args.basis_dir,
+            variance=float(selected["protected_variance"]),
+            ridge=float(selected["update_ridge"]),
+        )
     report = validate_pilot(args.root, args.baseline)
     record_stage(
         "B3_alphaedit_style",

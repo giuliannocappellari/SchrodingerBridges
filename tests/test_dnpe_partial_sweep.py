@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from scripts.run_dnpe_partial_state_sweep import POLICIES, should_run
+from scripts.run_dnpe_nullspace_sweep import should_run as nullspace_should_run
 
 
 def test_partial_state_policy_grid_is_exactly_predeclared() -> None:
@@ -31,3 +32,6 @@ def test_resume_skips_only_complete_outputs(tmp_path: Path) -> None:
     incomplete.mkdir()
     with pytest.raises(FileExistsError):
         should_run(incomplete, resume=True)
+    assert not nullspace_should_run(complete, resume=True)
+    with pytest.raises(FileExistsError):
+        nullspace_should_run(incomplete, resume=True)
