@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import math
 import random
@@ -102,6 +103,7 @@ def main() -> None:
     parser.add_argument("--components", default="hidden,mlp,attention")
     parser.add_argument("--positions", default="first_subject,last_subject,relation_cue,first_answer_mask")
     parser.add_argument("--limit", type=int, default=20)
+    parser.add_argument("--known_base_results", type=Path)
     parser.add_argument("--noise_scale", type=float, default=3.0)
     parser.add_argument("--seed", type=int, default=260717101)
     args = parser.parse_args()
@@ -110,7 +112,18 @@ def main() -> None:
     args.output_dir.mkdir(parents=True)
     started = now_utc()
     begin = time.monotonic()
-    rows = read_jsonl(args.manifest)[: args.limit]
+    rows = read_jsonl(args.manifest)
+    if args.known_base_results is not None:
+        with args.known_base_results.open(newline="", encoding="utf-8") as handle:
+            base_rows = list(csv.DictReader(handle))
+        known_ids = {
+            str(row["case_id"])
+            for row in base_rows
+            if row.get("bucket") == "rewrite"
+            and str(row.get("target_true_hit", "")).casefold() in {"true", "1"}
+        }
+        rows = [row for row in rows if str(row["case_id"]) in known_ids]
+    rows = rows[: args.limit]
     if not rows:
         raise RuntimeError("No tracing rows")
     model, tokenizer = load_model(args.model_id, args.model_revision, "float16")
@@ -184,6 +197,7 @@ def main() -> None:
         "manifest": str(args.manifest),
         "manifest_sha256": sha256_file(args.manifest),
         "num_edits": len(rows),
+        "known_old_fact_filter_used": args.known_base_results is not None,
         "layers": list(args.layers),
         "components": list(components),
         "positions": list(positions),
