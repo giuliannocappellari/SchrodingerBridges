@@ -1,6 +1,19 @@
 from __future__ import annotations
 
-from scripts.build_dnpe_preservation_basis import build_prompt_specs, stratified_limit
+from pathlib import Path
+
+from scripts.build_dnpe_preservation_basis import (
+    ROOT,
+    build_prompt_specs,
+    display_path,
+    stratified_limit,
+)
+
+
+def test_display_path_accepts_repo_relative_path(monkeypatch):
+    monkeypatch.chdir(ROOT)
+    path = Path("runs/example/basis.pt")
+    assert display_path(path) == "runs/example/basis.pt"
 
 
 def _row(index: int) -> dict:

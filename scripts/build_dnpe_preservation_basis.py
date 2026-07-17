@@ -40,6 +40,16 @@ from scripts.mdm_memit_editor import (
 from scripts.run_mdm_memit_stage import load_model
 
 
+def display_path(path: Path) -> str:
+    """Return a stable repo-relative path for relative or absolute inputs."""
+
+    resolved = path.resolve()
+    try:
+        return str(resolved.relative_to(ROOT))
+    except ValueError:
+        return str(resolved)
+
+
 def parse_layers(value: str) -> tuple[int, ...]:
     return tuple(sorted({int(item) for item in value.split(",") if item.strip()}))
 
@@ -208,7 +218,7 @@ def main() -> None:
             )
             layer_report["bases"][f"{variance:.2f}"] = {
                 **geometry,
-                "path": str(path.relative_to(ROOT)),
+                "path": display_path(path),
                 "sha256": sha256_file(path),
             }
         layer_reports[str(layer)] = layer_report
