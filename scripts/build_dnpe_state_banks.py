@@ -18,6 +18,7 @@ if str(ROOT) not in sys.path:
 
 from scripts.build_dnpe_preservation_basis import (
     build_prompt_specs,
+    display_path,
     extract_prompt_keys,
     stratified_limit,
 )
@@ -67,6 +68,52 @@ def prompt_hashes(rows: Iterable[Mapping[str, Any]]) -> set[str]:
         for prompt in iter_prompts(row)
         if prompt.strip()
     }
+
+
+def normalized_prompt_hash(prompt: str) -> str:
+    return stable_hash(" ".join(str(prompt).casefold().split()))
+
+
+def select_state_bank_inputs(
+    train_rows: list[dict[str, Any]],
+    eval_rows: list[dict[str, Any]],
+    *,
+    maximum_positive_keys: int,
+    maximum_preservation_keys: int,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, int]]:
+    """Select only the exact train prompts that are safe to enter the banks."""
+
+    eval_hashes = prompt_hashes(eval_rows)
+    source_overlap = prompt_hashes(train_rows) & eval_hashes
+    positive_candidates = [
+        row
+        for row in train_rows
+        if normalized_prompt_hash(str(row["rewrite_prompt"])) not in eval_hashes
+    ]
+    positive_rows = positive_candidates[:maximum_positive_keys]
+    preservation_candidates = [
+        spec
+        for spec in build_prompt_specs(train_rows)
+        if normalized_prompt_hash(str(spec["prompt"])) not in eval_hashes
+    ]
+    preservation_specs = stratified_limit(
+        preservation_candidates, maximum_preservation_keys
+    )
+    bank_hashes = {
+        normalized_prompt_hash(str(row["rewrite_prompt"]))
+        for row in positive_rows
+    } | {
+        normalized_prompt_hash(str(spec["prompt"]))
+        for spec in preservation_specs
+    }
+    actual_overlap = bank_hashes & eval_hashes
+    diagnostics = {
+        "source_manifest_prompt_overlap_count": len(source_overlap),
+        "positive_candidates_after_exclusion": len(positive_candidates),
+        "preservation_candidates_after_exclusion": len(preservation_candidates),
+        "state_bank_prompt_overlap_count": len(actual_overlap),
+    }
+    return positive_rows, preservation_specs, diagnostics
 
 
 def frozen_layers(site_lock: Mapping[str, Any]) -> list[int]:
@@ -121,13 +168,22 @@ def main() -> None:
         "dnpe_locality_eval_300.jsonl",
     ):
         eval_rows.extend(read_jsonl(CAMPAIGN_ROOT / "protocol_v1" / name))
-    overlap = prompt_hashes(train_rows) & prompt_hashes(eval_rows)
-    if overlap:
-        raise RuntimeError(f"Training/evaluation prompt overlap: {len(overlap)}")
-    positive_rows = train_rows[: args.maximum_positive_keys]
-    preservation_specs = stratified_limit(
-        build_prompt_specs(train_rows), args.maximum_preservation_keys
+    positive_rows, preservation_specs, overlap_diagnostics = select_state_bank_inputs(
+        train_rows,
+        eval_rows,
+        maximum_positive_keys=args.maximum_positive_keys,
+        maximum_preservation_keys=args.maximum_preservation_keys,
     )
+    if overlap_diagnostics["state_bank_prompt_overlap_count"]:
+        raise RuntimeError(
+            "Training/evaluation prompt overlap in selected state-bank inputs: "
+            f"{overlap_diagnostics['state_bank_prompt_overlap_count']}"
+        )
+    if len(positive_rows) < args.maximum_positive_keys:
+        raise RuntimeError(
+            "Insufficient non-overlapping positive rows: "
+            f"{len(positive_rows)} < {args.maximum_positive_keys}"
+        )
     preservation_counts = Counter(
         str(row["category"]) for row in preservation_specs
     )
@@ -218,7 +274,7 @@ def main() -> None:
             )
             bases[f"{variance:.2f}"] = {
                 **geometry,
-                "path": str(basis_path.relative_to(ROOT)),
+                "path": display_path(basis_path),
                 "sha256": sha256_file(basis_path),
             }
         layer_reports[str(layer)] = {
@@ -256,7 +312,9 @@ def main() -> None:
         )
     }
     acceptance = {
-        "train_eval_prompt_overlap": len(overlap) == 0,
+        "train_eval_prompt_overlap": (
+            overlap_diagnostics["state_bank_prompt_overlap_count"] == 0
+        ),
         "all_required_positive_categories_present": all(
             value
             for name, value in positive_categories.items()
@@ -302,6 +360,7 @@ def main() -> None:
         "positive_state_categories": positive_categories,
         "category_unavailable_reason": unavailable,
         "preservation_category_counts": dict(sorted(preservation_counts.items())),
+        "prompt_overlap_audit": overlap_diagnostics,
         "layer_reports": layer_reports,
         "runtime_seconds": time.monotonic() - begin,
         "environment": {
@@ -328,7 +387,16 @@ def main() -> None:
     )
     print(
         json.dumps(
-            {"acceptance_pass": passed, "layers": layers, "prompt_overlap": len(overlap)},
+            {
+                "acceptance_pass": passed,
+                "layers": layers,
+                "prompt_overlap": overlap_diagnostics[
+                    "state_bank_prompt_overlap_count"
+                ],
+                "source_manifest_prompt_overlap": overlap_diagnostics[
+                    "source_manifest_prompt_overlap_count"
+                ],
+            },
             sort_keys=True,
         )
     )
