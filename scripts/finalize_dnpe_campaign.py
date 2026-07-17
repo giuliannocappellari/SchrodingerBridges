@@ -478,7 +478,6 @@ def build_package(output: Path, *, requested_outcome: str) -> dict[str, Any]:
             "final_test_used": report["final_test_used"],
         },
     )
-    package_files_before_validation = artifact_manifest(output)
     write_json(
         output / "terminal_package_validation.json",
         {
@@ -486,8 +485,8 @@ def build_package(output: Path, *, requested_outcome: str) -> dict[str, Any]:
             "required_files": list(REQUIRED_PACKAGE_FILES),
             "required_files_present": False,
             "nonempty_files": False,
-            "artifact_hash_count": len(package_files_before_validation),
-            "artifact_hashes": package_files_before_validation,
+            "artifact_hash_count": 0,
+            "artifact_hashes": [],
             "self_hash_excluded_to_avoid_recursive_manifest": True,
             "acceptance_pass": False,
         },
@@ -496,17 +495,24 @@ def build_package(output: Path, *, requested_outcome: str) -> dict[str, Any]:
     nonempty = all(
         (output / name).stat().st_size > 0 for name in REQUIRED_PACKAGE_FILES
     )
+    report["package_validation_pass"] = bool(present and nonempty)
+    write_json(output / "report_summary.json", report)
+    package_hashes = [
+        row
+        for row in artifact_manifest(output)
+        if not row["path"].endswith("terminal_package_validation.json")
+    ]
     validation = read_json(output / "terminal_package_validation.json")
     validation.update(
         {
             "required_files_present": present,
             "nonempty_files": nonempty,
+            "artifact_hash_count": len(package_hashes),
+            "artifact_hashes": package_hashes,
             "acceptance_pass": present and nonempty,
         }
     )
     write_json(output / "terminal_package_validation.json", validation)
-    report["package_validation_pass"] = bool(validation["acceptance_pass"])
-    write_json(output / "report_summary.json", report)
     if not validation["acceptance_pass"]:
         raise RuntimeError("Terminal package validation failed")
     record_stage(
