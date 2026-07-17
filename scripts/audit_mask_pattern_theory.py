@@ -111,7 +111,9 @@ def _beta_limits() -> tuple[list[dict[str, object]], bool]:
     for n in range(2, 7):
         costs, reference = _fixture(n, 2600 + n)
         low = solve_exact_kl_control(costs, n, beta=1e-9, reference=reference)
-        high = solve_exact_kl_control(costs, n, beta=1000.0, reference=reference)
+        # Use a genuinely asymptotic scale: the fixture can contain globally
+        # distinct paths whose total costs differ by less than 1e-3.
+        high = solve_exact_kl_control(costs, n, beta=1_000_000.0, reference=reference)
         best_order, best_cost = solve_deterministic_global(costs, n)
         low_error = max(
             abs(low.policy[mask][index] - reference[(mask, index)])
@@ -129,6 +131,7 @@ def _beta_limits() -> tuple[list[dict[str, object]], bool]:
             "n": n,
             "beta_near_zero_max_reference_error": low_error,
             "beta_large_greedy_order": json.dumps(greedy_high_order),
+            "beta_large": 1_000_000.0,
             "deterministic_optimal_order": json.dumps(best_order),
             "beta_large_path_cost": high_cost,
             "deterministic_minimum_cost": best_cost,

@@ -204,8 +204,12 @@ def record_stage(
     failed = list(state.get("failed_stages", []))
     if acceptance_pass and stage not in completed:
         completed.append(stage)
+    if acceptance_pass and stage in failed:
+        failed.remove(stage)
     if not acceptance_pass and stage not in failed:
         failed.append(stage)
+    if not acceptance_pass and stage in completed:
+        completed.remove(stage)
     state["completed_stages"] = completed
     state["failed_stages"] = failed
     state.setdefault("track_status", {})[track] = status

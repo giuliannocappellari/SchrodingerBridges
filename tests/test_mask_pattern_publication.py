@@ -61,7 +61,7 @@ def test_beta_zero_is_reference() -> None:
 
 
 def test_large_beta_zero_mass_diagnostics_remain_finite() -> None:
-    solution = solve_exact_kl_control(fixture_costs(6), 6, beta=1000.0)
+    solution = solve_exact_kl_control(fixture_costs(6), 6, beta=1_000_000.0)
     assert solution.expected_cost >= 0.0
     assert solution.path_entropy >= 0.0
     assert solution.kl_from_reference >= 0.0
