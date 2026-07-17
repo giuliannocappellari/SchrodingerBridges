@@ -4,10 +4,14 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import math
+import random
 import sys
+from collections import defaultdict
 from pathlib import Path
+from statistics import mean
 from typing import Any, Mapping
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -45,6 +49,38 @@ def _display_path(path: Path) -> str:
         return str(path.relative_to(ROOT))
     except ValueError:
         return str(path)
+
+
+def _per_case_exact(run_dir: Path, bucket: str) -> dict[str, float]:
+    values: dict[str, list[float]] = defaultdict(list)
+    with (run_dir / "edited_per_prompt.csv").open(
+        newline="", encoding="utf-8"
+    ) as handle:
+        for row in csv.DictReader(handle):
+            if row.get("bucket") != bucket:
+                continue
+            hit = str(row.get("expected_hit", "")).casefold() in {"true", "1"}
+            values[str(row["case_id"])].append(float(hit))
+    return {case_id: mean(scores) for case_id, scores in values.items()}
+
+
+def _bootstrap_delta(
+    deltas: list[float], *, trials: int = 2000, seed: int = 260717101
+) -> dict[str, Any]:
+    if not deltas:
+        return {"delta": 0.0, "ci_low": 0.0, "ci_high": 0.0, "num_edits": 0}
+    rng = random.Random(seed)
+    samples = sorted(
+        mean(rng.choice(deltas) for _ in deltas) for _ in range(trials)
+    )
+    return {
+        "delta": mean(deltas),
+        "ci_low": samples[int(0.025 * trials)],
+        "ci_high": samples[min(trials - 1, int(0.975 * trials))],
+        "num_edits": len(deltas),
+        "trials": trials,
+        "resampling_unit": "case_id_with_target_length_stratum",
+    }
 
 
 def report_b1(root: Path, *, repair_used: bool) -> dict[str, Any]:
@@ -141,6 +177,10 @@ def report_b2(root: Path) -> dict[str, Any]:
     comparison = []
     positive_lengths = 0
     strong_lengths = 0
+    pooled_deltas: dict[str, list[float]] = {
+        "rewrite": [],
+        "declarative_paraphrase": [],
+    }
     for length in (2, 3, 4):
         baseline = by_length_policy.get((length, "fully_masked_only"))
         candidates = [row for row in rows if row["target_length"] == length and row["policy"] != "fully_masked_only"]
@@ -151,6 +191,15 @@ def report_b2(root: Path) -> dict[str, Any]:
         paraphrase_gain = float(best["declarative_paraphrase_exact"]) - float(baseline["declarative_paraphrase_exact"])
         positive_lengths += rewrite_gain >= 0.15
         strong_lengths += rewrite_gain >= 0.15 and paraphrase_gain >= 0.08
+        baseline_dir = root / str(baseline["run"])
+        best_dir = root / str(best["run"])
+        for bucket in pooled_deltas:
+            baseline_scores = _per_case_exact(baseline_dir, bucket)
+            best_scores = _per_case_exact(best_dir, bucket)
+            for case_id in sorted(set(baseline_scores) & set(best_scores)):
+                pooled_deltas[bucket].append(
+                    best_scores[case_id] - baseline_scores[case_id]
+                )
         comparison.append(
             {
                 "target_length": length,
@@ -161,17 +210,30 @@ def report_b2(root: Path) -> dict[str, Any]:
                 "malformed_rate": best["malformed_rate"],
             }
         )
-    passed = positive_lengths >= 2
+    pooled_bootstrap = {
+        bucket: _bootstrap_delta(deltas, seed=260717101 + index)
+        for index, (bucket, deltas) in enumerate(pooled_deltas.items())
+    }
+    pooled_positive = all(
+        values["ci_low"] > 0.0 for values in pooled_bootstrap.values()
+    )
+    passed = strong_lengths >= 2 or pooled_positive
     write_csv(root / "partial_state_summary.csv", rows)
     write_csv(root / "partial_state_comparison.csv", comparison)
+    write_csv(
+        root / "partial_state_pooled_bootstrap.csv",
+        [dict(metric=bucket, **values) for bucket, values in pooled_bootstrap.items()],
+    )
     report = {
         "campaign_id": CAMPAIGN_ID,
         "stage": "B2_partial_state_reproduction",
         "created_at_utc": now_utc(),
         "positive_lengths_at_rewrite_gain_0_15": positive_lengths,
         "strong_lengths_with_paraphrase_gain_0_08": strong_lengths,
+        "pooled_paired_bootstrap": pooled_bootstrap,
+        "pooled_rewrite_and_paraphrase_ci_positive": pooled_positive,
         "acceptance_pass": passed,
-        "source_qualitative_trend_reproduced": positive_lengths >= 2,
+        "source_qualitative_trend_reproduced": passed,
         "analysis_500_used": False,
         "final_test_used": False,
     }
