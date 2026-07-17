@@ -107,7 +107,13 @@ def report_b1(root: Path, *, repair_used: bool) -> dict[str, Any]:
 
 
 def report_b2(root: Path) -> dict[str, Any]:
-    run_dirs = sorted(path for path in root.iterdir() if path.is_dir() and (path / "report_summary.json").exists())
+    run_dirs = sorted(
+        path
+        for path in root.iterdir()
+        if path.is_dir()
+        and path.name.startswith("dev_n")
+        and (path / "report_summary.json").exists()
+    )
     reports = [_load_run(path) for path in run_dirs]
     rows = []
     by_length_policy = {}
@@ -119,7 +125,8 @@ def report_b2(root: Path) -> dict[str, Any]:
                 if f"n{candidate}" in manifest_name:
                     length = candidate
                     break
-        policy = str(report["memit"]["partial_mask_schedule"])
+        method = str(report["method"])
+        policy = method.split("__", 1)[1] if "__" in method else str(report["memit"]["partial_mask_schedule"])
         row = {
             "run": path.name,
             "target_length": length,
@@ -135,8 +142,8 @@ def report_b2(root: Path) -> dict[str, Any]:
     positive_lengths = 0
     strong_lengths = 0
     for length in (2, 3, 4):
-        baseline = by_length_policy.get((length, "fully_masked"))
-        candidates = [row for row in rows if row["target_length"] == length and row["policy"] != "fully_masked"]
+        baseline = by_length_policy.get((length, "fully_masked_only"))
+        candidates = [row for row in rows if row["target_length"] == length and row["policy"] != "fully_masked_only"]
         if baseline is None or not candidates:
             continue
         best = max(candidates, key=lambda row: (row["rewrite_exact"], row["declarative_paraphrase_exact"]))
