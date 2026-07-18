@@ -1,146 +1,74 @@
-# Paper and Reproducibility Plan
+# H — Final Paper and Reproducibility Package
 
-Protocol: `diffusion_native_causal_partial_state_editor_v1`
-
-## Final package
-
-Create:
+## Required reports
 
 ```text
-runs/diffusion_native_causal_partial_state_editor_v1/final_research_package_v1/
-```
-
-Required artifacts:
-
-```text
-report_summary.json
-final_research_report.md
-paper_claim_recommendation.md
 main_results_table.csv
-same_subject_stress_table.csv
 multi_token_table.csv
+same_subject_stress_table.csv
+locality_table.csv
 causal_localization_table.csv
-locality_distribution_table.csv
+state_bucket_ablation.csv
+relation_table.csv
 compute_storage_table.csv
-sequential_edit_table.csv
 paired_bootstrap.csv
 rewrite_locality_pareto.png
+state_bucket_plot.png
+multi_token_plot.png
 causal_heatmap.png
-partial_state_plot.png
-update_norm_locality_plot.png
 failure_cases.csv
 artifact_availability_manifest.json
 reproducibility_manifest.json
+final_research_report.md
+paper_claim_recommendation.md
 terminal_package_validation.json
 ```
 
-## Reproducibility manifest
+## Claim taxonomy
+
+```text
+full_editor_positive
+pareto_locality_positive
+diffusion_specific_positive
+state_conditioning_positive
+reproduction_only
+diagnostic_negative
+formal_bounded_negative
+```
+
+## Reproducibility requirements
 
 Record:
 
 ```text
-Git commit and tag
-all model/tokenizer revisions
-Python/CUDA/PyTorch/Transformers versions
-RunPod GPU type
-all split and prompt fingerprints
-all source-code hashes
-all selected hyperparameters
-all random seeds
-all update/checkpoint hashes
-all result artifact hashes
-commands for every main table and figure
+Git commit
+model/tokenizer revisions
+source paper/code revisions
+all split hashes
+all config files
+runtime feature schemas
+residual-memory formula and solver tests
+raw per-edit outcomes
+bootstrap seeds
+RunPod image, Python, CUDA, Torch, Transformers versions
+commands for every table and figure
+artifact hashes
 ```
 
-## One-command reproduction
+Create a cheap synthetic test that verifies the residual-memory closed form and state-bucket routing without loading LLaDA.
 
-Provide commands such as:
+## Interpretation requirements
 
-```bash
-python reproduce_dnpe_paper.py --table main
-python reproduce_dnpe_paper.py --figure causal_heatmap
-python reproduce_dnpe_paper.py --validate-terminal-package
-```
-
-Add CPU-safe toy tests for:
+The final report must separate:
 
 ```text
-causal restoration accounting
-partial-state enumeration
-null-space projector correctness
-constrained update closed form
-train/eval leakage
-paired bootstrap
+TimeROME reproduction
+CounterFact adaptation
+partial-state mechanism benefit
+state-conditioning benefit
+full editor success/failure
+locked confirmation
+second-backbone evidence
 ```
 
-## Main figures
-
-### Figure 1 — Temporal causal localization
-
-Heatmap over layers, token positions, and mask counts.
-
-### Figure 2 — Rewrite/locality Pareto
-
-Show ordinary MDM-MEMIT, partial-state, AlphaEdit-style, TimeROME-style, and the main editor.
-
-### Figure 3 — Multi-token robustness
-
-Target lengths 2–4 with full-span exact and paraphrase.
-
-### Figure 4 — Update geometry
-
-Protected dimension, update norm, and same-subject drift.
-
-### Figure 5 — Sequential scaling
-
-Edit count versus efficacy/locality/interference.
-
-## Claim matrix
-
-Classify each claim as:
-
-```text
-supported
-partially supported
-rejected under bounded protocol
-not tested
-protocol-infeasible
-infrastructure-blocked
-```
-
-Potential positive claims:
-
-```text
-causal temporal localization improves parametric edit efficiency
-partial-state optimization improves multi-token editing
-null-space constrained updates improve same-subject locality
-full diffusion-native editor improves the joint efficacy/locality trade-off
-```
-
-Do not claim a strong editor unless locked analysis/final results pass.
-
-## Failure report requirements
-
-A negative result must separate:
-
-```text
-baseline reproduction failure
-causal localization failure
-partial-state optimization failure
-locality projection failure
-editability/locality incompatibility
-second-backbone integration failure
-analysis generalization failure
-```
-
-## Final shutdown
-
-After terminal package validation:
-
-```text
-mark campaign state terminal
-write final Pod/cost state
-verify no active tmux/Python GPU job
-stop the configured Pod
-record stopped status
-```
+A near miss remains a formal failure for its frozen claim, but may still support a different predeclared claim class if that class passed independently.

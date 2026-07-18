@@ -1,149 +1,106 @@
-# Main Editor and Baselines Plan
+# E/F — Main Editor, Baselines, Pilot, and Selection
 
-Protocol: `diffusion_native_causal_partial_state_editor_v1`
-
-## Method registry
-
-### B0 — Base
-
-Frozen unedited model.
-
-### B1 — Prompt memory
-
-Runtime statement of the edit; required non-parametric baseline.
-
-### B2 — Target logit bias
-
-Simple target pressure; diagnostic baseline.
-
-### B3 — MDM-MEMIT
-
-Source-aligned locate-then-edit baseline using masked answer inputs.
-
-### B4 — Partial-state MDM-MEMIT
-
-MDM-MEMIT target value optimized over partial mask states.
-
-### B5 — MDM-MEMIT + target-value KL anchors
-
-Preservation enforced only during target-value optimization; distinguishes objective regularization from null-space geometry.
-
-### B6 — AlphaEdit-style MDM-MEMIT
-
-Standard update projected into a preservation null space.
-
-### B7 — TimeROME-DLM-style residual memory
-
-Temporal causal site plus ridge-regularized sparse low-rank residual applied during diffusion forwards. Label as `-style` unless official algorithm/code is reproduced exactly.
-
-### B8 — Random-site partial-state editor
-
-Same target/state/locality objective at random sites.
-
-### B9 — Fixed-site partial-state editor
-
-Best global source-aligned layer/position.
-
-### B10 — Causal-site fullmask editor
-
-Causal site with only fully masked target optimization.
-
-### B11 — Causal-site partial-state editor
-
-Causal site and partial-state target value, no null-space constraint.
-
-### M0 — Causal partial-state null-space MEMIT
-
-Primary method.
-
-### R0 — State-conditioned low-rank residual rescue
-
-Three mask-state buckets; only if rescue trigger is met.
-
-## Main evaluation table
-
-| Method | Rewrite | Paraphrase | Target F1 | Same-subj TFPR | Near TFPR | Far TFPR | Dist. KL | Update norm | Rank | Edit time |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-
-## Stress-aware aggregate
-
-Use a harmonic/geometric aggregate only after hard constraints:
+## Required method registry
 
 ```text
-rewrite
-paraphrase
-clipped self-normalized locality
+base
+prompt_memory
+target_logit_bias
+ordinary_mdm_memit
+partial_state_mdm_memit
+static_nullspace_partial_state_memit
+timerome_source_style_fullmask
+timerome_counterfact_fullmask
+timerome_counterfact_partial_state
+timerome_partial_state_state_bucketed
+timerome_partial_state_state_protected
+random_site_partial_state_residual
+fixed_site_partial_state_residual
 ```
 
-Methods violating TFPR/malformed constraints remain infeasible regardless of aggregate.
+If triggered:
 
-## Pilot sequence
+```text
+timerome_partial_state_state_relation_protected
+```
+
+## Pilot ladder
 
 ### Smoke20
 
-Purpose: integration and catastrophic-failure detection.
+Purpose: integration and bounded calibration only.
 
-One bounded calibration may adjust:
+Allowed calibration:
 
 ```text
-update scale
-projector rank within the frozen grid
+alpha in a small predeclared grid
+lambda ridge in a small predeclared grid
+sparsity q in a small predeclared grid
+state-bucket threshold sanity
 ```
 
 No architecture changes.
 
 ### Pilot100
 
-Purpose: choose site/partial-state/null-space configuration.
-
-Select at most three candidates:
+Fixed architecture comparison on fresh edits. Select at most three Pareto candidates:
 
 ```text
-best aggregate
-best locality
-best multi-token robustness
+best full-editor candidate
+best locality candidate
+best multi-token/diffusion-specific candidate
 ```
 
 ### Dev200
 
-Purpose: final method selection. No new method family after inspection.
+Run the selected architectures and bounded shared hyperparameters. Freeze one primary and up to two secondary candidates.
 
-## Mechanism ablations
-
-Required:
+## Core metrics
 
 ```text
-causal site vs random site
-partial state vs fullmask only
-null space vs no null space
-state-conditioned vs step-agnostic, only if rescue triggered
-same preservation anchors with KL-only vs geometric projection
+rewrite exact
+paraphrase exact
+target-token F1
+old-target suppression
+same-subject TFPR
+near/far TFPR
+generation/attribute TFPR
+malformed rate
+distributional locality KL
+residual norm and sparsity
+model evaluations/edit
+GPU minutes/edit
+memory bytes/edit or per batch
 ```
 
-## Acceptance to proceed to locked analysis
+## Primary comparison rules
 
-At least one primary candidate must:
+1. Compare against the strongest efficacy-matched baseline, not only base.
+2. Report paired bootstrap by edit ID.
+3. Match or stratify compute where feasible.
+4. Distinguish train-seen rewrite from held-out paraphrase/locality.
+5. Report ordinary and state-conditioned TimeROME variants separately.
+
+## Pilot eligibility
+
+A candidate may advance if it satisfies at least one predeclared positive class:
 
 ```text
-rewrite >=0.75
-paraphrase >=0.40
-same-subject/near/far TFPR <= base +0.03
-malformed <=0.05
-improve locality over the strongest efficacy-matched baseline
-show causal or partial-state mechanism value
+full editor claim
+Pareto locality claim
+diffusion-specific partial-state claim
+state-conditioning claim
 ```
 
-## Failure taxonomy
+and:
 
 ```text
-edit construction failure
-causal-site instability
-target-value conflict across states
-null-space removes edit direction
-same-subject leakage
-near/far leakage
-old target persists
-multi-token partial completion
-malformed span
-batch/sequential interference
+malformed <= 0.05
+no data leakage
+no catastrophic general-utility regression
+all runtime inputs deployable
 ```
+
+## Failure
+
+If no candidate satisfies any positive class after permitted rescues, write a formal bounded negative package. Do not open locked confirmation.

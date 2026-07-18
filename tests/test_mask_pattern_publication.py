@@ -125,7 +125,7 @@ def test_publication_protocol_remains_registered_as_closed_history() -> None:
     root = Path(__file__).resolve().parents[1]
     active = json.loads((root / "ACTIVE_RESEARCH_CAMPAIGN.json").read_text())
     registry = json.loads((root / "PUBLICATION_PROTOCOL_REGISTRY.json").read_text())
-    assert active["active_protocol"] == "diffusion_native_causal_partial_state_editor_v1"
+    assert active["active_protocol"] == "partial_state_temporal_residual_editor_v1"
     assert (
         active["historical_protocols"]["mask_pattern_sb_publication_confirmation_v1"]
         == "closed_fresh_confirmation_failed"

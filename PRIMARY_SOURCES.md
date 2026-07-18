@@ -1,74 +1,42 @@
-# Primary sources
+# Primary Sources
 
-Codex must inspect primary papers and official code before implementing or labelling a reproduction.
+The implementation and report must cite and distinguish these sources.
 
-## Masked-diffusion knowledge editing
+## TimeROME-DLM
 
-### Knowledge Editing in Masked Diffusion Language Models
+- **TimeROME-DLM: Temporal Causal Tracing and Low-Rank Inference-Time Knowledge Editing for Masked Diffusion Language Models**
+- arXiv:2606.12841
+- Core ideas used by this campaign:
+  - Temporal Indirect Effect causal tracing over denoising time.
+  - A closed-form, low-rank residual edit memory.
+  - Ridge regularization and sparsification.
+  - Frozen backbone; residual applied during diffusion forwards.
+  - Transfer across several masked diffusion language-model backbones.
 
-- arXiv: https://arxiv.org/abs/2606.03924
-- Core relevance:
-  - causal tracing finds early-to-middle MLP factual recall at the last subject token;
-  - locate-then-edit transfers to LLaDA and Dream;
-  - multi-token editing fails at partially unmasked intermediate states;
-  - optimization over those states restores performance.
+## Knowledge Editing in Masked Diffusion Language Models
 
-### TimeROME-DLM
+- **Knowledge Editing in Masked Diffusion Language Models**
+- arXiv:2606.03924
+- Core ideas used by this campaign:
+  - Early-to-middle MLP localization at the last subject token.
+  - Multi-token degradation caused by partially unmasked inference states.
+  - Target optimization across partial-mask states.
 
-- arXiv: https://arxiv.org/abs/2606.12841
-- Core relevance:
-  - temporal indirect effect causal tracing;
-  - low-rank residual edit memory applied at a selected coordinate during diffusion forwards;
-  - ridge regularization and sparsification for utility preservation;
-  - must be treated as a strong recent baseline, not ignored.
+## AlphaEdit
 
-## Locate-then-edit foundations
+- **AlphaEdit: Null-Space Constrained Knowledge Editing for Language Models**
+- arXiv:2410.02355
+- Used as the protected-subspace/null-space baseline and motivation.
+- Its assumptions are not presumed to transfer unchanged to masked diffusion models.
 
-### ROME
+## Historical local evidence
 
-- arXiv: https://arxiv.org/abs/2202.05262
-- Core relevance: causal localization and rank-one factual weight update.
+The campaign must preserve and cite the repository's completed evidence showing:
 
-### MEMIT
+```text
+partial-state edit optimization produced large multi-token rewrite gains;
+a static null-space projection reduced same-subject leakage but did not satisfy the frozen joint criterion;
+rule-based runtime gates and learned value-controller routes were previously closed under their own protocols.
+```
 
-- arXiv: https://arxiv.org/abs/2210.07229
-- Core relevance: batched multi-layer associative memory update.
-
-### AlphaEdit
-
-- arXiv: https://arxiv.org/abs/2410.02355
-- Official code: https://github.com/jianghoucheng/AlphaEdit
-- Core relevance: project perturbations into the null space of preserved knowledge; main locality baseline/inspiration.
-
-## Diffusion backbones
-
-### LLaDA
-
-- arXiv: https://arxiv.org/abs/2502.09992
-- Primary checkpoint: `GSAI-ML/LLaDA-8B-Instruct`
-
-### Dream
-
-- arXiv: https://arxiv.org/abs/2508.15487
-- Official code: https://github.com/DreamLM/Dream
-- Secondary checkpoint: `Dream-v0-Instruct-7B`
-
-## Datasets
-
-### CounterFact
-
-- Hugging Face source used in the repository: `azhx/counterfact`
-- Standard factual edit, paraphrase, and neighborhood evaluation.
-
-### KAMEL
-
-- Use for controlled multi-token target lengths.
-- Record the exact source/version and tokenizer-dependent length bins.
-
-## Source-handling rules
-
-1. Prefer official paper/code repositories.
-2. Record commit hashes and model revisions.
-3. If official code is unavailable, label the implementation `-style` or `inspired`, not a reproduction.
-4. Do not rely on secondary blog summaries for algorithmic details.
-5. Preserve all deviations in `source_audit/implementation_gap.md`.
+Historical results motivate the new protocol but cannot be tuned on or overwritten.

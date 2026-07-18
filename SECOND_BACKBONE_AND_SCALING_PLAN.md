@@ -1,120 +1,51 @@
-# Second Backbone and Scaling Plan
+# G — Second Backbone and Edit Scaling
 
-Protocol: `diffusion_native_causal_partial_state_editor_v1`
+## Edit-count scaling
 
-## Part A — Dream-v0-Instruct-7B
-
-### Objective
-
-Test whether causal partial-state locality preservation transfers beyond LLaDA.
-
-### Required adaptation audit
+Evaluate the frozen method at:
 
 ```text
-model/tokenizer revision
-layer count and MLP module names
-shifted prediction convention
-mask token and answer-span construction
-subject position indexing
-editable down-projection matrices
-decoding schedule
+1 edit
+10 edits
+50 edits
+100 edits
+```
+
+Report:
+
+```text
+rewrite/paraphrase/locality
+same-subject TFPR
+residual-memory rank and bytes
+fit time
+inference overhead
+utility drift
+interference with previous edits
+```
+
+The scaling track is diagnostic unless the selected primary claim explicitly concerns scalability.
+
+## Second backbone
+
+Primary second model:
+
+```text
+Dream-v0-Instruct-7B
 ```
 
 One bounded integration repair is allowed.
 
-### Minimal experiment
+If Dream remains technically infeasible, a predeclared fallback to LLaDA-8B-Base may be run, but it supports only cross-checkpoint evidence, not a broad cross-architecture claim.
 
-Use:
+## Second-backbone acceptance
 
-```text
-20-edit smoke
-100-edit confirmation
-KAMEL lengths 2,3,4 where tokenization permits
-```
-
-Methods:
+At least one positive claim should show the same direction of effect. For a strong generality result:
 
 ```text
-Dream MDM-MEMIT
-Dream partial-state MDM-MEMIT
-Dream AlphaEdit-style MDM-MEMIT
-Dream causal partial-state null-space editor
+rewrite/paraphrase effect direction matches LLaDA-Instruct;
+same-subject/locality advantage remains;
+malformed <= 0.05;
+paired lower bound > 0 for at least one primary comparison.
 ```
 
-### Acceptance
-
-```text
-rewrite >= strongest Dream baseline -0.10
-same direction of same-subject/locality improvement
-at least one locality metric improves with no >0.05 efficacy loss
-partial-state trend reported for multi-token targets
-```
-
-If Dream remains technically infeasible after one repair, record `dream_integration_infeasible` and run the predeclared LLaDA-8B-Base cross-check. That fallback limits the claim to cross-checkpoint generality.
-
----
-
-## Part B — Batch and sequential edit scaling
-
-### Edit counts
-
-```text
-1
-10
-50
-100
-```
-
-Optional 500 only if the implementation naturally supports it and all earlier scales pass.
-
-### Methods
-
-```text
-MDM-MEMIT
-AlphaEdit-style MDM-MEMIT
-TimeROME-DLM-style residual memory
-main causal partial-state null-space editor
-```
-
-### Metrics
-
-```text
-rewrite/paraphrase retention as edit count grows
-same-subject/near/far TFPR
-inter-edit interference
-previous-edit retention
-update rank and Frobenius norm
-condition number
-protected-subspace dimension
-storage bytes/edit
-edit wall clock
-inference overhead
-```
-
-### Scaling acceptance
-
-A strong scalable result requires:
-
-```text
-50-edit rewrite retains >=80% of single-edit rewrite
-same-subject TFPR remains within base +0.05
-previous-edit retention remains >=0.80
-update statistics remain finite
-```
-
-A single-edit locality result can remain valid even if scaling fails, but no mass-edit claim may be made.
-
----
-
-## Part C — General utility diagnostics
-
-At selected edit counts, run small fixed diagnostics:
-
-```text
-perplexity or masked-token loss on unrelated text
-BoolQ/HellaSwag-style subset if already supported
-basic generation fluency
-refusal/safety behavior only if an existing safe benchmark is already integrated
-```
-
-These diagnostics are secondary and cannot substitute for CounterFact/KAMEL locality.
+Failure of the second backbone does not erase a locked primary-backbone positive result, but limits claim scope.

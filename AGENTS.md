@@ -1,277 +1,103 @@
 # AGENTS.md
 
-Operational and scientific rules for Codex in the LLaDA / masked-diffusion model-editing repository.
+Operational and scientific rules for Codex in the LLaDA masked-diffusion model-editing repository.
 
-The active research campaign asks:
+The active autonomous research program is:
 
-> **Can a diffusion-native parametric editor preserve locality by optimizing updates over causal internal representations and partial denoising states?**
+```text
+protocol_version = partial_state_temporal_residual_editor_v1
+research_question = Can a temporally localized residual editor, optimized across partial denoising states and protected by state-conditioned locality constraints, improve factual-editing locality at matched efficacy?
+primary_model = GSAI-ML/LLaDA-8B-Instruct
+source_reproduction_model = GSAI-ML/LLaDA-8B-Base or the exact TimeROME-DLM source checkpoint when available
+base_weights = frozen
+trained_or_fitted_objects = temporal residual memories, calibration parameters, optional state-conditioned gates/projectors
+```
 
-The campaign is autonomous. Once Goal mode is started with the required environment variables, Codex must execute the complete bounded plan without requesting per-stage, per-command, or per-GPU-job approval.
+All earlier protocols and campaigns are immutable historical evidence. Do not resume, overwrite, delete, or silently reinterpret them.
 
 ---
 
-## 0. Active project identity
+## 1. Authoritative files and reading order
 
-```text
-active_protocol_version = diffusion_native_causal_partial_state_editor_v1
-active_plan = DIFFUSION_NATIVE_PARAMETRIC_EDITOR_AUTONOMOUS_PLAN.md
-base_model_primary = GSAI-ML/LLaDA-8B-Instruct
-base_model_secondary = Dream-v0-Instruct-7B
-base_model_weights = frozen except explicit low-rank/closed-form edited modules
-trained_or_solved_parameters = edit-specific low-rank updates, target values, optional state-conditioned residual basis
-edit_access = edit request available at edit time
-training_access = fresh development and train-only preservation anchors
-analysis_access = locked confirmation only
-final_access = one locked final evaluation only
-```
+Before acting, Codex must read:
 
-Historical campaigns and their artifacts are immutable evidence:
+1. `AGENTS.md`
+2. `ACTIVE_RESEARCH_CAMPAIGN.json`
+3. `PARTIAL_STATE_TEMPORAL_RESIDUAL_EDITOR_AUTONOMOUS_PLAN.md`
+4. `EXPERIMENT_PROTOCOL_REGISTRY.json`
+5. every detailed plan referenced by the active stage
+6. persisted campaign state under `runs/partial_state_temporal_residual_editor_v1/autonomous_campaign_v1/`
 
-```text
-counterfact_direction1_v1
-counterfact_direction2_bridge_adapter_v1
-counterfact_direction3_controller_v1
-counterfact_sb_alternatives_campaign_v1
-masked_diffusion_memit_sb_positive_result_v1
-mask_pattern_sb_publication_confirmation_v1
-```
-
-Codex may read historical code and compact summaries, but must not overwrite, delete, silently reinterpret, or resume a closed historical protocol.
+The persisted campaign state is authoritative for completed stages. Root control files determine the active protocol and must not reset validated work.
 
 ---
 
-## 1. Research question and primary method
+## 2. Autonomous Goal-mode authorization
 
-The primary hypothesis is that locality can be improved by combining three diffusion-native ideas:
-
-```text
-1. Temporal/causal localization:
-   identify internal coordinates that causally mediate the factual object across denoising states.
-
-2. Partial-state edit optimization:
-   optimize the target value/update over fully masked and partially revealed answer states.
-
-3. Preservation-subspace constraints:
-   project or solve the update in directions that minimally affect same-subject, locality, and unrelated keys.
-```
-
-The main candidate is called:
-
-```text
-causal_partial_state_nullspace_memit
-```
-
-It is a locate-then-edit parametric editor. The primary form writes a permanent low-rank update into selected MLP down-projection matrices. A state-conditioned low-rank residual variant is allowed only as a predeclared bounded rescue and must be reported separately as inference-conditioned editing.
-
-The intended update for layer `l` is conceptually:
-
-```text
-positive key bank K_plus:
-  causal subject-site keys collected across rewrite prompts and partial denoising states
-
-target value bank V_star:
-  values optimized to support target_new across the same states
-
-preservation key bank K_minus:
-  train-only same-subject-different-relation, near/far locality, attribute,
-  generation, and unrelated anchors
-
-null-space projector N:
-  N = I - U U^T, where U spans the protected key subspace
-
-constrained update:
-  Delta_W = argmin_D ||(W + D N) K_plus - V_star||^2
-                    + lambda_update ||D N||_F^2
-                    + lambda_identity ||D N K_minus||^2
-```
-
-Exact implementation details must follow the master plan and be validated dimensionally and numerically.
-
----
-
-## 2. Authoritative files and read order
-
-Codex must read these files in order before acting:
-
-```text
-1. AGENTS.md
-2. ACTIVE_RESEARCH_CAMPAIGN.json
-3. EXPERIMENT_PROTOCOL_REGISTRY.json
-4. DIFFUSION_NATIVE_PARAMETRIC_EDITOR_AUTONOMOUS_PLAN.md
-5. the relevant detailed stage plan
-6. persisted campaign state under runs/diffusion_native_causal_partial_state_editor_v1/
-```
-
-Detailed plans:
-
-```text
-CAUSAL_LOCALIZATION_PLAN.md
-PARTIAL_STATE_TARGET_OPTIMIZATION_PLAN.md
-NULL_SPACE_LOCALITY_PLAN.md
-MAIN_EDITOR_AND_BASELINES_PLAN.md
-LOCKED_CONFIRMATION_PLAN.md
-SECOND_BACKBONE_AND_SCALING_PLAN.md
-PAPER_REPRODUCIBILITY_PLAN.md
-```
-
-The persisted campaign state is authoritative for completed stages. Root control files determine which campaign is active but must not cause already validated work to be rerun unnecessarily.
-
----
-
-## 3. Autonomous mode
-
-Autonomous execution is enabled only when:
+Autonomous mode is enabled only when:
 
 ```bash
-export DNPE_AUTONOMOUS_MODE=1
-export DNPE_MAX_INFRA_RETRIES="3"
-export DNPE_MAX_SCIENTIFIC_RESCUES_PER_STAGE="1"
+export PS_TRM_AUTONOMOUS_MODE=1
 ```
 
-Required RunPod variables:
-
-```bash
-export RUNPOD_POD_ID="<existing-pod-id>"
-export RUNPOD_SSH_KEY="$HOME/.ssh/<private-key-file>"
-export RUNPOD_SSH_USER="root"
-export RUNPOD_SSH_HOST="<current-host>"
-export RUNPOD_SSH_PORT="<current-port>"
-export REMOTE_REPO_DIR="/workspace/SB"
-```
-
-`runpodctl` must already be configured with a RunPod API key.
-
-When `DNPE_AUTONOMOUS_MODE=1`, Codex has one-time approval to execute every task explicitly listed in the plan without asking the user between stages.
+When enabled, Codex has one-time authorization to execute every task explicitly listed in the active plan without asking for per-stage, per-command, or per-GPU-job approval.
 
 Codex must not:
 
-```text
-- expand the scientific scope beyond the plan;
-- lower acceptance thresholds after seeing results;
-- invent unplanned rescues;
-- add evaluation prompts to training;
-- use teacher-only or outcome-only features as runtime inputs;
-- open locked analysis/final data before the required lock;
-- switch to a different research direction;
-- create or delete a Pod;
-- ask for monetary budget approval or stop because of estimated cost.
-```
+- invent unplanned experiments;
+- lower frozen thresholds after observing results;
+- use evaluation prompts as training or protection anchors;
+- use outcome labels, evaluation-bucket labels, or teacher-only fields as runtime inputs;
+- reopen historical analysis/final splits;
+- switch to another research direction;
+- create a new protocol version automatically;
+- delete existing run directories;
+- terminate or delete a RunPod Pod.
 
 ---
 
-## 4. Monetary policy
+## 3. Campaign completion and Pod lifecycle
 
-There is no monetary budget guard in this campaign.
+The Pod must be started once and retained across all planned CPU and GPU stages.
 
-Codex may record:
-
-```text
-Pod running time
-estimated GPU spend
-per-stage runtime
-model evaluations
-energy/compute proxies
-```
-
-These are informational only. Monetary cost must never:
+Keep the Pod running through:
 
 ```text
-block a planned stage
-trigger a scientific stop
-cause a track to be skipped
-cause the Pod to be stopped
-cause Codex to ask for a budget increase
-```
-
-Scientific compute-efficiency thresholds remain valid experimental criteria. They are not monetary guards.
-
----
-
-## 5. Pod lifecycle
-
-### Start
-
-At campaign start, Codex must start the configured existing Pod if stopped:
-
-```bash
-runpodctl pod start "$RUNPOD_POD_ID"
-runpodctl pod list
-```
-
-Verify:
-
-```text
-Pod status is RUNNING
-at least one GPU is allocated
-SSH works
-nvidia-smi works
-/workspace is mounted
-/workspace/SB exists or can be cloned
-```
-
-If the host or port changes, Codex must refresh connection details through configured RunPod tooling/API. It must not guess.
-
-### Keep running
-
-After successful startup, keep the Pod running through:
-
-```text
-source and artifact audits
-CPU-only implementation and tests
-GPU causal tracing
-feature/statistics collection
-edit generation
-controller/update solving
-actual decoding
-bootstrap analysis
-second-backbone work
-locked analysis/final evaluation
-final reporting
+source reproduction
+implementation and testing
+causal tracing
+partial-state target construction
+residual-memory fitting
+state-conditioned protection
+pilot and locked evaluations
+multi-token evaluation
+scaling and second-backbone work
+statistics, plots, and final reporting
 ```
 
 Do not stop the Pod because:
 
-```text
-one stage finished
-one method failed
-one method passed
-no GPU process is active temporarily
-the next stage is CPU-only
-estimated spend is high
-```
-
-### Stop
+- one job finished;
+- the next task is CPU-only;
+- one method failed;
+- one method passed;
+- the GPU is temporarily idle between planned stages;
+- the estimated monetary cost is high.
 
 Stop the Pod only after one of these terminal conditions:
 
-```text
-1. Positive completion:
-   the full final research package validates.
+1. **Validated positive completion:** the final package and claim classification validate.
+2. **Validated formal bounded negative completion:** all permitted stages/rescues are exhausted and the negative package validates.
+3. **Unrecoverable infrastructure failure:** the configured Pod/GPU/SSH/persistent volume remains unusable after all permitted retries.
+4. **Unsafe data-integrity failure:** split leakage or artifact corruption makes continued science invalid and cannot be repaired within the plan.
 
-2. Formal bounded scientific negative completion:
-   every required stage and permitted rescue is complete,
-   the terminal negative package validates, and no further planned stage remains.
-
-3. Unrecoverable infrastructure failure:
-   Pod/GPU/SSH/storage remains unusable after the allowed retries and a complete
-   infrastructure checkpoint has been written.
-
-4. Unsafe data-integrity failure:
-   split leakage, irrecoverable corruption, or missing authoritative artifacts makes
-   continuation scientifically invalid, and a terminal checkpoint has been validated.
-```
-
-Stop command:
-
-```bash
-runpodctl pod stop "$RUNPOD_POD_ID"
-```
+There is no monetary budget guard. Cost tracking is informational only.
 
 Never terminate/delete the Pod unless the user explicitly requests deletion.
 
 ---
 
-## 6. Local and RunPod Python environments
+## 4. Python environments
 
 ### Local MacBook
 
@@ -280,33 +106,82 @@ Use `uv`:
 ```bash
 uv sync
 uv run pytest tests -q
-uv run python scripts/<script_name>.py
+uv run python scripts/<script>.py
 ```
 
 Do not use `pip install` directly in the local project environment.
 
 ### RunPod
 
-Use the Python environment available in the GPU image:
+Use the Python available in the image unless a compatible environment already exists:
 
 ```bash
 python --version
 python -m pip --version
 python -m pytest tests -q
-python scripts/<script_name>.py
+python scripts/<script>.py
 ```
 
-Do not require `uv` on RunPod. Record Python, CUDA, PyTorch, Transformers, PEFT, and bitsandbytes versions in every GPU run summary.
+Do not require `uv` on RunPod.
 
-The primary closed-form parametric edit must operate on floating-point editable MLP weights. Do not apply the update directly to 4-bit quantized matrices. Quantization may be used only for diagnostics or explicitly labelled inference-only comparisons.
+---
+
+## 5. Required RunPod configuration
+
+```bash
+export RUNPOD_POD_ID="<existing-pod-id>"
+export RUNPOD_SSH_KEY="$HOME/.ssh/<private-key-file>"
+export RUNPOD_SSH_USER="root"
+export RUNPOD_SSH_HOST="<current-host>"
+export RUNPOD_SSH_PORT="<current-port>"
+export REMOTE_REPO_DIR="/workspace/SB"
+export PS_TRM_MAX_INFRA_RETRIES="3"
+export PS_TRM_MAX_SCIENTIFIC_RESCUES_PER_STAGE="1"
+```
+
+`runpodctl` must already be configured with a RunPod API key.
+
+If host/port changes after restart, refresh it using configured RunPod tooling. Do not guess.
+
+---
+
+## 6. Campaign state machine
+
+Required directory:
+
+```text
+runs/partial_state_temporal_residual_editor_v1/autonomous_campaign_v1/
+```
+
+Required state files:
+
+```text
+campaign_state.json
+stage_history.csv
+autonomous_log.md
+cost_state.json
+artifact_registry.json
+```
+
+For every stage:
+
+1. read the active plan and campaign state;
+2. run preflight and tests;
+3. execute the exact planned task;
+4. validate every acceptance criterion;
+5. write versioned artifacts, logs, and explicit exit-code files;
+6. update state and registry;
+7. advance automatically on pass;
+8. apply only the listed bounded rescue on failure;
+9. finish formally if no rescue remains.
 
 ---
 
 ## 7. Git, storage, and long-job rules
 
-Code moves through Git. Large artifacts remain under `/workspace/SB/runs` or durable storage.
+Code moves through Git. Large artifacts remain under `/workspace` and `runs/`.
 
-Before every stage:
+Before each stage:
 
 ```bash
 cd /workspace/SB
@@ -323,9 +198,9 @@ git status
 python -m pytest tests -q
 ```
 
-Commit only after tests pass. Do not commit secrets, model weights, large tensors, or large run directories.
+Commit only after tests pass. Do not commit secrets, weights, raw large runs, or private keys.
 
-Long jobs must use `tmux`, `set -o pipefail`, logs, and explicit exit-code files:
+Long-job template:
 
 ```bash
 tmux new -d -s "<stage_name>" \
@@ -340,549 +215,207 @@ Every stage must write:
 report_summary.json
 run_config.json or equivalent
 validation report
-log path
-exit-code path for long jobs
-artifact hashes or manifest
+log file
+exit-code file for long jobs
 ```
 
-Never overwrite a completed run by default. Use versioned directories.
+Never overwrite a completed run by default. Use `_v1`, `_v2`, and explicit rescue directories.
 
 ---
 
-## 8. Campaign state machine
+## 8. Split and leakage discipline
 
-Campaign directory:
+Create fresh manifests for this protocol. Exclude all historically used development facts, prompt fingerprints, and source-row IDs where required by the active plan.
 
-```text
-runs/diffusion_native_causal_partial_state_editor_v1/autonomous_campaign_v1/
-```
+Historical Direction 1 `analysis_500`, `final_test_500`, and `final_test_full` remain untouched and are forbidden for this campaign.
 
-Required files:
+Training/protection data may include only predeclared training prompts and anchors. Evaluation-only prompts include:
 
 ```text
-campaign_state.json
-stage_history.csv
-autonomous_log.md
-cost_state.json  # informational only
-```
-
-For each stage:
-
-```text
-1. Read active state and authoritative plan.
-2. Run preflight checks and tests.
-3. Execute the stage.
-4. Validate every hard acceptance criterion.
-5. Write versioned artifacts, logs, and exit code.
-6. Update campaign state and track status.
-7. Advance automatically on pass.
-8. Apply only the bounded rescue specified for that stage on failure.
-9. If no rescue remains, write the formal terminal package.
-```
-
-No unplanned hyperparameter expansion is allowed.
-
----
-
-## 9. Data and split discipline
-
-Primary datasets:
-
-```text
-CounterFact:
-  single-token and standard factual-editing evaluation
-
-KAMEL-compatible multi-token set:
-  controlled target lengths 2, 3, and 4; optional 5 if available
-```
-
-Fresh protocol manifests must exclude every case/prompt fingerprint used for method development in historical campaigns when practical. Historical locked manifests may be read only for ID/fingerprint exclusion until the new method lock permits evaluation.
-
-Canonical new split roles:
-
-```text
-dnpe_smoke_20:
-  integration only; bounded calibration allowed
-
-dnpe_pilot_100:
-  architecture pilot and bounded rescue
-
-dnpe_dev_200:
-  final shared-hyperparameter and method selection
-
-dnpe_kamel_dev_<N>:
-  multi-token method selection for target length N
-
-dnpe_kamel_locked_<N>:
-  locked confirmation for target length N
-
-analysis_500:
-  locked proceed/stop confirmation only
-
-final_test_500:
-  one locked final evaluation only
-```
-
-The old `analysis_500`, `final_test_500`, and `final_test_full` remain locked until the new protocol writes and validates the required lock files.
-
-No prompt may be both adapter/update training data and evaluation-only data for the same edit.
-
-Allowed edit-time optimization data:
-
-```text
-rewrite prompt and target_new
-edit tuple
-training-only prompt augmentations from unused rows
-training-only same-subject different-relation anchors
-training-only locality/unrelated anchors
-partial-mask states derived from the allowed rewrite/augmentation prompts
-base activations and logits from those allowed states
-```
-
-Evaluation-only data:
-
-```text
-official paraphrases
-QA generalization
-held-out same-subject stress
-near/far locality evaluation prompts
-generation/attribute evaluation prompts
-locked analysis/final prompts
+official held-out paraphrases
+held-out same-subject different-relation stress prompts
+held-out near/far locality prompts
+held-out generation/attribute prompts
+locked confirmation facts and prompts
 ```
 
 Hard rule:
 
 ```text
-train_prompt_ids intersect eval_prompt_ids = empty
+train_prompt_ids ∩ evaluation_prompt_ids = empty
 ```
 
-The rewrite prompt may be reported as `train_seen=true`; all paraphrase/locality/stress metrics must be `train_seen=false`.
+The rewrite prompt may be reported as `train_seen=true`. Generalization and locality metrics must be `train_seen=false`.
 
 ---
 
-## 10. Causal localization rules
+## 9. Scientific method families
 
-Causal tracing must use only information available before applying the new edit.
-
-Primary measures:
-
-```text
-normalized indirect effect (AIE)
-temporal indirect effect (TIE)
-old-target probability recovery
-site stability across partial mask states
-site stability across paraphrases
-edit-effect per update norm
-```
-
-Required coordinates:
-
-```text
-layer
-module type: MLP, attention, full hidden state
-token position: first subject, last subject, relation cue, first answer mask
-partial-mask count / denoising state
-```
-
-The campaign must compare:
-
-```text
-fixed early-mid last-subject site
-per-edit top causal site
-stable temporal site aggregated across states
-random layer/position controls
-late answer-position control
-```
-
-Causal tracing may guide site selection, but the final method must validate that the selected site improves editing/locality over random or fixed-site baselines. Localization alone is not evidence of editing value.
-
----
-
-## 11. Partial-state optimization rules
-
-For a target of length `N`, include all mask counts:
-
-```text
-k = 0, 1, ..., N-1 revealed target positions
-```
-
-At each optimization step, sample or cycle which `k` target positions are revealed. Compute target loss only on still-masked positions unless a predeclared joint-span objective is used.
-
-Required state policies:
-
-```text
-fully_masked_only
-all_mask_counts_random_positions
-confidence_trajectory_states
-uniform_mask_count_states
-three_bucket_states: full, intermediate, late
-```
-
-The primary partial-state comparison is:
-
-```text
-all_mask_counts_random_positions
-vs
-fully_masked_only
-```
-
-No method may claim diffusion-specific value unless partial-state or state-conditioned optimization beats a matched full-mask-only/step-agnostic baseline.
-
----
-
-## 12. Locality and preservation rules
-
-The main locality mechanism is a protected-key/null-space constraint.
-
-Protection data must be training-only and disjoint from evaluation prompts.
-
-Protection categories:
-
-```text
-same subject, different relation
-different subject, same relation
-near locality
-far locality
-attribute
-generation
-random unrelated
-```
-
-Required comparisons:
-
-```text
-ordinary MDM-MEMIT
-partial-state MDM-MEMIT
-MDM-MEMIT + target-value KL anchors
-AlphaEdit-style null-space projection
-causal multi-state editor without null space
-causal partial-state null-space editor
-TimeROME-DLM-style temporal residual memory baseline
-```
-
-Null-space rank/energy must be reported. A projection that removes every useful edit direction is not acceptable.
-
-Main locality metrics:
-
-```text
-same-subject target false-positive rate
-near/far target false-positive rate
-pre/post output agreement
-distributional KL/JS to base
-identity-key output drift
-update norm and rank
-general utility diagnostics
-```
-
----
-
-## 13. Runtime deployability and leakage
-
-The primary permanent editor may use base activations, keys, values, and covariance statistics during edit construction. Evaluation must use only the resulting edited weights and the frozen decoding configuration.
-
-The optional state-conditioned residual editor may use at inference:
-
-```text
-current hidden state
-mask ratio / active mask count
-step index
-edit-specific low-rank residual parameters
-```
-
-Forbidden runtime shortcuts:
-
-```text
-evaluation bucket identity
-prompt_type
-negative_type
-case ID as learned feature
-final success labels
-future decoded outcome
-analysis/final membership
-```
-
-Teacher-only scores may be optimization labels but not runtime inputs.
-
-Every checkpoint/update must include:
-
-```text
-runtime feature schema
-edited layer/position policy
-update hashes
-parameter count/rank
-feature-leakage audit
-```
-
----
-
-## 14. Required baselines
-
-At minimum:
+Required methods:
 
 ```text
 base
 prompt_memory
 target_logit_bias
-ordinary MDM-MEMIT
-partial-state MDM-MEMIT
-AlphaEdit-style null-space MDM-MEMIT
-TimeROME-DLM-style temporal residual memory
-random-site partial-state editor
-fixed-site partial-state editor
-causal-site full-mask editor
-causal-site partial-state editor
-causal partial-state null-space editor
-state-conditioned residual rescue, only if triggered
+ordinary_mdm_memit
+partial_state_mdm_memit
+static_nullspace_partial_state_memit
+timerome_source_reproduction
+timerome_counterfact_fullmask
+timerome_counterfact_partial_state
+timerome_partial_state_state_bucketed
+timerome_partial_state_state_protected
+random_site_partial_state_residual
+fixed_site_partial_state_residual
 ```
 
-Where feasible, include:
+One relation-conditioned protection rescue is allowed only if the state-conditioned method reaches the trigger defined in the plan.
 
-```text
-per-edit LoRA rank 4
-ROME-style single-layer update
-MEMIT batch edit
-```
-
-The main claim requires the proposed editor to beat the strongest direct/null-space baseline, not merely the unedited model.
+The main method must not be described as a permanent weight editor. It is a frozen-backbone, low-rank inference-time residual memory unless a stage explicitly modifies weights.
 
 ---
 
-## 15. Hard scientific acceptance criteria
+## 10. Runtime deployability and forbidden shortcuts
 
-### Baseline reproduction
-
-```text
-MDM-MEMIT rewrite exact >= 0.75
-MDM-MEMIT paraphrase exact >= 0.40
-pre-edit target_new rewrite exact <= 0.10
-```
-
-### Causal localization
+Allowed runtime inputs:
 
 ```text
-causal-site normalized effect exceeds random-site mean by >= 0.15
-site stability across partial states is reported
-selected site improves edit/locality aggregate or reduces update norm at matched efficacy
+current hidden state at the selected temporal coordinate
+subject key
+prompt/edit tuple
+relation identifier or precomputed relation cluster
+step/timestep or early-middle-late bucket
+active mask count and selected answer-span position
+base logits/log-probabilities
+fitted residual-memory parameters
+sparsification/calibration parameters
 ```
 
-### Main editor efficacy
-
-On dev/confirmation:
+Forbidden runtime inputs:
 
 ```text
-rewrite exact >= 0.75
-paraphrase exact >= 0.40
-malformed rate <= 0.05
-old-target suppression improves over base
+evaluation prompt type
+evaluation negative type
+split label
+case ID as a learned feature
+final decoded outcome
+final rewrite/locality success
+teacher-only future reward
+analysis/final metrics
 ```
 
-### Locality
-
-At least one main candidate must satisfy:
-
-```text
-same-subject TFPR <= base + 0.03
-near-locality TFPR <= base + 0.03
-far-locality TFPR <= base + 0.03
-```
-
-and relative to the strongest efficacy-matched baseline:
-
-```text
-same-subject TFPR reduced >= 50%
-or distributional locality KL reduced >= 25%
-```
-
-with:
-
-```text
-rewrite loss <= 0.05 absolute
-paraphrase loss <= 0.05 absolute
-```
-
-### Diffusion-native value
-
-At least one:
-
-```text
-partial-state editor improves full-span exact by >= 0.10 on at least two
-multi-token lengths
-
-or
-
-state-conditioned editor beats step-agnostic editor by >= 0.05 on the
-stress-aware aggregate with positive paired CI
-```
-
-### Causal-mechanism value
-
-At least one:
-
-```text
-causal-site editor beats random-site editor by >= 0.05 aggregate
-
-or
-
-matches efficacy within 0.02 using >= 25% lower update norm / fewer edited layers
-```
-
-### Strong-method claim
-
-Requires all:
-
-```text
-passes efficacy floors
-passes same-subject and near/far locality constraints
-beats ordinary partial-state MDM-MEMIT on stress-aware aggregate
-beats AlphaEdit-style projection or TimeROME-DLM-style baseline on at least one
-primary locality/efficacy axis without losing the others
-shows diffusion-state-specific value
-survives locked analysis and final evaluation
-```
+Every checkpoint or fitted memory must serialize its runtime feature schema and pass a leakage audit.
 
 ---
 
-## 16. Bounded rescues
+## 11. Frozen positive-result definitions
 
-Only these rescues are allowed:
+This campaign can finish positively under one or more predeclared claim classes.
 
-```text
-1. Causal-site rescue:
-   switch between global fixed layer window, per-edit top TIE site, and stable
-   temporal site set. No new localization family.
-
-2. Locality rescue:
-   bounded projector-rank / ridge grid specified in the plan.
-
-3. Partial-state rescue:
-   replace one shared update with a three-bucket state-conditioned low-rank
-   residual using the same sites/features.
-
-4. Dream integration repair:
-   one model-specific compatibility repair.
-```
-
-No rescue may:
+### Full editor claim
 
 ```text
-lower hard thresholds
-use evaluation prompts in optimization
-add outcome labels as features
-change metrics after analysis
-expand grids beyond the plan
+rewrite_exact >= 0.85
+paraphrase_exact >= 0.40
+same_subject_tfpr <= base + 0.03
+near_tfpr <= base + 0.03
+far_tfpr <= base + 0.03
+malformed_rate <= 0.05
 ```
 
-If all permitted rescues fail, produce a formal negative result.
+### Pareto locality claim
+
+Relative to the strongest efficacy-matched baseline:
+
+```text
+rewrite_loss <= 0.02
+paraphrase_loss <= 0.02
+same_subject_tfpr reduction >= 25%
+paired 95% CI for TFPR delta is below 0
+near/far locality do not materially worsen
+```
+
+### Diffusion-specific partial-state claim
+
+```text
+partial-state temporal residual improves multi-token rewrite by >= 0.10
+on at least two target-length bins
+with positive paired evidence on the pooled comparison
+```
+
+### State-conditioning claim
+
+```text
+state-conditioned protection reduces same-subject TFPR by >= 20%
+versus shared residual at matched efficacy
+or improves the frozen stress-aware aggregate by >= 0.05
+with positive paired evidence
+```
+
+Do not retroactively redefine a failed claim. A method may support one claim class without supporting all classes.
 
 ---
 
-## 17. Analysis and final locks
+## 12. Bounded rescues
 
-Before `analysis_500`, write and validate:
-
-```text
-runs/diffusion_native_causal_partial_state_editor_v1/dev_method_lock.json
-```
-
-It must freeze:
+Allowed total rescues:
 
 ```text
-model/checkpoint
-edited layers and positions
-causal-site policy
-partial-state policy
-null-space construction
-projector rank/ridge
-update rank
-all hyperparameters
-sampling configuration
-metrics
-random seeds
-report scripts
-selected candidate
+one TimeROME source-integration repair
+one temporal-site policy rescue
+one residual-memory ridge/sparsity rescue
+one state-conditioned protection rescue
+one relation-conditioned protection rescue, only if triggered
+one Dream integration repair
 ```
 
-Only then set:
+No rescue after locked confirmation inspection.
 
-```bash
-export DEV_METHOD_LOCKED=1
-```
-
-`analysis_500` is proceed/stop only. After seeing it, do not alter the method.
-
-If analysis passes, write:
-
-```text
-analysis_confirmation_lock.json
-```
-
-and set:
-
-```bash
-export FINAL_METHOD_LOCKED=1
-```
-
-Run `final_test_500` exactly once. Rerun only for a documented infrastructure failure before results were inspected.
+Never lower hard thresholds or expand grids beyond the plan.
 
 ---
 
-## 18. Final package and claim classes
+## 13. Final package
 
-Final directory:
+Required final directory:
 
 ```text
-runs/diffusion_native_causal_partial_state_editor_v1/final_research_package_v1/
+runs/partial_state_temporal_residual_editor_v1/final_research_package_v1/
 ```
 
-Required files:
+Required artifacts:
 
 ```text
 report_summary.json
 main_results_table.csv
-same_subject_stress_table.csv
 multi_token_table.csv
+same_subject_stress_table.csv
+locality_table.csv
 causal_localization_table.csv
-locality_distribution_table.csv
 compute_storage_table.csv
-sequential_edit_table.csv
 paired_bootstrap.csv
 rewrite_locality_pareto.png
-causal_heatmap.png
-partial_state_plot.png
+state_bucket_plot.png
+multi_token_plot.png
 failure_cases.csv
 artifact_availability_manifest.json
 reproducibility_manifest.json
 final_research_report.md
 paper_claim_recommendation.md
+terminal_package_validation.json
 ```
 
-Claim classifications:
+The final claim must be classified as:
 
 ```text
-strong_diffusion_native_parametric_editor
-locality_preservation_improvement
-partial_state_editing_improvement
-causal_localization_result
+full_editor_positive
+pareto_locality_positive
+diffusion_specific_positive
+state_conditioning_positive
 reproduction_only
-bounded_negative_result
+diagnostic_negative
+formal_bounded_negative
 infrastructure_blocked
 ```
 
-The claim must follow the evidence.
-
----
-
-## 19. Codex completion behavior
-
-In Goal mode, Codex must execute the complete campaign and return only after:
-
-```text
-the final positive or negative package validates
-campaign_state.json is terminal
-all required artifact hashes are recorded
-historical analysis/final use is correctly reported
-all tests pass or failures are documented
-the Pod is stopped
-```
-
-Codex must not ask the user for intermediate approval.
+After the final package validates, mark campaign terminal and stop the Pod.

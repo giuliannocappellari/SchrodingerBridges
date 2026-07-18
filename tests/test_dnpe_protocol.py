@@ -9,12 +9,13 @@ from scripts import dnpe_common
 from scripts.build_dnpe_protocol import CF_COUNTS, _overlap_audit
 
 
-def test_dnpe_identity_matches_active_registry() -> None:
+def test_dnpe_identity_remains_registered_as_closed_history() -> None:
     root = Path(__file__).resolve().parents[1]
     active = json.loads((root / "ACTIVE_RESEARCH_CAMPAIGN.json").read_text())
     registry = json.loads((root / "EXPERIMENT_PROTOCOL_REGISTRY.json").read_text())
-    assert active["active_protocol"] == dnpe_common.CAMPAIGN_ID
-    assert registry["protocol_version"] == dnpe_common.CAMPAIGN_ID
+    assert active["active_protocol"] == "partial_state_temporal_residual_editor_v1"
+    assert active["historical_protocols"][dnpe_common.CAMPAIGN_ID] == "closed_bounded_negative"
+    assert registry["protocol_version"] == active["active_protocol"]
 
 
 def test_overlap_audit_rejects_duplicate_source_fingerprint() -> None:

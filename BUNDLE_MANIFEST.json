@@ -1,77 +1,81 @@
 {
-  "bundle_name": "diffusion_native_parametric_editor_goal_bundle",
-  "active_protocol": "diffusion_native_causal_partial_state_editor_v1",
-  "file_count": 14,
-  "files": [
+  "bundle": "partial_state_temporal_residual_editor_goal",
+  "protocol_version": "partial_state_temporal_residual_editor_v1",
+  "created_files": [
     {
       "name": "ACTIVE_RESEARCH_CAMPAIGN.json",
-      "size_bytes": 1944,
-      "sha256": "0441e2cfac73260304d8c5caf53d39f13d7ddad2d16a946747d431b00d8f3196"
+      "size_bytes": 1352,
+      "sha256": "87220ca78c97d69feccc80ba7ae11ab682cb93c2bddc9421bc4ff924ead9a307"
     },
     {
       "name": "AGENTS.md",
-      "size_bytes": 21489,
-      "sha256": "6e63611407ec6bf064d13f58a64c25a982380f985573dce07eb1c1af63eaf33e"
+      "size_bytes": 10991,
+      "sha256": "a40c2795054b5a41eeabc1447849d53db9714600862807cbfbc604fc6116a87f"
     },
     {
-      "name": "CAUSAL_LOCALIZATION_PLAN.md",
-      "size_bytes": 5198,
-      "sha256": "c1e125296e1b91021692b7432d50190140dfdca8a84729a5074c9ea40c9e59da"
-    },
-    {
-      "name": "DIFFUSION_NATIVE_PARAMETRIC_EDITOR_AUTONOMOUS_PLAN.md",
-      "size_bytes": 20671,
-      "sha256": "e3ca53d87801e325b46f74f6b696869dae6ee8e911c2b9e4a3270ac1554559f2"
+      "name": "COUNTERFACT_TEMPORAL_RESIDUAL_ADAPTATION_PLAN.md",
+      "size_bytes": 2244,
+      "sha256": "f8088fe317e69e2b40a49e6b86489a36fc90e233b9068b8360ddf40c2658e56d"
     },
     {
       "name": "EXPERIMENT_PROTOCOL_REGISTRY.json",
-      "size_bytes": 2769,
-      "sha256": "689ab19a2156358acdbf303e8def341b839a634c447484bd0e442b2f527f7961"
+      "size_bytes": 2436,
+      "sha256": "2c5d82a3d70ad637df69624db78d31e21082f201442868f11b9a35423e774502"
     },
     {
       "name": "LOCKED_CONFIRMATION_PLAN.md",
-      "size_bytes": 3755,
-      "sha256": "437e266842910f59f78f9fb9b326bba9b61fdf3d7d89e776aa881c352a6233de"
+      "size_bytes": 1598,
+      "sha256": "df601210e6fd2afadab31bd89f615ef318bfa610d1a3363eba1e9fa8fb525000"
     },
     {
       "name": "MAIN_EDITOR_AND_BASELINES_PLAN.md",
-      "size_bytes": 3371,
-      "sha256": "7370281c6348f2a03e20d715ad7e6121c735d6bb1e0a3feff45c8e66719a1e26"
-    },
-    {
-      "name": "NULL_SPACE_LOCALITY_PLAN.md",
-      "size_bytes": 3067,
-      "sha256": "c71977d4b395de754562205e3ad23a0547430e94ee69e37524add11747e2b205"
+      "size_bytes": 2296,
+      "sha256": "ec9d333cf90f3c1491187ff90ca17e76d00dada3ab1675b77347ba835df896ae"
     },
     {
       "name": "PAPER_REPRODUCIBILITY_PLAN.md",
-      "size_bytes": 3126,
-      "sha256": "ab804a907d8c234c6e6713fb7ee487a651eeed24c3f3d8d3e6421eae8fd9c474"
+      "size_bytes": 1656,
+      "sha256": "fdf4c33a6added7adc45a754d45cf8c66021a7ab5ecb1bcd95f67c15d5d224e4"
     },
     {
-      "name": "PARTIAL_STATE_TARGET_OPTIMIZATION_PLAN.md",
-      "size_bytes": 3406,
-      "sha256": "2cbf3ef13be14eb7f2611314ab36ed5649c5ceffbc35e575e7a1225dd9a415f8"
+      "name": "PARTIAL_STATE_TARGET_DELTA_PLAN.md",
+      "size_bytes": 2311,
+      "sha256": "ff7c8a145adad58a42c9a023e3d6c1d49de967b842aa33caa18823951875fdec"
+    },
+    {
+      "name": "PARTIAL_STATE_TEMPORAL_RESIDUAL_EDITOR_AUTONOMOUS_PLAN.md",
+      "size_bytes": 7316,
+      "sha256": "5a2185a69feb7feabf3a5e2215dcdfce44940ea06aecb33879f4c9f81aa0b76d"
     },
     {
       "name": "PRIMARY_SOURCES.md",
-      "size_bytes": 2344,
-      "sha256": "e482efa19679ed8e7c31eaa160e4fec1b8294ddf418b5d4940eb9bff33953a9a"
+      "size_bytes": 1720,
+      "sha256": "0b02981743741421c6aa2797d08fbe5838af7840132f6ec6600354507e42a8e1"
     },
     {
       "name": "README.md",
-      "size_bytes": 1958,
-      "sha256": "1b9effd75c606a2739639fad6d2ae406ffe30af4f777ceaee0c95e02964197a1"
+      "size_bytes": 1652,
+      "sha256": "38d788b8a907e67e28af05ad068a0553bd16e7f074c0da127b28b29e9bd43d5c"
     },
     {
       "name": "SECOND_BACKBONE_AND_SCALING_PLAN.md",
-      "size_bytes": 2614,
-      "sha256": "7847096e50708f576e602df7cb488e02c06ab7fe965e715047ff22f6d4cbc080"
+      "size_bytes": 1160,
+      "sha256": "42f08caa53122e4deb903d056eb5551aa78e5fe81c3964cfba9b75647f949cbe"
     },
     {
-      "name": "START_DIFFUSION_NATIVE_PARAMETRIC_EDITOR_GOAL.md",
-      "size_bytes": 2299,
-      "sha256": "bfc1db3d79da09db20d2675479916e2a1a7b54877dac78996f9938ed324c57c4"
+      "name": "START_PARTIAL_STATE_TEMPORAL_RESIDUAL_EDITOR_GOAL.md",
+      "size_bytes": 1834,
+      "sha256": "51b6393c5205ee55f95f9c8b308be512d33882601a0e7f1e98e5f647072a71fd"
+    },
+    {
+      "name": "STATE_CONDITIONED_LOCALITY_PLAN.md",
+      "size_bytes": 2368,
+      "sha256": "55c0b97e5dd7650719208be5bcf254b8b5d2d1530b2d8d28471fe9e5238a17a5"
+    },
+    {
+      "name": "TIMEROME_REPRODUCTION_PLAN.md",
+      "size_bytes": 2187,
+      "sha256": "05fac106d4cbfbc829bdb550d974a02948048b2049c3911ffa727f17cfc5649b"
     }
   ]
 }

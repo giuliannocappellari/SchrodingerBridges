@@ -1,181 +1,86 @@
-# Locked Confirmation Plan
-
-Protocol: `diffusion_native_causal_partial_state_editor_v1`
+# F2 — Fresh Locked Confirmation
 
 ## Purpose
 
-Prevent development-set overfitting and establish whether a selected diffusion-native parametric editor retains efficacy/locality on untouched data.
+Confirm the selected positive claim on new untouched data after all method and threshold choices are frozen.
 
-## Stage L0 — Dev selection lock
-
-Before any locked evaluation, write:
+## Fresh locked sets
 
 ```text
-runs/diffusion_native_causal_partial_state_editor_v1/dev_method_lock.json
+cf_trm_locked_500
+kamel_trm_locked_200_per_length for lengths 2,3,4
+same-subject locked stress set
+near/far locked locality set
 ```
 
-Required fields:
+All facts and prompt fingerprints must be disjoint from localization, smoke, pilot, and dev sets.
+
+## Lock file
+
+Before opening locked data, write:
 
 ```text
-protocol version
-Git commit
-model and tokenizer revisions
-edited layer window
-edited token position/site policy
-causal tracing configuration
-partial-state state-bank policy
-positive/preservation manifest hashes
-target-value objective and hyperparameters
-null-space basis construction
-protected variance and ridge
-update rank and layer allocation
-optional state-conditioned residual policy
-sampling schedule and steps
-random seeds
-normalization and metrics
-selected baselines
-report-script hashes
+runs/partial_state_temporal_residual_editor_v1/dev_method_lock.json
 ```
 
-The lock must explicitly state:
+It must include:
 
 ```text
-no further tuning planned
-analysis_500_allowed = true
-final_test_500_allowed = false
+method ID
+site policy
+coordinate/layer selection
+residual-memory formula
+state buckets
+alpha/lambda/q
+protection policy
+relation clusters if used
+model/tokenizer hashes
+split hashes
+metrics
+claim class
+bootstrap procedure
+code commit
 ```
 
-Only then set:
+No changes after locked inspection.
 
-```bash
-export DEV_METHOD_LOCKED=1
-```
+## Confirmation by claim class
 
-## Stage L1 — KAMEL locked multi-token confirmation
-
-Run the frozen candidate on untouched target-length-specific KAMEL sets:
+### Full editor
 
 ```text
-dnpe_kamel_locked_2
-dnpe_kamel_locked_3
-dnpe_kamel_locked_4
+rewrite >= 0.85
+paraphrase >= 0.40
+same-subject TFPR <= base + 0.03
+near/far TFPR <= base + 0.03
+malformed <= 0.05
 ```
 
-Methods:
+### Pareto locality
 
 ```text
-fullmask MDM-MEMIT
-partial-state MDM-MEMIT
-AlphaEdit-style MDM-MEMIT
-causal partial-state editor
-causal partial-state null-space editor
-state-conditioned rescue if it was preselected
+rewrite and paraphrase within 0.02 of baseline
+same-subject TFPR reduction >= 25%
+paired 95% CI for delta below 0
+near/far no material worsening
 ```
 
-Primary criteria:
+### Diffusion-specific
 
 ```text
-full-span exact gain over fullmask baseline >=0.10 on at least two lengths
-or positive pooled paired delta with lower CI >0
-same-subject/locality budgets pass
-malformed <=0.05
+pooled multi-token rewrite gain >= 0.10 on at least two lengths
+paired pooled lower bound > 0
+malformed <= 0.05
 ```
 
-No tuning on locked KAMEL results.
-
-## Stage L2 — analysis_500
-
-Run the frozen selected candidate and required baselines once.
-
-### Pass criteria
+### State-conditioning
 
 ```text
-rewrite >=80% of dev rewrite
-paraphrase >=80% of dev paraphrase
-same-subject TFPR <= base +0.03
-near/far TFPR <= base +0.03
-malformed <=0.05
-locality advantage over strongest baseline remains in the same direction
-paired bootstrap preserves the central qualitative claim
+same-subject TFPR reduction >= 20% vs shared residual
+at matched efficacy
+paired evidence positive
 ```
 
-If analysis fails:
+## Failure
 
-```text
-mark protocol failed
-write formal negative package
-do not tune on analysis
-do not open final_test_500
-```
-
-If analysis passes, write:
-
-```text
-runs/diffusion_native_causal_partial_state_editor_v1/analysis_confirmation_lock.json
-```
-
-and set:
-
-```bash
-export FINAL_METHOD_LOCKED=1
-```
-
-## Stage L3 — final_test_500
-
-Run exactly once.
-
-Required methods:
-
-```text
-base
-MDM-MEMIT
-partial-state MDM-MEMIT
-AlphaEdit-style MDM-MEMIT
-TimeROME-DLM-style residual memory
-selected main editor
-one precommitted causal/null-space ablation
-```
-
-Required metrics:
-
-```text
-rewrite
-paraphrase
-target F1
-old-target suppression
-same-subject TFPR
-near/far locality
-locality exact/self-normalized locality
-distributional KL/JS
-malformed
-update rank/norm
-edit time
-inference time
-sequential/batch diagnostics where precommitted
-paired bootstrap by edit_id
-```
-
-A rerun is allowed only for a documented infrastructure failure before result inspection.
-
-## Statistical protocol
-
-```text
-paired bootstrap by edit_id
-10,000 resamples for primary final comparisons
-95% confidence intervals
-report micro and macro-by-relation metrics
-Holm correction if multiple primary comparisons are declared
-```
-
-## Strong confirmation
-
-A strong result requires:
-
-```text
-main editor meets efficacy floors
-same-subject and near/far budgets pass
-locality improvement over strongest baseline has positive paired evidence
-partial-state/causal mechanism evidence survives
-```
-
-A narrower locality result may be claimed if efficacy is within 0.05 of baseline and locality improvement is robust.
+A locked failure is terminal for v1. Do not tune on locked data or create v2 automatically.

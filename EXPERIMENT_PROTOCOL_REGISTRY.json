@@ -1,85 +1,105 @@
 {
-  "protocol_version": "diffusion_native_causal_partial_state_editor_v1",
-  "campaign_name": "Diffusion-Native Causal Partial-State Parametric Editing",
-  "research_question": "Can a diffusion-native parametric editor preserve locality by optimizing updates over causal internal representations and partial denoising states?",
-  "primary_method_id": "causal_partial_state_nullspace_memit",
-  "required_method_families": [
-    "base",
-    "prompt_memory",
-    "target_logit_bias",
-    "mdm_memit",
-    "partial_state_mdm_memit",
-    "mdm_memit_target_value_kl",
-    "alphaedit_style_mdm_memit",
-    "timerome_dlm_style_residual_memory",
-    "random_site_partial_state_editor",
-    "fixed_site_partial_state_editor",
-    "causal_site_fullmask_editor",
-    "causal_site_partial_state_editor",
-    "causal_partial_state_nullspace_memit",
-    "state_conditioned_lowrank_residual_rescue"
+  "protocol_version": "partial_state_temporal_residual_editor_v1",
+  "research_question": "Can temporal residual editing optimized across partial denoising states and protected by state-conditioned locality constraints improve factual-editing locality at matched efficacy?",
+  "primary_method": "partial_state_state_conditioned_timerome",
+  "primary_model": "GSAI-ML/LLaDA-8B-Instruct",
+  "datasets": [
+    "CounterFact",
+    "KAMEL",
+    "TOFU/source reproduction when available"
   ],
-  "required_datasets": {
-    "counterfact": "single-token and standard edit evaluation",
-    "kamel_multitoken": "controlled target lengths 2, 3, and 4; optional length 5"
-  },
-  "primary_models": [
-    "GSAI-ML/LLaDA-8B-Instruct",
-    "Dream-v0-Instruct-7B"
-  ],
-  "canonical_split_roles": [
-    "dnpe_smoke_20",
-    "dnpe_pilot_100",
-    "dnpe_dev_200",
-    "dnpe_kamel_dev_2",
-    "dnpe_kamel_dev_3",
-    "dnpe_kamel_dev_4",
-    "dnpe_kamel_locked_2",
-    "dnpe_kamel_locked_3",
-    "dnpe_kamel_locked_4",
-    "analysis_500",
-    "final_test_500"
-  ],
-  "primary_metrics": [
-    "rewrite_exact",
-    "declarative_paraphrase_exact",
-    "target_token_f1",
-    "old_target_suppression",
-    "same_subject_tfpr",
-    "near_locality_tfpr",
-    "far_locality_tfpr",
-    "locality_exact",
-    "distributional_locality_kl_js",
-    "malformed_rate",
-    "update_frobenius_norm",
-    "update_rank",
-    "edited_parameter_count",
-    "edit_gpu_minutes",
-    "inference_gpu_minutes",
-    "model_evals_per_edit",
-    "normalized_aie",
-    "temporal_indirect_effect",
-    "partial_state_full_span_exact"
-  ],
-  "required_lock_files": {
-    "analysis": "runs/diffusion_native_causal_partial_state_editor_v1/dev_method_lock.json",
-    "final": "runs/diffusion_native_causal_partial_state_editor_v1/analysis_confirmation_lock.json"
-  },
-  "hard_stop_rules": [
-    "no locked analysis/final access before lock",
-    "no train/eval prompt overlap",
-    "no threshold lowering after results",
-    "no unplanned grid expansion",
-    "no quantized closed-form weight update",
-    "no teacher/outcome feature leakage"
+  "stages": [
+    {
+      "id": "A0",
+      "name": "bootstrap_and_source_audit",
+      "mandatory": true
+    },
+    {
+      "id": "B0",
+      "name": "fresh_protocol_manifests",
+      "mandatory": true
+    },
+    {
+      "id": "B1",
+      "name": "timerome_source_reproduction",
+      "mandatory": true
+    },
+    {
+      "id": "C1",
+      "name": "counterfact_temporal_localization",
+      "mandatory": true
+    },
+    {
+      "id": "C2",
+      "name": "fullmask_temporal_residual_adaptation",
+      "mandatory": true
+    },
+    {
+      "id": "D1",
+      "name": "partial_state_target_delta_optimization",
+      "mandatory": true
+    },
+    {
+      "id": "D2",
+      "name": "state_conditioned_locality_protection",
+      "mandatory": true
+    },
+    {
+      "id": "E1",
+      "name": "smoke20",
+      "mandatory": true
+    },
+    {
+      "id": "E2",
+      "name": "pilot100",
+      "mandatory": true
+    },
+    {
+      "id": "E3",
+      "name": "kamel_multi_token",
+      "mandatory": true
+    },
+    {
+      "id": "F1",
+      "name": "dev200_selection",
+      "mandatory": true
+    },
+    {
+      "id": "F2",
+      "name": "fresh_locked_confirmation",
+      "mandatory": true,
+      "conditional_on_dev_pass": true
+    },
+    {
+      "id": "G1",
+      "name": "edit_scaling",
+      "mandatory": true,
+      "conditional_on_pilot_pass": true
+    },
+    {
+      "id": "G2",
+      "name": "dream_second_backbone",
+      "mandatory": true,
+      "conditional_on_primary_positive": true
+    },
+    {
+      "id": "H1",
+      "name": "final_package",
+      "mandatory": true
+    }
   ],
   "claim_classes": [
-    "strong_diffusion_native_parametric_editor",
-    "locality_preservation_improvement",
-    "partial_state_editing_improvement",
-    "causal_localization_result",
+    "full_editor_positive",
+    "pareto_locality_positive",
+    "diffusion_specific_positive",
+    "state_conditioning_positive",
     "reproduction_only",
-    "bounded_negative_result",
-    "infrastructure_blocked"
+    "diagnostic_negative",
+    "formal_bounded_negative"
+  ],
+  "forbidden_splits": [
+    "historical_analysis_500",
+    "historical_final_test_500",
+    "historical_final_test_full"
   ]
 }

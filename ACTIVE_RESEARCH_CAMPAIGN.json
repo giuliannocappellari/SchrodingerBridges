@@ -1,42 +1,28 @@
 {
-  "campaign_id": "diffusion_native_causal_partial_state_editor_v1",
-  "active_direction": "diffusion_native_parametric_editing",
-  "active_protocol": "diffusion_native_causal_partial_state_editor_v1",
-  "active_plan": "DIFFUSION_NATIVE_PARAMETRIC_EDITOR_AUTONOMOUS_PLAN.md",
+  "campaign_id": "partial_state_temporal_residual_editor_v1",
+  "active_protocol": "partial_state_temporal_residual_editor_v1",
+  "active_plan": "PARTIAL_STATE_TEMPORAL_RESIDUAL_EDITOR_AUTONOMOUS_PLAN.md",
   "execution_mode": "autonomous_goal",
   "campaign_status": "ready_to_start",
   "current_stage": "A0_bootstrap_and_source_audit",
-  "next_stage": "A1_fresh_protocol_manifests",
-  "research_question": "Can a diffusion-native parametric editor preserve locality by optimizing updates over causal internal representations and partial denoising states?",
+  "autonomous_env_var": "PS_TRM_AUTONOMOUS_MODE",
   "primary_model": "GSAI-ML/LLaDA-8B-Instruct",
-  "secondary_model": "Dream-v0-Instruct-7B",
-  "primary_method": "causal_partial_state_nullspace_memit",
+  "source_reproduction_model": "source-paper-compatible LLaDA checkpoint",
   "historical_protocols": {
     "counterfact_direction1_v1": "closed",
     "counterfact_direction2_bridge_adapter_v1": "closed_protocol_infeasible",
     "counterfact_direction3_controller_v1": "closed_bounded_negative",
     "counterfact_sb_alternatives_campaign_v1": "closed_scientific_negative",
-    "masked_diffusion_memit_sb_positive_result_v1": "closed_positive_reproduction_and_pilot",
-    "mask_pattern_sb_publication_confirmation_v1": "closed_fresh_confirmation_failed"
+    "masked_diffusion_memit_sb_positive_result_v1": "closed_mixed_positive",
+    "mask_pattern_sb_publication_confirmation_v1": "closed_fresh_confirmation_failed",
+    "diffusion_native_causal_partial_state_editor_v1": "closed_bounded_negative"
   },
-  "historical_protocols_read_only": true,
-  "monetary_budget_guard_enabled": false,
-  "cost_logging_informational_only": true,
+  "historical_analysis_final_splits_locked": true,
   "pod_policy": {
-    "start_existing_pod": true,
+    "start_once": true,
     "keep_running_between_stages": true,
-    "stop_only_after_terminal_package_or_unrecoverable_infrastructure": true,
-    "create_or_delete_pod": false
+    "monetary_budget_guard": false,
+    "stop_only_after_terminal_package_or_unrecoverable_issue": true
   },
-  "analysis_500_locked": true,
-  "final_test_500_locked": true,
-  "allow_per_stage_user_approval_requests": false,
-  "max_infrastructure_retries": 3,
-  "max_scientific_rescues_per_stage": 1,
-  "terminal_statuses": [
-    "positive_completion",
-    "formal_negative_completion",
-    "infrastructure_blocked",
-    "unsafe_data_integrity_stop"
-  ]
+  "new_protocol_required_for_scope_change": true
 }
