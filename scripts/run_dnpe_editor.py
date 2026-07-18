@@ -250,6 +250,7 @@ def main() -> None:
     parser.add_argument("--manifest", type=Path, required=True)
     parser.add_argument("--output_dir", type=Path, required=True)
     parser.add_argument("--method", required=True)
+    parser.add_argument("--campaign_id", default=CAMPAIGN_ID)
     parser.add_argument("--model_id", default=PRIMARY_MODEL_ID)
     parser.add_argument("--model_revision", default=PRIMARY_MODEL_REVISION)
     parser.add_argument("--dtype", choices=("float16", "bfloat16"), default="float16")
@@ -342,7 +343,7 @@ def main() -> None:
     write_csv(args.output_dir / "edited_per_prompt.csv", edited_rows)
     write_json(args.output_dir / "target_value_diagnostics.json", diagnostics)
     run_config = {
-        "campaign_id": CAMPAIGN_ID,
+        "campaign_id": args.campaign_id,
         "method": args.method,
         "manifest": str(args.manifest),
         "manifest_sha256": sha256_file(args.manifest),
@@ -355,6 +356,8 @@ def main() -> None:
         "memit": config.to_dict(),
         "protected_basis_dir": str(args.protected_basis_dir or ""),
         "protected_variance": args.protected_variance,
+        "covariance_dir": str(args.covariance_dir),
+        "covariance_source": "training_only_wikipedia_uncentered_mlp_key_covariance",
         "analysis_500_used": "analysis_500" in args.manifest.name,
         "final_test_used": "final_test_500" in args.manifest.name,
     }

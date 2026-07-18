@@ -122,6 +122,7 @@ def biased_results(model: Any, tokenizer: Any, tasks: Sequence[Mapping[str, Any]
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--method", choices=("prompt_memory", "target_logit_bias"), required=True)
+    parser.add_argument("--campaign_id", default=CAMPAIGN_ID)
     parser.add_argument("--manifest", type=Path, required=True)
     parser.add_argument("--output_dir", type=Path, required=True)
     parser.add_argument("--model_id", default=PRIMARY_MODEL_ID)
@@ -169,7 +170,7 @@ def main() -> None:
     write_csv(args.output_dir / "base_per_prompt.csv", base_rows)
     write_csv(args.output_dir / "edited_per_prompt.csv", edited_rows)
     config = {
-        "campaign_id": CAMPAIGN_ID,
+        "campaign_id": args.campaign_id,
         "method": args.method,
         "manifest": str(args.manifest),
         "manifest_sha256": sha256_file(args.manifest),
