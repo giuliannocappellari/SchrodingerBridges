@@ -94,3 +94,15 @@ def test_runtime_environment_is_serializable():
     assert payload["python"]
     assert "torch" in payload
     assert "cuda_available" in payload
+
+
+def test_scientific_evidence_selects_strongest_tradeoff(monkeypatch, tmp_path):
+    campaign = tmp_path / "runs" / finalizer.CAMPAIGN_ID
+    monkeypatch.setattr(finalizer, "CAMPAIGN_ROOT", campaign)
+    evidence = finalizer.scientific_evidence(
+        [
+            {"method": "weaker", "selection_score": 0.2, "rewrite_exact": 0.9},
+            {"method": "stronger", "selection_score": 0.4, "rewrite_exact": 0.7},
+        ]
+    )
+    assert evidence["strongest_pilot_tradeoff"]["method"] == "stronger"

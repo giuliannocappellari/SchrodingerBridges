@@ -482,6 +482,91 @@ def stage_reports() -> dict[str, dict[str, Any] | None]:
     return output
 
 
+def scientific_evidence(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    def load(path: Path) -> dict[str, Any]:
+        return read_json(path) if path.exists() else {}
+
+    c2_root = CAMPAIGN_ROOT / "C2_fullmask_temporal_residual_v1" / "pilot100_v1"
+    stable = load(c2_root / "stable_temporal_top1" / "report_summary.json")
+    random = load(c2_root / "random_site_top1" / "report_summary.json")
+    d1 = load(CAMPAIGN_ROOT / "D1_partial_state_target_delta_v1" / "report_summary.json")
+    d2 = load(CAMPAIGN_ROOT / "D2_state_conditioned_protection_v1" / "report_summary.json")
+    e1 = load(CAMPAIGN_ROOT / "E1_smoke20_v1" / "report_summary.json")
+    e2 = load(CAMPAIGN_ROOT / "E2_pilot100_v1" / "report_summary.json")
+    comparable = [
+        row
+        for row in rows
+        if row.get("method") not in {None, "", "base", "timerome_source_reproduction"}
+        and row.get("rewrite_exact") not in {None, ""}
+    ]
+    strongest = max(
+        comparable,
+        key=lambda row: (
+            float_or(row.get("selection_score")),
+            float_or(row.get("stress_aware_aggregate")),
+            float_or(row.get("rewrite_exact")),
+        ),
+        default={},
+    )
+    return {
+        "counterfact_fullmask_stable": {
+            key: stable.get(key)
+            for key in (
+                "rewrite_exact",
+                "declarative_paraphrase_exact",
+                "same_subject_tfpr",
+                "near_tfpr",
+                "far_tfpr",
+                "stress_aware_aggregate",
+            )
+        },
+        "counterfact_fullmask_random_control": {
+            key: random.get(key)
+            for key in (
+                "rewrite_exact",
+                "declarative_paraphrase_exact",
+                "same_subject_tfpr",
+                "near_tfpr",
+                "far_tfpr",
+                "stress_aware_aggregate",
+            )
+        },
+        "partial_state_target_delta": {
+            "selected_method": d1.get("selected_partial_method"),
+            "diffusion_specific_pass": d1.get("diffusion_specific_pass"),
+        },
+        "state_conditioned_protection": {
+            "state_conditioning_pass": d2.get("state_conditioning_pass"),
+            "relative_tfpr_reduction_vs_shared": d2.get(
+                "state_conditioned_relative_tfpr_reduction_vs_shared"
+            ),
+            "relation_rescue_status": d2.get("relation_rescue_status"),
+        },
+        "smoke": {
+            "acceptance_pass": e1.get("acceptance_pass"),
+            "selected_method_for_E2": e1.get("selected_method_for_E2"),
+        },
+        "pilot": {
+            "acceptance_pass": e2.get("acceptance_pass"),
+            "positive_classes": e2.get("positive_classes", {}),
+            "selected_candidate_methods": e2.get("selected_candidate_methods", []),
+        },
+        "strongest_pilot_tradeoff": {
+            key: strongest.get(key)
+            for key in (
+                "method",
+                "rewrite_exact",
+                "declarative_paraphrase_exact",
+                "same_subject_tfpr",
+                "near_tfpr",
+                "far_tfpr",
+                "selection_score",
+                "stress_aware_aggregate",
+            )
+        },
+    }
+
+
 def artifact_hashes(output: Path) -> list[dict[str, Any]]:
     rows = []
     for path in sorted(output.rglob("*")):
@@ -600,6 +685,7 @@ def build_package(output: Path, *, requested_outcome: str, pod_idle_verified: bo
     multi_token_plot(output / "multi_token_plot.png", multi)
     causal_heatmap(output / "causal_heatmap.png", causal)
     reports = stage_reports()
+    evidence = scientific_evidence(rows)
     availability = []
     for stage, report in reports.items():
         availability.append(
@@ -690,6 +776,7 @@ def build_package(output: Path, *, requested_outcome: str, pod_idle_verified: bo
         "terminal_reason": reason,
         "claim_classification": claim,
         "positive_classes": positive_classes,
+        "scientific_evidence": evidence,
         "stage_acceptance": {
             stage: payload.get("acceptance_pass") if payload else None
             for stage, payload in reports.items()
@@ -713,6 +800,25 @@ def build_package(output: Path, *, requested_outcome: str, pod_idle_verified: bo
         if outcome == "completed"
         else "The scientific question remains unresolved because the required pipeline did not complete."
     )
+    stable = evidence["counterfact_fullmask_stable"]
+    random = evidence["counterfact_fullmask_random_control"]
+    strongest = evidence["strongest_pilot_tradeoff"]
+    evidence_lines = (
+        f"- Stable temporal full-mask pilot: rewrite `{stable.get('rewrite_exact')}`, "
+        f"paraphrase `{stable.get('declarative_paraphrase_exact')}`, same-subject TFPR "
+        f"`{stable.get('same_subject_tfpr')}`.\n"
+        f"- Random-site control: rewrite `{random.get('rewrite_exact')}`, paraphrase "
+        f"`{random.get('declarative_paraphrase_exact')}`, same-subject TFPR "
+        f"`{random.get('same_subject_tfpr')}`.\n"
+        f"- Diffusion-specific partial-state criterion: "
+        f"`{evidence['partial_state_target_delta']['diffusion_specific_pass']}`.\n"
+        f"- State-conditioning criterion: "
+        f"`{evidence['state_conditioned_protection']['state_conditioning_pass']}`.\n"
+        f"- Strongest fixed-pilot tradeoff: `{strongest.get('method')}` with rewrite "
+        f"`{strongest.get('rewrite_exact')}`, paraphrase "
+        f"`{strongest.get('declarative_paraphrase_exact')}`, and same-subject TFPR "
+        f"`{strongest.get('same_subject_tfpr')}`.\n"
+    )
     (output / "final_research_report.md").write_text(
         "# Partial-State Temporal Residual Editor Final Report\n\n"
         f"- Terminal outcome: `{outcome}`\n"
@@ -721,6 +827,8 @@ def build_package(output: Path, *, requested_outcome: str, pod_idle_verified: bo
         "- Historical analysis/final splits opened: `false`\n\n"
         "## Stage Evidence\n\n"
         + stage_lines
+        + "\n## Key Scientific Evidence\n\n"
+        + evidence_lines
         + "\n## Interpretation\n\n"
         + interpretation
         + "\n\n## Limitations\n\n"
