@@ -12,3 +12,4 @@
 - 2026-07-18T19:56:43.794487+00:00: E1_smoke20 -> passed; acceptance=True; selected=prompt_memory; missing=[]
 - 2026-07-18T21:04:43.619266+00:00: E2_pilot100 -> failed; acceptance=False; positive_classes={'full_editor': False, 'pareto_locality': False, 'diffusion_specific_partial_state': False, 'state_conditioning': False}; candidates=[]
 - 2026-07-18T21:09:30.981428+00:00: H1_final_package -> passed; acceptance=True; Terminal formal_negative package assembled.
+- 2026-07-18T21:13:57+00:00: Pod xvxyggxtkmnny2 confirmed stopped after terminal validation; no tmux, Python campaign, or GPU job remained active.

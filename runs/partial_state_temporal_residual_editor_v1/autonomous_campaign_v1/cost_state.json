@@ -4,7 +4,10 @@
   "estimated_cost_usd": 0.9694630637607847,
   "monetary_budget_guard_enabled": false,
   "pod_hourly_rate_usd": 0.44,
+  "pod_runtime_estimated_cost_usd": 1.4896746213555558,
+  "pod_runtime_seconds": 12188.246902,
   "pod_started_at_utc": "2026-07-18T17:50:48.753098+00:00",
+  "pod_stopped_at_utc": "2026-07-18T21:13:57+00:00",
   "stage_costs": [
     {
       "estimated_cost_usd": 0.03140881262421608,
@@ -70,5 +73,5 @@
       "stage": "H1_final_package"
     }
   ],
-  "updated_at_utc": "2026-07-18T21:09:30.873525+00:00"
+  "updated_at_utc": "2026-07-18T21:13:57+00:00"
 }

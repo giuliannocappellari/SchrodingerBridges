@@ -25,7 +25,8 @@
   "historical_protocols_read_only": true,
   "last_git_commit": "280b5368505e569f29fc19c0f078aa000bff6087",
   "next_stage": null,
-  "pod_status": "stop_pending_after_terminal_validation",
+  "pod_status": "stopped_confirmed",
+  "pod_stopped_at_utc": "2026-07-18T21:13:57+00:00",
   "protocol_version": "partial_state_temporal_residual_editor_v1",
   "rescues_used": {},
   "stage_status": {
@@ -48,5 +49,5 @@
     "G2_second_backbone": "not_run_due_formal_pilot_stop",
     "H1_final_package": "passed"
   },
-  "updated_at_utc": "2026-07-18T21:09:31.314371+00:00"
+  "updated_at_utc": "2026-07-18T21:13:57+00:00"
 }
