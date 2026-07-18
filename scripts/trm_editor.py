@@ -6,6 +6,8 @@ from __future__ import annotations
 import contextlib
 import math
 from dataclasses import dataclass
+from pathlib import Path
+import time
 from typing import Any, Iterator, Mapping, Sequence
 
 import torch
@@ -74,6 +76,79 @@ def fit_factorized_residual_memory(
     return FactorizedResidualMemory(keys32, dual, residuals32, float(ridge))
 
 
+def fit_residual_memory_for_requests(
+    model: torch.nn.Module,
+    tokenizer: Any,
+    requests: Sequence[Mapping[str, Any]],
+    *,
+    layer: int,
+    ridge: float,
+    target_optimization_steps: int,
+    learning_rate: float,
+    partial_mask_schedule: str,
+    reveal_policy: str,
+    state_consistency_weight: float,
+    old_target_suppression_weight: float,
+    seed: int,
+    cache_dir: Path,
+) -> tuple[FactorizedResidualMemory, list[dict[str, Any]], float]:
+    """Fit one deployable residual memory under a frozen state policy."""
+
+    from scripts.mdm_memit_editor import (
+        MemitConfig,
+        extract_keys_and_outputs,
+        optimize_target_value,
+    )
+
+    started = time.monotonic()
+    config = MemitConfig(
+        layers=(int(layer),),
+        target_optimization_steps=int(target_optimization_steps),
+        learning_rate=float(learning_rate),
+        partial_mask_schedule=str(partial_mask_schedule),
+        reveal_policy=str(reveal_policy),
+        state_consistency_weight=float(state_consistency_weight),
+        old_target_suppression_weight=float(old_target_suppression_weight),
+        seed=int(seed),
+    )
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    targets = []
+    diagnostics = []
+    for index, request in enumerate(requests, start=1):
+        cache_path = cache_dir / f"{request['case_id']}.pt"
+        if cache_path.exists():
+            payload = torch.load(cache_path, map_location="cpu", weights_only=True)
+            target = payload["target_value"].float()
+            report = payload["diagnostics"]
+        else:
+            target, report = optimize_target_value(model, tokenizer, request, config)
+            target = target.detach().cpu()
+            torch.save({"target_value": target, "diagnostics": report}, cache_path)
+        targets.append(target)
+        diagnostics.append({"case_id": request["case_id"], **report})
+        if index % 10 == 0 or index == len(requests):
+            print(
+                f"TRM targets schedule={partial_mask_schedule}/{reveal_policy} "
+                f"layer={layer} {index}/{len(requests)}",
+                flush=True,
+            )
+    keys, current_outputs = extract_keys_and_outputs(
+        model,
+        tokenizer,
+        requests,
+        key_layer=int(layer),
+        output_layer=int(layer),
+        partial_mask_schedule=str(partial_mask_schedule),
+        reveal_policy=str(reveal_policy),
+        seed=int(seed),
+    )
+    residuals = torch.stack(targets) - current_outputs
+    memory = fit_factorized_residual_memory(
+        keys.to("cuda"), residuals.to("cuda"), ridge=float(ridge)
+    )
+    return memory, diagnostics, time.monotonic() - started
+
+
 @contextlib.contextmanager
 def install_factorized_residual_memory(
     module: torch.nn.Module,
@@ -112,6 +187,91 @@ def install_factorized_residual_memory(
     try:
         yield state
     finally:
+        before.remove()
+        after.remove()
+
+
+def state_bucket_from_counts(active_mask_count: int, span_length: int) -> str:
+    active = int(active_mask_count)
+    span = max(int(span_length), 1)
+    ratio = active / span
+    if ratio >= 2.0 / 3.0:
+        return "early"
+    if ratio >= 1.0 / 3.0:
+        return "middle"
+    return "late"
+
+
+@contextlib.contextmanager
+def install_state_bucketed_residual_memories(
+    model: torch.nn.Module,
+    module: torch.nn.Module,
+    memories: Mapping[str, FactorizedResidualMemory],
+    *,
+    mask_id: int,
+    alpha: float,
+    top_q: int,
+    shuffle_buckets: bool = False,
+) -> Iterator[dict[str, Any]]:
+    required = {"early", "middle", "late"}
+    if set(memories) != required:
+        raise ValueError("state-bucketed memory requires early/middle/late")
+    state: dict[str, Any] = {
+        "hook_calls": 0,
+        "bucket_counts": {name: 0 for name in sorted(required)},
+        "shuffle_buckets": bool(shuffle_buckets),
+    }
+    current_buckets: list[str] = []
+    previous_max_active: int | None = None
+    span_length = 1
+    input_box: list[torch.Tensor] = []
+    shuffle = {"early": "late", "middle": "early", "late": "middle"}
+
+    def model_pre_hook(
+        _module: torch.nn.Module,
+        args: tuple[Any, ...],
+        kwargs: Mapping[str, Any],
+    ) -> None:
+        nonlocal previous_max_active, span_length, current_buckets
+        input_ids = kwargs.get("input_ids")
+        if input_ids is None and args:
+            input_ids = args[0]
+        if input_ids is None:
+            raise RuntimeError("state routing requires runtime input_ids")
+        counts = (input_ids == int(mask_id)).sum(dim=1).tolist()
+        maximum = max(map(int, counts), default=0)
+        if previous_max_active is None or maximum > previous_max_active or (
+            maximum == previous_max_active and maximum <= 1
+        ):
+            span_length = max(maximum, 1)
+        previous_max_active = maximum
+        current_buckets = [state_bucket_from_counts(int(value), span_length) for value in counts]
+
+    def module_pre_hook(_module: torch.nn.Module, inputs: tuple[Any, ...]) -> None:
+        input_box.append(inputs[0])
+
+    def module_hook(_module: torch.nn.Module, _inputs: tuple[Any, ...], output: Any) -> Any:
+        if not input_box or not current_buckets:
+            raise RuntimeError("state-routed residual hook lacks runtime state")
+        inputs = input_box.pop(0)
+        hidden = output_hidden(output)
+        delta = torch.zeros_like(hidden, dtype=torch.float32)
+        for row_index, bucket in enumerate(current_buckets):
+            routed = shuffle[bucket] if shuffle_buckets else bucket
+            delta[row_index] = memories[routed].predict(
+                inputs[row_index], alpha=alpha, top_q=top_q
+            )
+            state["bucket_counts"][bucket] += 1
+        state["hook_calls"] += 1
+        return replace_output_hidden(output, hidden + delta.to(dtype=hidden.dtype))
+
+    model_handle = model.register_forward_pre_hook(model_pre_hook, with_kwargs=True)
+    before = module.register_forward_pre_hook(module_pre_hook)
+    after = module.register_forward_hook(module_hook)
+    try:
+        yield state
+    finally:
+        model_handle.remove()
         before.remove()
         after.remove()
 
