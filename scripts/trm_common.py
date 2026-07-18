@@ -243,6 +243,46 @@ def register_artifacts(stage: str, paths: Iterable[str | Path]) -> None:
     write_json(registry_path, registry)
 
 
+def record_stage_cost(
+    stage: str,
+    *,
+    runtime_seconds: float,
+    gpu_count: int = 1,
+    notes: str = "",
+) -> dict[str, Any]:
+    """Append informational RunPod cost without enforcing a budget guard."""
+
+    initialize_state()
+    path = STATE_ROOT / "cost_state.json"
+    state = read_json(path)
+    hourly_rate = _optional_float("RUNPOD_HOURLY_RATE_USD")
+    estimated_cost = (
+        float(runtime_seconds) / 3600.0 * float(gpu_count) * hourly_rate
+        if hourly_rate is not None
+        else None
+    )
+    state.setdefault("stage_costs", []).append(
+        {
+            "stage": stage,
+            "runtime_seconds": float(runtime_seconds),
+            "gpu_count": int(gpu_count),
+            "hourly_rate_usd": hourly_rate,
+            "estimated_cost_usd": estimated_cost,
+            "notes": notes,
+            "recorded_at_utc": now_utc(),
+        }
+    )
+    known_costs = [
+        float(row["estimated_cost_usd"])
+        for row in state["stage_costs"]
+        if row.get("estimated_cost_usd") is not None
+    ]
+    state["estimated_cost_usd"] = sum(known_costs)
+    state["updated_at_utc"] = now_utc()
+    write_json(path, state)
+    return state
+
+
 def record_stage(
     stage: str,
     *,
