@@ -8,6 +8,7 @@ import hashlib
 import json
 import os
 import subprocess
+from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
@@ -314,3 +315,144 @@ def historical_snapshot() -> dict[str, Any]:
             }
         )
     return {"created_at_utc": now_utc(), "historical_campaigns": rows}
+
+
+def immutable_historical_roots() -> tuple[Path, ...]:
+    return tuple(ROOT / "runs" / name for name in HISTORICAL_CAMPAIGNS)
+
+
+def is_forbidden_historical_locked_path(path: Path) -> bool:
+    lower = str(path).lower()
+    return any(name in lower for name in LOCKED_SPLIT_NAMES)
+
+
+def collect_historical_exclusions() -> dict[str, Any]:
+    """Collect exclusion identities without opening historical locked splits."""
+
+    case_ids: set[str] = set()
+    source_keys: set[str] = set()
+    source_fingerprints: set[str] = set()
+    fact_fingerprints: set[str] = set()
+    fact_target_fingerprints: set[str] = set()
+    prompt_fingerprints: set[str] = set()
+    audit: list[dict[str, Any]] = []
+    candidates: set[Path] = set()
+    for root in immutable_historical_roots():
+        if not root.exists():
+            continue
+        for pattern in ("**/protocol/**/*.jsonl", "**/protocol_v1/*.jsonl", "**/*manifest*.jsonl"):
+            candidates.update(root.glob(pattern))
+    for path in sorted(candidates):
+        if is_forbidden_historical_locked_path(path):
+            audit.append(
+                {
+                    "path": str(path.relative_to(ROOT)),
+                    "status": "skipped_locked_without_opening",
+                    "prompt_label_output_metric_fields_used": False,
+                }
+            )
+            continue
+        rows = 0
+        added = Counter()
+        try:
+            with path.open("r", encoding="utf-8") as handle:
+                for line in handle:
+                    if not line.strip():
+                        continue
+                    row = json.loads(line)
+                    rows += 1
+                    case_id = row.get("case_id") or row.get("id")
+                    if case_id is not None:
+                        before = len(case_ids)
+                        case_ids.add(str(case_id))
+                        added["case_ids"] += len(case_ids) - before
+                    split = row.get("source_split") or row.get("source_dataset_split")
+                    index = row.get("source_index")
+                    if split is not None and index is not None:
+                        before = len(source_keys)
+                        source_keys.add(f"{split}:{int(index)}")
+                        added["source_keys"] += len(source_keys) - before
+                    for field, target in (
+                        ("source_fingerprint", source_fingerprints),
+                        ("fact_fingerprint", fact_fingerprints),
+                        ("fact_target_fingerprint", fact_target_fingerprints),
+                        ("prompt_fingerprint", prompt_fingerprints),
+                    ):
+                        value = row.get(field)
+                        if value:
+                            before = len(target)
+                            target.add(str(value))
+                            added[field] += len(target) - before
+                    for field in ("rewrite_prompt", "prompt"):
+                        value = row.get(field)
+                        if value:
+                            before = len(prompt_fingerprints)
+                            prompt_fingerprints.add(stable_hash("prompt", " ".join(str(value).casefold().split())))
+                            added["derived_prompt_fingerprint"] += len(prompt_fingerprints) - before
+        except (json.JSONDecodeError, OSError, TypeError, ValueError) as exc:
+            audit.append(
+                {
+                    "path": str(path.relative_to(ROOT)),
+                    "status": "unreadable",
+                    "error": str(exc),
+                    "rows": rows,
+                }
+            )
+            continue
+        audit.append(
+            {
+                "path": str(path.relative_to(ROOT)),
+                "status": "read_exclusion_fields_only",
+                "rows": rows,
+                "case_ids_added": added["case_ids"],
+                "source_keys_added": added["source_keys"],
+                "source_fingerprints_added": added["source_fingerprint"],
+                "fact_fingerprints_added": added["fact_fingerprint"],
+                "fact_target_fingerprints_added": added["fact_target_fingerprint"],
+                "prompt_fingerprints_added": added["prompt_fingerprint"] + added["derived_prompt_fingerprint"],
+                "prompt_content_used_for_training": False,
+                "prompt_label_output_metric_fields_used": False,
+            }
+        )
+    for root in immutable_historical_roots():
+        if not root.exists():
+            continue
+        for path in sorted(root.glob("**/historical_exclusion_manifest.json")):
+            if is_forbidden_historical_locked_path(path):
+                continue
+            try:
+                payload = json.loads(path.read_text(encoding="utf-8"))
+            except (json.JSONDecodeError, OSError):
+                continue
+            imported = {}
+            for key, target in (
+                ("case_ids", case_ids),
+                ("source_keys", source_keys),
+                ("source_fingerprints", source_fingerprints),
+                ("fact_fingerprints", fact_fingerprints),
+                ("fact_target_fingerprints", fact_target_fingerprints),
+                ("prompt_fingerprints", prompt_fingerprints),
+            ):
+                values = payload.get(key, [])
+                if not isinstance(values, list):
+                    values = []
+                before = len(target)
+                target.update(map(str, values))
+                imported[key] = len(target) - before
+            audit.append(
+                {
+                    "path": str(path.relative_to(ROOT)),
+                    "status": "read_compact_exclusion_arrays_only",
+                    **{f"{key}_added": value for key, value in imported.items()},
+                    "prompt_label_output_metric_fields_used": False,
+                }
+            )
+    return {
+        "case_ids": sorted(case_ids),
+        "source_keys": sorted(source_keys),
+        "source_fingerprints": sorted(source_fingerprints),
+        "fact_fingerprints": sorted(fact_fingerprints),
+        "fact_target_fingerprints": sorted(fact_target_fingerprints),
+        "prompt_fingerprints": sorted(prompt_fingerprints),
+        "audit": audit,
+    }
