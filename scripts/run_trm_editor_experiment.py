@@ -207,22 +207,28 @@ def main() -> None:
     module = get_module(model, resolved_key_module_name(model, args.layer))
     protection_keys = {}
     protection_metadata = []
-    for bucket in ("early", "middle", "late"):
-        keys, metadata = extract_protection_keys(
-            model,
-            tokenizer,
-            records,
-            layer=args.layer,
-            state_bucket=bucket,
-            span_length=3,
-            seed=args.seed,
-        )
-        protection_keys[bucket] = keys
-        protection_metadata.extend(metadata)
+    if args.protection_mode != "none":
+        for bucket in ("early", "middle", "late"):
+            keys, metadata = extract_protection_keys(
+                model,
+                tokenizer,
+                records,
+                layer=args.layer,
+                state_bucket=bucket,
+                span_length=3,
+                seed=args.seed,
+            )
+            protection_keys[bucket] = keys
+            protection_metadata.extend(metadata)
     write_csv(args.output_dir / "protection_key_metadata.csv", protection_metadata)
-    combined = torch.cat(
-        [protection_keys[bucket] for bucket in ("early", "middle", "late")], dim=0
-    ).to("cuda")
+    combined = (
+        torch.cat(
+            [protection_keys[bucket] for bucket in ("early", "middle", "late")],
+            dim=0,
+        ).to("cuda")
+        if protection_keys
+        else None
+    )
     kl_records = records[: min(64, len(records))]
     base_anchor_logits = anchor_logits(model, tokenizer, kl_records)
     fit_runtime = 0.0
@@ -236,6 +242,7 @@ def main() -> None:
         protect = None
         strength = 0.0
         if args.protection_mode == "static":
+            assert combined is not None
             projection, basis_report = build_input_protection_basis(
                 combined,
                 explained_variance=args.protected_variance,
@@ -246,6 +253,7 @@ def main() -> None:
                 args.output_dir / "static_protection_basis.pt",
             )
         elif args.protection_mode == "shared":
+            assert combined is not None
             protect = combined
             strength = args.preservation_strength
         memory, diagnostics, fit_runtime = fit_residual_memory_for_requests(
