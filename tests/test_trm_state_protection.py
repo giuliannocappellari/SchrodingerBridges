@@ -39,3 +39,19 @@ def test_same_subject_bootstrap_pairs_by_case() -> None:
     result = paired_tfpr_bootstrap(left, right, trials=200, seed=9)
     assert result["num_cases"] == 2
     assert result["delta"] == -0.5
+
+
+def test_same_subject_bootstrap_averages_prompt_rows_within_case() -> None:
+    left = [
+        {"case_id": "a", "bucket": "same_subject", "target_new_hit": True},
+        {"case_id": "a", "bucket": "same_subject", "target_new_hit": False},
+        {"case_id": "b", "bucket": "same_subject", "target_new_hit": False},
+    ]
+    right = [
+        {"case_id": "a", "bucket": "same_subject", "target_new_hit": False},
+        {"case_id": "a", "bucket": "same_subject", "target_new_hit": False},
+        {"case_id": "b", "bucket": "same_subject", "target_new_hit": False},
+    ]
+    result = paired_tfpr_bootstrap(left, right, trials=200, seed=11)
+    assert result["num_cases"] == 2
+    assert result["delta"] == 0.25

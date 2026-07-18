@@ -10,6 +10,7 @@ import platform
 import random
 import sys
 import time
+from collections import defaultdict
 from pathlib import Path
 from typing import Any, Callable, ContextManager, Mapping, Sequence
 
@@ -115,10 +116,15 @@ def paired_tfpr_bootstrap(
     seed: int = 260718601,
 ) -> dict[str, float]:
     def index(rows: Sequence[Mapping[str, Any]]) -> dict[str, float]:
+        grouped: dict[str, list[float]] = defaultdict(list)
+        for row in rows:
+            if row.get("bucket") == "same_subject":
+                grouped[str(row["case_id"])].append(
+                    float(bool(row["target_new_hit"]))
+                )
         return {
-            str(row["case_id"]): float(bool(row["target_new_hit"]))
-            for row in rows
-            if row.get("bucket") == "same_subject"
+            case_id: sum(values) / len(values)
+            for case_id, values in grouped.items()
         }
 
     a = index(left)
@@ -475,6 +481,16 @@ def main() -> None:
         / max(sum(row["bucket"] == "same_subject" for row in base_rows), 1)
         + 0.03
     )
+    near_budget = float(
+        sum(bool(row["target_new_hit"]) for row in base_rows if row["bucket"] == "near_locality")
+        / max(sum(row["bucket"] == "near_locality" for row in base_rows), 1)
+        + 0.03
+    )
+    far_budget = float(
+        sum(bool(row["target_new_hit"]) for row in base_rows if row["bucket"] == "far_locality")
+        / max(sum(row["bucket"] == "far_locality" for row in base_rows), 1)
+        + 0.03
+    )
     state_relative_reduction = (
         (float(shared["same_subject_tfpr"]) - float(state["same_subject_tfpr"]))
         / max(float(shared["same_subject_tfpr"]), 1e-8)
@@ -511,6 +527,8 @@ def main() -> None:
             float(state["rewrite_exact"]) >= 0.85
             and float(state["declarative_paraphrase_exact"]) >= 0.40
             and float(state["same_subject_tfpr"]) <= full_budget
+            and float(state["near_tfpr"]) <= near_budget
+            and float(state["far_tfpr"]) <= far_budget
             and float(state["malformed_rate"]) <= 0.05
         ),
         "state_conditioning": state_conditioning_pass,
@@ -577,6 +595,8 @@ def main() -> None:
         "model_revision": args.model_revision,
         "selected_protection_method_for_E1": selected["method"],
         "same_subject_full_editor_budget": full_budget,
+        "near_full_editor_budget": near_budget,
+        "far_full_editor_budget": far_budget,
         "state_conditioned_relative_tfpr_reduction_vs_shared": state_relative_reduction,
         "state_conditioned_matched_efficacy": state_matched,
         "state_conditioning_pass": state_conditioning_pass,
