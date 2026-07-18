@@ -5,8 +5,11 @@ from __future__ import annotations
 
 import argparse
 import csv
+import importlib.metadata
 import json
 import math
+import os
+import platform
 import shutil
 import sys
 import time
@@ -494,6 +497,43 @@ def artifact_hashes(output: Path) -> list[dict[str, Any]]:
     return rows
 
 
+def runtime_environment() -> dict[str, Any]:
+    environment: dict[str, Any] = {
+        "python": platform.python_version(),
+        "platform": platform.platform(),
+        "runpod_pod_id": os.environ.get("RUNPOD_POD_ID"),
+        "runpod_image": os.environ.get("RUNPOD_IMAGE_NAME") or os.environ.get("RUNPOD_IMAGE"),
+    }
+    for distribution in ("torch", "transformers", "bitsandbytes", "accelerate"):
+        try:
+            environment[distribution] = importlib.metadata.version(distribution)
+        except importlib.metadata.PackageNotFoundError:
+            environment[distribution] = None
+    try:
+        import torch
+
+        environment.update(
+            {
+                "cuda_available": bool(torch.cuda.is_available()),
+                "cuda_version": torch.version.cuda,
+                "cudnn_version": torch.backends.cudnn.version(),
+                "gpu_name": (
+                    torch.cuda.get_device_name(0) if torch.cuda.is_available() else None
+                ),
+            }
+        )
+    except (ImportError, RuntimeError):
+        environment.update(
+            {
+                "cuda_available": False,
+                "cuda_version": None,
+                "cudnn_version": None,
+                "gpu_name": None,
+            }
+        )
+    return environment
+
+
 def mark_terminal_state(outcome: str) -> dict[str, Any]:
     state_path = STATE_ROOT / "campaign_state.json"
     state = read_json(state_path)
@@ -582,9 +622,21 @@ def build_package(output: Path, *, requested_outcome: str, pod_idle_verified: bo
     protocol_files = sorted(PROTOCOL_ROOT.glob("*.json*"))
     source_files = sorted(
         path
-        for path in (ROOT / "scripts").glob("*trm*.py")
+        for pattern in ("*trm*.py", "run_dnpe_editor.py", "run_dnpe_runtime_baseline.py")
+        for path in (ROOT / "scripts").glob(pattern)
         if path.is_file()
     )
+    config_files = sorted(
+        path
+        for path in CAMPAIGN_ROOT.glob("**/run_config.json")
+        if output not in path.parents
+    )
+    schema_files = sorted(
+        path
+        for path in CAMPAIGN_ROOT.glob("**/*schema*.json")
+        if output not in path.parents
+    )
+    finalizer_command = "python scripts/finalize_trm_campaign.py --pod_idle_verified 1"
     write_json(
         output / "reproducibility_manifest.json",
         {
@@ -603,11 +655,25 @@ def build_package(output: Path, *, requested_outcome: str, pod_idle_verified: bo
                 {"path": str(path.relative_to(ROOT)), "sha256": sha256_file(path)}
                 for path in source_files
             ],
+            "run_configs": [
+                {"path": str(path.relative_to(ROOT)), "sha256": sha256_file(path)}
+                for path in config_files
+            ],
+            "runtime_feature_schemas": [
+                {"path": str(path.relative_to(ROOT)), "sha256": sha256_file(path)}
+                for path in schema_files
+            ],
+            "runtime_environment": runtime_environment(),
             "bootstrap_seeds": [260718901, 260718902],
             "commands": {
                 "smoke": "python scripts/run_trm_e1_smoke.py",
                 "pilot": "python scripts/run_trm_e2_pilot.py",
-                "finalize": "python scripts/finalize_trm_campaign.py --pod_idle_verified 1",
+                "finalize": finalizer_command,
+            },
+            "artifact_commands": {
+                name: finalizer_command
+                for name in REQUIRED_PACKAGE_FILES
+                if name.endswith((".csv", ".png"))
             },
             "analysis_500_used": False,
             "final_test_used": False,

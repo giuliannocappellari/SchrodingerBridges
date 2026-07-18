@@ -87,3 +87,10 @@ def test_artifact_hashes_exclude_recursive_validator(monkeypatch, tmp_path):
     (package / "terminal_package_validation.json").write_text("{}\n", encoding="utf-8")
     rows = finalizer.artifact_hashes(package)
     assert [Path(row["path"]).name for row in rows] == ["report_summary.json"]
+
+
+def test_runtime_environment_is_serializable():
+    payload = finalizer.runtime_environment()
+    assert payload["python"]
+    assert "torch" in payload
+    assert "cuda_available" in payload
