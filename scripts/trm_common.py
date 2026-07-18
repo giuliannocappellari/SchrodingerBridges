@@ -46,6 +46,7 @@ STAGES = (
     "C2_fullmask_temporal_residual",
     "D1_partial_state_target_delta",
     "D2_state_conditioned_protection",
+    "D2_relation_conditioned_rescue",
     "E1_smoke20",
     "E2_pilot100",
     "E3_kamel_multi_token",

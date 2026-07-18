@@ -67,6 +67,34 @@ class FactorizedResidualMemory:
             "protect_row_count": int(self.protect_row_count),
         }
 
+    @classmethod
+    def from_payload(
+        cls,
+        payload: Mapping[str, Any],
+        *,
+        device: str | torch.device = "cuda",
+    ) -> "FactorizedResidualMemory":
+        basis = payload.get("input_projection_basis")
+        if basis is not None and basis.numel() == 0:
+            basis = None
+        memory = cls(
+            keys=payload["keys"].float().to(device),
+            dual=payload["dual"].float().to(device),
+            residuals=payload["residuals"].float().to(device),
+            ridge=float(payload["ridge"]),
+            input_projection_basis=(
+                basis.float().to(device) if basis is not None else None
+            ),
+            edit_row_count=int(payload.get("edit_row_count", payload["keys"].shape[0])),
+            protect_row_count=int(payload.get("protect_row_count", 0)),
+        )
+        if not all(
+            torch.isfinite(value).all()
+            for value in (memory.keys, memory.dual, memory.residuals)
+        ):
+            raise FloatingPointError("loaded residual memory contains non-finite values")
+        return memory
+
 
 def fit_factorized_residual_memory(
     keys: torch.Tensor,

@@ -231,6 +231,7 @@ def extract_protection_keys(
                 {
                     "anchor_id": record["anchor_id"],
                     "family": record["family"],
+                    "relation_id": record["relation_id"],
                     "state_bucket": state_bucket,
                     "span_length": int(span_length),
                     "revealed_positions": revealed_patterns[row_index],

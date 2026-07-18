@@ -4,6 +4,7 @@ import torch
 
 from scripts.run_trm_fullmask_baseline import frozen_policy_layers
 from scripts.trm_editor import (
+    FactorizedResidualMemory,
     fit_factorized_residual_memory,
     harmonic_mean,
     install_factorized_residual_memory,
@@ -21,6 +22,18 @@ def test_factorized_memory_matches_closed_form_ridge() -> None:
     )
     probe = torch.randn(4, 7)
     assert torch.allclose(memory.predict(probe), probe @ expected, atol=1e-5, rtol=1e-5)
+
+
+def test_factorized_memory_payload_round_trip() -> None:
+    torch.manual_seed(19)
+    memory = fit_factorized_residual_memory(
+        torch.randn(4, 6), torch.randn(4, 5), ridge=0.1
+    )
+    loaded = FactorizedResidualMemory.from_payload(memory.cpu_payload(), device="cpu")
+    probes = torch.randn(3, 6)
+    assert torch.allclose(memory.predict(probes), loaded.predict(probes))
+    assert loaded.edit_row_count == 4
+    assert loaded.protect_row_count == 0
 
 
 def test_factorized_memory_top_q_and_runtime_hook() -> None:
