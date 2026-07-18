@@ -49,7 +49,6 @@ CF_COUNTS = {
     "cf_trm_locked_500": 500,
     "cf_trm_scaling_100": 100,
     "cf_trm_anchor_train_500": 500,
-    "cf_trm_locality_pool_300": 300,
 }
 KAMEL_COUNTS = {"dev": 50, "pilot": 100, "locked": 200}
 SEED = 260718101
@@ -111,11 +110,17 @@ def _counterfact_candidates(
         if not target_ids or not true_ids or len(target_ids) > 6:
             counters["invalid_or_long_target"] += 1
             continue
-        negative_relation = min(
+        negative_relations = sorted(
             (value for value in relations if value != relation),
             key=lambda value: stable_hash(SEED, source_index, value),
-        )
-        same_subject = raw_templates[negative_relation].format(subject)
+        )[:8]
+        same_subject_candidates = [
+            {
+                "relation_id": value,
+                "prompt": raw_templates[value].format(subject),
+            }
+            for value in negative_relations
+        ]
         legal.append(
             {
                 "schema_version": 1,
@@ -146,8 +151,9 @@ def _counterfact_candidates(
                 "near_locality_prompts": list(raw.get("neighborhood_prompts") or []),
                 "attribute_prompts": list(raw.get("attribute_prompts") or []),
                 "generation_prompts": list(raw.get("generation_prompts") or []),
-                "same_subject_prompts": [same_subject],
-                "same_subject_negative_relation_id": negative_relation,
+                "same_subject_prompts": [],
+                "same_subject_prompt_candidates": same_subject_candidates,
+                "same_subject_negative_relation_id": None,
                 "same_subject_provenance": "fresh_cross_relation_template",
                 "prompt_provenance": "real_azhx_counterfact_train",
                 "train_seen": {"rewrite": True, "paraphrase": False, "locality": False},
@@ -176,24 +182,102 @@ def _select_counterfact(candidates: Sequence[dict[str, Any]]) -> dict[str, list[
             row["role_access"] = "locked_confirmation_only" if "_locked_" in role else "development"
             normalized.append(row)
         splits[role] = normalized
-    far_pool = splits["cf_trm_locality_pool_300"]
-    for role in ("cf_trm_smoke_20", "cf_trm_pilot_100", "cf_trm_dev_200", "cf_trm_locked_500"):
-        for row in splits[role]:
-            selected = sorted(
-                far_pool,
-                key=lambda candidate: stable_hash(SEED, role, row["case_id"], candidate["case_id"]),
-            )[:3]
-            row["far_locality_cases"] = [
-                {
-                    "case_id": item["case_id"],
-                    "prompt": item["rewrite_prompt"],
-                    "target": item["target_true"],
-                    "source_index": item["source_index"],
-                    "prompt_provenance": "fresh_disjoint_counterfact_pool",
-                }
-                for item in selected
-            ]
+    _sanitize_prompt_fields(splits)
+    _attach_far_locality(splits, candidates, used)
     return splits
+
+
+def _primary_prompt_fingerprints(splits: Mapping[str, Sequence[Mapping[str, Any]]]) -> set[str]:
+    fingerprints = set()
+    for rows in splits.values():
+        for row in rows:
+            fingerprints.add(prompt_fingerprint(str(row["rewrite_prompt"])))
+            fingerprints.update(prompt_fingerprint(str(value)) for value in row.get("paraphrase_prompts", []) if str(value).strip())
+    return fingerprints
+
+
+def _sanitize_prompt_fields(splits: dict[str, list[dict[str, Any]]]) -> None:
+    """Allocate every auxiliary prompt to exactly one split role."""
+
+    primary = _primary_prompt_fingerprints(splits)
+    used = set(primary)
+    priority = (
+        "cf_trm_locked_500",
+        "cf_trm_dev_200",
+        "cf_trm_pilot_100",
+        "cf_trm_smoke_20",
+        "cf_trm_scaling_100",
+        "cf_trm_localize_50",
+        "cf_trm_anchor_train_500",
+    )
+    for role in priority:
+        for row in splits[role]:
+            chosen = None
+            for candidate in row.pop("same_subject_prompt_candidates", []):
+                fingerprint = prompt_fingerprint(str(candidate["prompt"]))
+                if fingerprint not in used:
+                    chosen = candidate
+                    used.add(fingerprint)
+                    break
+            if chosen is None:
+                raise RuntimeError(f"No unique same-subject prompt for {row['case_id']}")
+            row["same_subject_prompts"] = [chosen["prompt"]]
+            row["same_subject_negative_relation_id"] = chosen["relation_id"]
+            for field in ("near_locality_prompts", "attribute_prompts", "generation_prompts"):
+                kept = []
+                for value in row.get(field, []):
+                    if not str(value).strip():
+                        continue
+                    fingerprint = prompt_fingerprint(str(value))
+                    if fingerprint in used:
+                        continue
+                    used.add(fingerprint)
+                    kept.append(value)
+                row[field] = kept
+
+
+def _attach_far_locality(
+    splits: dict[str, list[dict[str, Any]]],
+    candidates: Sequence[dict[str, Any]],
+    selected_case_ids: set[str],
+) -> None:
+    used_prompts = _all_prompt_fingerprints(splits)
+    available = [row for row in candidates if row["case_id"] not in selected_case_ids]
+    available.sort(key=lambda row: stable_hash(SEED, "far", row["case_id"]))
+    cursor = 0
+    for role in ("cf_trm_locked_500", "cf_trm_dev_200", "cf_trm_pilot_100", "cf_trm_smoke_20"):
+        for row in splits[role]:
+            while cursor < len(available):
+                candidate = available[cursor]
+                cursor += 1
+                fingerprint = prompt_fingerprint(str(candidate["rewrite_prompt"]))
+                if fingerprint in used_prompts:
+                    continue
+                used_prompts.add(fingerprint)
+                row["far_locality_cases"] = [
+                    {
+                        "case_id": candidate["case_id"],
+                        "prompt": candidate["rewrite_prompt"],
+                        "target": candidate["target_true"],
+                        "source_index": candidate["source_index"],
+                        "source_fingerprint": candidate["source_fingerprint"],
+                        "prompt_provenance": "fresh_unique_disjoint_counterfact_fact",
+                    }
+                ]
+                break
+            else:
+                raise RuntimeError("Insufficient unique far-locality candidates")
+
+
+def _all_prompt_fingerprints(splits: Mapping[str, Sequence[Mapping[str, Any]]]) -> set[str]:
+    values = set()
+    for rows in splits.values():
+        for row in rows:
+            values.add(prompt_fingerprint(str(row["rewrite_prompt"])))
+            for field in ("paraphrase_prompts", "near_locality_prompts", "attribute_prompts", "generation_prompts", "same_subject_prompts"):
+                values.update(prompt_fingerprint(str(value)) for value in row.get(field, []) if str(value).strip())
+            values.update(prompt_fingerprint(str(item["prompt"])) for item in row.get("far_locality_cases", []))
+    return values
 
 
 def _select_kamel(
@@ -242,6 +326,7 @@ def _summary(path: Path, rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         prompts.append(prompt_fingerprint(str(row["rewrite_prompt"])))
         for field in ("paraphrase_prompts", "near_locality_prompts", "attribute_prompts", "generation_prompts", "same_subject_prompts"):
             prompts.extend(prompt_fingerprint(str(value)) for value in row.get(field, []))
+        prompts.extend(prompt_fingerprint(str(item["prompt"])) for item in row.get("far_locality_cases", []))
     return {
         "path": str(path.relative_to(ROOT)),
         "sha256": sha256_file(path),
@@ -260,14 +345,21 @@ def _overlap_audit(splits: Mapping[str, Sequence[Mapping[str, Any]]]) -> list[di
     names = list(splits)
     audit = []
     for index, left_name in enumerate(names):
-        left = {str(row["source_fingerprint"]) for row in splits[left_name]}
+        left = _source_fingerprints(splits[left_name])
         for right_name in names[index + 1 :]:
-            right = {str(row["source_fingerprint"]) for row in splits[right_name]}
+            right = _source_fingerprints(splits[right_name])
             overlap = left & right
             audit.append({"left": left_name, "right": right_name, "overlap_count": len(overlap)})
             if overlap:
                 raise RuntimeError(f"Fresh protocol overlap: {left_name} vs {right_name}")
     return audit
+
+
+def _source_fingerprints(rows: Sequence[Mapping[str, Any]]) -> set[str]:
+    values = {str(row["source_fingerprint"]) for row in rows}
+    for row in rows:
+        values.update(str(item["source_fingerprint"]) for item in row.get("far_locality_cases", []))
+    return values
 
 
 def _prompt_overlap_audit(splits: Mapping[str, Sequence[Mapping[str, Any]]]) -> list[dict[str, Any]]:
@@ -278,6 +370,7 @@ def _prompt_overlap_audit(splits: Mapping[str, Sequence[Mapping[str, Any]]]) -> 
             values.add(prompt_fingerprint(str(row["rewrite_prompt"])))
             for field in ("paraphrase_prompts", "near_locality_prompts", "attribute_prompts", "generation_prompts", "same_subject_prompts"):
                 values.update(prompt_fingerprint(str(value)) for value in row.get(field, []))
+            values.update(prompt_fingerprint(str(item["prompt"])) for item in row.get("far_locality_cases", []))
         prompt_sets[name] = values
     names = list(splits)
     audit = []
