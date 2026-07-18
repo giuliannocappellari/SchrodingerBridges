@@ -22,6 +22,9 @@ class FactorizedResidualMemory:
     dual: torch.Tensor
     residuals: torch.Tensor
     ridge: float
+    input_projection_basis: torch.Tensor | None = None
+    edit_row_count: int = 0
+    protect_row_count: int = 0
 
     @property
     def rank_bound(self) -> int:
@@ -29,15 +32,17 @@ class FactorizedResidualMemory:
 
     @property
     def storage_bytes(self) -> int:
-        return int(
-            sum(
-                tensor.numel() * tensor.element_size()
-                for tensor in (self.keys, self.dual, self.residuals)
-            )
-        )
+        tensors = [self.keys, self.dual, self.residuals]
+        if self.input_projection_basis is not None:
+            tensors.append(self.input_projection_basis)
+        return int(sum(tensor.numel() * tensor.element_size() for tensor in tensors))
 
     def predict(self, inputs: torch.Tensor, *, alpha: float = 1.0, top_q: int = 0) -> torch.Tensor:
-        coefficients = inputs.float() @ self.dual.T
+        projected = inputs.float()
+        if self.input_projection_basis is not None:
+            basis = self.input_projection_basis.to(projected)
+            projected = projected - (projected @ basis) @ basis.T
+        coefficients = projected @ self.dual.T
         delta = coefficients @ self.residuals
         delta = delta * float(alpha)
         if int(top_q) > 0 and int(top_q) < delta.shape[-1]:
@@ -53,6 +58,13 @@ class FactorizedResidualMemory:
             "dual": self.dual.detach().cpu(),
             "residuals": self.residuals.detach().cpu(),
             "ridge": float(self.ridge),
+            "input_projection_basis": (
+                self.input_projection_basis.detach().cpu()
+                if self.input_projection_basis is not None
+                else torch.empty((self.keys.shape[1], 0))
+            ),
+            "edit_row_count": int(self.edit_row_count),
+            "protect_row_count": int(self.protect_row_count),
         }
 
 
@@ -61,19 +73,90 @@ def fit_factorized_residual_memory(
     residuals: torch.Tensor,
     *,
     ridge: float,
+    protect_keys: torch.Tensor | None = None,
+    preservation_strength: float = 0.0,
+    input_projection_basis: torch.Tensor | None = None,
 ) -> FactorizedResidualMemory:
     if keys.ndim != 2 or residuals.ndim != 2:
         raise ValueError("keys and residuals must be matrices")
     if keys.shape[0] != residuals.shape[0] or keys.shape[0] == 0:
         raise ValueError("keys and residuals need the same nonzero row count")
-    keys32 = keys.float()
+    if preservation_strength < 0:
+        raise ValueError("preservation_strength must be nonnegative")
+    edit_count = int(keys.shape[0])
+    projected_keys = keys.float()
+    basis = None
+    if input_projection_basis is not None:
+        basis = input_projection_basis.float().to(projected_keys)
+        if basis.ndim != 2 or basis.shape[0] != projected_keys.shape[1]:
+            raise ValueError("input projection basis has the wrong key width")
+        projected_keys = projected_keys - (projected_keys @ basis) @ basis.T
     residuals32 = residuals.float()
-    gram = keys32 @ keys32.T
+    protect_count = 0
+    if protect_keys is not None and float(preservation_strength) > 0:
+        if protect_keys.ndim != 2 or protect_keys.shape[1] != projected_keys.shape[1]:
+            raise ValueError("protect key dimensions do not match edit keys")
+        protected = protect_keys.float().to(projected_keys)
+        if basis is not None:
+            protected = protected - (protected @ basis) @ basis.T
+        protect_count = int(protected.shape[0])
+        scale = math.sqrt(float(preservation_strength))
+        projected_keys = torch.cat((projected_keys, protected * scale), dim=0)
+        residuals32 = torch.cat(
+            (
+                residuals32,
+                torch.zeros(
+                    (protect_count, residuals32.shape[1]),
+                    dtype=residuals32.dtype,
+                    device=residuals32.device,
+                ),
+            ),
+            dim=0,
+        )
+    gram = projected_keys @ projected_keys.T
     system = gram + torch.eye(gram.shape[0], device=gram.device, dtype=gram.dtype) * float(ridge)
-    dual = torch.linalg.solve(system, keys32)
-    if not all(torch.isfinite(value).all() for value in (keys32, residuals32, dual)):
+    dual = torch.linalg.solve(system, projected_keys)
+    if not all(torch.isfinite(value).all() for value in (projected_keys, residuals32, dual)):
         raise FloatingPointError("non-finite factorized residual memory")
-    return FactorizedResidualMemory(keys32, dual, residuals32, float(ridge))
+    return FactorizedResidualMemory(
+        projected_keys,
+        dual,
+        residuals32,
+        float(ridge),
+        input_projection_basis=basis,
+        edit_row_count=edit_count,
+        protect_row_count=protect_count,
+    )
+
+
+def build_input_protection_basis(
+    protect_keys: torch.Tensor,
+    *,
+    explained_variance: float = 0.95,
+    maximum_rank: int = 64,
+) -> tuple[torch.Tensor, dict[str, float | int]]:
+    if protect_keys.ndim != 2 or protect_keys.shape[0] < 2:
+        raise ValueError("protect_keys must contain at least two rows")
+    if not 0 < float(explained_variance) <= 1:
+        raise ValueError("explained_variance must be in (0, 1]")
+    centered = protect_keys.float() - protect_keys.float().mean(dim=0, keepdim=True)
+    _u, singular_values, vh = torch.linalg.svd(centered, full_matrices=False)
+    energy = singular_values.square()
+    cumulative = torch.cumsum(energy, dim=0) / energy.sum().clamp_min(1e-12)
+    rank = int(
+        torch.searchsorted(
+            cumulative,
+            torch.tensor(float(explained_variance), device=cumulative.device),
+        ).item()
+    ) + 1
+    rank = min(rank, int(maximum_rank), int(vh.shape[0]))
+    basis = vh[:rank].T.contiguous()
+    return basis, {
+        "protected_rank": rank,
+        "key_width": int(protect_keys.shape[1]),
+        "captured_variance": float(cumulative[rank - 1]),
+        "remaining_dimension": int(protect_keys.shape[1] - rank),
+    }
 
 
 def fit_residual_memory_for_requests(
@@ -91,6 +174,9 @@ def fit_residual_memory_for_requests(
     old_target_suppression_weight: float,
     seed: int,
     cache_dir: Path,
+    protect_keys: torch.Tensor | None = None,
+    preservation_strength: float = 0.0,
+    input_projection_basis: torch.Tensor | None = None,
 ) -> tuple[FactorizedResidualMemory, list[dict[str, Any]], float]:
     """Fit one deployable residual memory under a frozen state policy."""
 
@@ -144,7 +230,12 @@ def fit_residual_memory_for_requests(
     )
     residuals = torch.stack(targets) - current_outputs
     memory = fit_factorized_residual_memory(
-        keys.to("cuda"), residuals.to("cuda"), ridge=float(ridge)
+        keys.to("cuda"),
+        residuals.to("cuda"),
+        ridge=float(ridge),
+        protect_keys=protect_keys,
+        preservation_strength=float(preservation_strength),
+        input_projection_basis=input_projection_basis,
     )
     return memory, diagnostics, time.monotonic() - started
 
