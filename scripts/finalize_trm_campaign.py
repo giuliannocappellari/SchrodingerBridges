@@ -67,7 +67,9 @@ REQUIRED_PACKAGE_FILES = (
 
 TERMINAL_STAGE_STATUSES = {
     "passed",
+    "passed_component_branch",
     "failed",
+    "not_run_trigger_not_met",
     "not_run_due_formal_pilot_stop",
     "not_run_due_locked_failure",
 }
@@ -495,10 +497,21 @@ def artifact_hashes(output: Path) -> list[dict[str, Any]]:
 def mark_terminal_state(outcome: str) -> dict[str, Any]:
     state_path = STATE_ROOT / "campaign_state.json"
     state = read_json(state_path)
+    d2_path = CAMPAIGN_ROOT / "D2_state_conditioned_protection_v1" / "report_summary.json"
+    relation_rescue_triggered = bool(
+        read_json(d2_path).get("relation_rescue_triggered") if d2_path.exists() else False
+    )
     for stage in STAGES:
         if stage == "H1_final_package":
             continue
-        if state["stage_status"].get(stage) == "pending":
+        current = state["stage_status"].get(stage)
+        if (
+            stage == "D2_relation_conditioned_rescue"
+            and current in {None, "pending"}
+            and not relation_rescue_triggered
+        ):
+            state["stage_status"][stage] = "not_run_trigger_not_met"
+        elif current in {None, "pending"}:
             state["stage_status"][stage] = (
                 "not_run_due_formal_pilot_stop"
                 if outcome == "formal_negative"

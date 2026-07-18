@@ -74,4 +74,6 @@ def test_terminal_finalizer_requires_idle_pod(tmp_path):
 def test_terminal_status_set_is_bounded():
     assert "pending" not in finalizer.TERMINAL_STAGE_STATUSES
     assert "running" not in finalizer.TERMINAL_STAGE_STATUSES
+    assert "passed_component_branch" in finalizer.TERMINAL_STAGE_STATUSES
+    assert "not_run_trigger_not_met" in finalizer.TERMINAL_STAGE_STATUSES
     assert "not_run_due_formal_pilot_stop" in finalizer.TERMINAL_STAGE_STATUSES
