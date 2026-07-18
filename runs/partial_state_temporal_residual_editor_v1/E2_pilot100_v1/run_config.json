@@ -1,0 +1,28 @@
+{
+  "analysis_500_used": false,
+  "architectures_frozen_before_pilot": true,
+  "campaign_id": "partial_state_temporal_residual_editor_v1",
+  "final_test_used": false,
+  "layer": 6,
+  "manifest": "/workspace/SB/runs/partial_state_temporal_residual_editor_v1/protocol_v1/cf_trm_pilot_100.jsonl",
+  "partial_mask_schedule": "cycle",
+  "required_methods": [
+    "base",
+    "prompt_memory",
+    "target_logit_bias",
+    "ordinary_mdm_memit",
+    "partial_state_mdm_memit",
+    "static_nullspace_partial_state_memit",
+    "timerome_source_reproduction",
+    "timerome_counterfact_fullmask",
+    "timerome_counterfact_partial_state",
+    "timerome_partial_state_state_bucketed",
+    "timerome_partial_state_state_protected",
+    "random_site_partial_state_residual",
+    "fixed_site_partial_state_residual"
+  ],
+  "reveal_policy": "base_confidence",
+  "selected_state_protected_top_q": 0,
+  "stage": "E2_pilot100",
+  "state_consistency_weight": 0.1
+}

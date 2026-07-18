@@ -1,0 +1,90 @@
+{
+  "acceptance_pass": true,
+  "analysis_500_used": false,
+  "campaign_id": "partial_state_temporal_residual_editor_v1",
+  "claim_classification": "formal_bounded_negative",
+  "created_at_utc": "2026-07-18T21:09:30.757285+00:00",
+  "final_test_used": false,
+  "git_commit": "280b5368505e569f29fc19c0f078aa000bff6087",
+  "historical_analysis_final_opened": false,
+  "package_validation_pass": true,
+  "pod_idle_before_shutdown": true,
+  "positive_classes": {
+    "diffusion_specific_partial_state": false,
+    "full_editor": false,
+    "pareto_locality": false,
+    "state_conditioning": false
+  },
+  "scientific_evidence": {
+    "counterfact_fullmask_random_control": {
+      "declarative_paraphrase_exact": 0.49,
+      "far_tfpr": 0.0,
+      "near_tfpr": 0.008928571428571428,
+      "rewrite_exact": 0.31,
+      "same_subject_tfpr": 0.03,
+      "stress_aware_aggregate": 0.4962808732407897
+    },
+    "counterfact_fullmask_stable": {
+      "declarative_paraphrase_exact": 0.5,
+      "far_tfpr": 0.0,
+      "near_tfpr": 0.005952380952380952,
+      "rewrite_exact": 0.82,
+      "same_subject_tfpr": 0.07,
+      "stress_aware_aggregate": 0.7418409940817967
+    },
+    "partial_state_target_delta": {
+      "diffusion_specific_pass": false,
+      "selected_method": "state_bucketed_delta"
+    },
+    "pilot": {
+      "acceptance_pass": false,
+      "positive_classes": {
+        "diffusion_specific_partial_state": false,
+        "full_editor": false,
+        "pareto_locality": false,
+        "state_conditioning": false
+      },
+      "selected_candidate_methods": []
+    },
+    "smoke": {
+      "acceptance_pass": true,
+      "selected_method_for_E2": "prompt_memory"
+    },
+    "state_conditioned_protection": {
+      "relation_rescue_status": "not_triggered",
+      "relative_tfpr_reduction_vs_shared": 0.0,
+      "state_conditioning_pass": false
+    },
+    "strongest_pilot_tradeoff": {
+      "declarative_paraphrase_exact": "0.55",
+      "far_tfpr": "0.04",
+      "method": "prompt_memory",
+      "near_tfpr": "0.2425595238095238",
+      "rewrite_exact": "0.73",
+      "same_subject_tfpr": "0.16",
+      "selection_score": "0.7163247100802854",
+      "stress_aware_aggregate": "0.7436988687732916"
+    }
+  },
+  "stage": "H1_final_package",
+  "stage_acceptance": {
+    "A0": true,
+    "A1": true,
+    "B0": null,
+    "C0": true,
+    "C1": true,
+    "C2": true,
+    "D1": true,
+    "D2": true,
+    "E1": true,
+    "E2": false,
+    "E3": null,
+    "F1": null,
+    "F2": null,
+    "F3": null,
+    "G1": null,
+    "G2": null
+  },
+  "terminal_outcome": "formal_negative",
+  "terminal_reason": "no predeclared positive claim survived the fixed pilot100 comparison"
+}

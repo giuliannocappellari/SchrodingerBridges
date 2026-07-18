@@ -1,0 +1,31 @@
+{
+  "acceptance_pass": false,
+  "analysis_500_used": false,
+  "budgets": {
+    "far_tfpr": 0.03,
+    "near_tfpr": 0.03446428571428571,
+    "same_subject_tfpr": 0.03
+  },
+  "campaign_id": "partial_state_temporal_residual_editor_v1",
+  "created_at_utc": "2026-07-18T21:04:43.437691+00:00",
+  "final_test_used": false,
+  "git_commit": "d79b6f1aa63b3f9916d4b72764829e45ed47d89b",
+  "integrity": {
+    "all_comparable_metrics_finite": true,
+    "all_runtime_inputs_deployable": true,
+    "candidate_count_at_most_three": true,
+    "complete_required_registry": true,
+    "no_analysis_or_final_used": true
+  },
+  "missing_required_methods": [],
+  "positive_classes": {
+    "diffusion_specific_partial_state": false,
+    "full_editor": false,
+    "pareto_locality": false,
+    "state_conditioning": false
+  },
+  "runtime_seconds": 3809.521549396217,
+  "selected_candidate_methods": [],
+  "stage": "E2_pilot100",
+  "strongest_efficacy_baseline": "prompt_memory"
+}

@@ -1,0 +1,61 @@
+{
+  "created_at_utc": "2026-07-18T17:50:49.053178+00:00",
+  "historical_campaigns": [
+    {
+      "access_policy": "read_only_evidence",
+      "campaign": "counterfact_direction1_v1",
+      "exists": true,
+      "file_count": 13,
+      "path": "runs/counterfact_direction1_v1",
+      "tree_sha256": "ce2660e3d5aad8e4becf2f23f35a4ee4bf7b0673879c5f5cc187bdc5cacf7c99"
+    },
+    {
+      "access_policy": "read_only_evidence",
+      "campaign": "counterfact_direction2_bridge_adapter_v1",
+      "exists": false,
+      "file_count": 0,
+      "path": "runs/counterfact_direction2_bridge_adapter_v1",
+      "tree_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "access_policy": "read_only_evidence",
+      "campaign": "counterfact_direction3_controller_v1",
+      "exists": true,
+      "file_count": 11,
+      "path": "runs/counterfact_direction3_controller_v1",
+      "tree_sha256": "6a7e18c45b43d9aea571ec961225527fe901ec420040a4588b99450b1e6c5e0e"
+    },
+    {
+      "access_policy": "read_only_evidence",
+      "campaign": "counterfact_sb_alternatives_campaign_v1",
+      "exists": false,
+      "file_count": 0,
+      "path": "runs/counterfact_sb_alternatives_campaign_v1",
+      "tree_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "access_policy": "read_only_evidence",
+      "campaign": "masked_diffusion_memit_sb_positive_result_v1",
+      "exists": false,
+      "file_count": 0,
+      "path": "runs/masked_diffusion_memit_sb_positive_result_v1",
+      "tree_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "access_policy": "read_only_evidence",
+      "campaign": "mask_pattern_sb_publication_confirmation_v1",
+      "exists": false,
+      "file_count": 0,
+      "path": "runs/mask_pattern_sb_publication_confirmation_v1",
+      "tree_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "access_policy": "read_only_evidence",
+      "campaign": "diffusion_native_causal_partial_state_editor_v1",
+      "exists": false,
+      "file_count": 0,
+      "path": "runs/diffusion_native_causal_partial_state_editor_v1",
+      "tree_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ]
+}

@@ -1,0 +1,55 @@
+{
+  "candidates": [],
+  "pareto_locality": {
+    "bootstrap": {
+      "ci_high": 0.01,
+      "ci_low": -0.16,
+      "delta": -0.08,
+      "num_cases": 100
+    },
+    "relative_same_subject_reduction": 0.5
+  },
+  "positive_classes": {
+    "diffusion_specific_partial_state": false,
+    "full_editor": false,
+    "pareto_locality": false,
+    "state_conditioning": false
+  },
+  "state_conditioning": {
+    "bootstrap": {
+      "ci_high": 0.0,
+      "ci_low": 0.0,
+      "delta": 0.0,
+      "num_cases": 100
+    },
+    "matched_efficacy": true,
+    "relative_same_subject_reduction": 0.0
+  },
+  "strongest_efficacy_baseline": {
+    "all_metrics_finite": true,
+    "analysis_500_used": false,
+    "base_locality_exact": 0.18610119047619048,
+    "clipped_self_normalized_locality": 1.0,
+    "comparable_actual_decode": true,
+    "declarative_paraphrase_exact": 0.55,
+    "far_tfpr": 0.04,
+    "final_test_used": false,
+    "generation_tfpr": 0.27364864864864863,
+    "gpu_minutes_per_edit": 0.007832923579961062,
+    "locality_exact": 0.2175595238095238,
+    "malformed_rate": 0.0,
+    "memory_storage_bytes": 0,
+    "method": "prompt_memory",
+    "near_tfpr": 0.2425595238095238,
+    "num_edits": 100,
+    "old_target_suppression": 0.84,
+    "rewrite_exact": 0.73,
+    "run": "runs/partial_state_temporal_residual_editor_v1/E2_pilot100_v1/prompt_memory",
+    "runtime_schema_present": true,
+    "same_subject_tfpr": 0.16,
+    "selection_score": 0.7163247100802854,
+    "stress_aware_aggregate": 0.7436988687732916,
+    "target_token_f1": 0.7266666666666667,
+    "utility_base_agreement": 0.2660208643815201
+  }
+}

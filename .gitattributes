@@ -1,0 +1,5 @@
+# Generated campaign CSVs are byte-for-byte research artifacts. Preserve their
+# writer-produced line endings and avoid noisy textual diffs.
+runs/partial_state_temporal_residual_editor_v1/E2_pilot100_v1/*.csv -text -diff
+runs/partial_state_temporal_residual_editor_v1/autonomous_campaign_v1/*.csv -text -diff
+runs/partial_state_temporal_residual_editor_v1/final_research_package_v1/*.csv -text -diff

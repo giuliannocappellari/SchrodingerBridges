@@ -1,0 +1,52 @@
+{
+  "analysis_500_used": false,
+  "autonomous_mode": true,
+  "campaign_id": "partial_state_temporal_residual_editor_v1",
+  "campaign_status": "formal_negative",
+  "completed_at_utc": "2026-07-18T21:09:31.322918+00:00",
+  "completed_stages": [
+    "A0_bootstrap",
+    "A1_source_audit",
+    "B0_fresh_protocol",
+    "C0_timerome_source_reproduction",
+    "C1_temporal_localization",
+    "C2_fullmask_temporal_residual",
+    "D1_partial_state_target_delta",
+    "D2_state_conditioned_protection",
+    "E1_smoke20",
+    "H1_final_package"
+  ],
+  "created_at_utc": "2026-07-18T17:50:48.730765+00:00",
+  "current_stage": "H1_final_package",
+  "failed_stages": [
+    "E2_pilot100"
+  ],
+  "final_test_used": false,
+  "historical_protocols_read_only": true,
+  "last_git_commit": "280b5368505e569f29fc19c0f078aa000bff6087",
+  "next_stage": null,
+  "pod_status": "stop_pending_after_terminal_validation",
+  "protocol_version": "partial_state_temporal_residual_editor_v1",
+  "rescues_used": {},
+  "stage_status": {
+    "A0_bootstrap": "passed",
+    "A1_source_audit": "passed",
+    "B0_fresh_protocol": "passed",
+    "C0_timerome_source_reproduction": "passed_component_branch",
+    "C1_temporal_localization": "passed",
+    "C2_fullmask_temporal_residual": "passed",
+    "D1_partial_state_target_delta": "passed",
+    "D2_relation_conditioned_rescue": "not_run_trigger_not_met",
+    "D2_state_conditioned_protection": "passed",
+    "E1_smoke20": "passed",
+    "E2_pilot100": "failed",
+    "E3_kamel_multi_token": "not_run_due_formal_pilot_stop",
+    "F1_dev200_selection": "not_run_due_formal_pilot_stop",
+    "F2_dev_lock": "not_run_due_formal_pilot_stop",
+    "F3_locked_confirmation": "not_run_due_formal_pilot_stop",
+    "G1_edit_scaling": "not_run_due_formal_pilot_stop",
+    "G2_second_backbone": "not_run_due_formal_pilot_stop",
+    "H1_final_package": "passed"
+  },
+  "updated_at_utc": "2026-07-18T21:09:31.314371+00:00"
+}

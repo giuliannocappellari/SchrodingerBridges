@@ -1,0 +1,5 @@
+ci_high,ci_low,comparison,delta,num_cases,source_table
+0.0,0.0,state_protected_minus_shared_same_subject_tfpr,0.0,100,E2_pilot100_v1/paired_bootstrap.csv
+0.01,-0.16,state_protected_minus_prompt_memory_same_subject_tfpr,-0.08,100,E2_pilot100_v1/paired_bootstrap.csv
+0.0,0.0,state_conditioned_minus_shared_same_subject_tfpr,0.0,20,D2_state_conditioned_protection_v1/paired_bootstrap.csv
+0.09333333333333334,-0.05333333333333334,state_bucketed_delta_minus_fullmask,0.02,150,D1_partial_state_target_delta_v1/paired_bootstrap.csv

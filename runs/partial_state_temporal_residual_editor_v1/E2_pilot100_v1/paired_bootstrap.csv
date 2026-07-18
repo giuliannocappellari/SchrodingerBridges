@@ -1,0 +1,3 @@
+ci_high,ci_low,comparison,delta,num_cases
+0.0,0.0,state_protected_minus_shared_same_subject_tfpr,0.0,100
+0.01,-0.16,state_protected_minus_prompt_memory_same_subject_tfpr,-0.08,100

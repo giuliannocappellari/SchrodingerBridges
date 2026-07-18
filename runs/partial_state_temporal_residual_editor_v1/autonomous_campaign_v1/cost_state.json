@@ -1,0 +1,74 @@
+{
+  "campaign_id": "partial_state_temporal_residual_editor_v1",
+  "cost_logging_informational_only": true,
+  "estimated_cost_usd": 0.9694630637607847,
+  "monetary_budget_guard_enabled": false,
+  "pod_hourly_rate_usd": 0.44,
+  "pod_started_at_utc": "2026-07-18T17:50:48.753098+00:00",
+  "stage_costs": [
+    {
+      "estimated_cost_usd": 0.03140881262421608,
+      "gpu_count": 1,
+      "hourly_rate_usd": 0.44,
+      "notes": "A40 coarse-to-fine temporal causal localization",
+      "recorded_at_utc": "2026-07-18T18:25:59.823396+00:00",
+      "runtime_seconds": 256.98119419813156,
+      "stage": "C1_temporal_localization"
+    },
+    {
+      "estimated_cost_usd": 0.07577986582229948,
+      "gpu_count": 1,
+      "hourly_rate_usd": 0.44,
+      "notes": "Full-mask temporal residual smoke20 and pilot100",
+      "recorded_at_utc": "2026-07-18T18:44:34.073753+00:00",
+      "runtime_seconds": 620.0170840006322,
+      "stage": "C2_fullmask_temporal_residual"
+    },
+    {
+      "estimated_cost_usd": 0.288417243727131,
+      "gpu_count": 1,
+      "hourly_rate_usd": 0.44,
+      "notes": "Five partial-state target-delta variants across KAMEL n2/n3/n4",
+      "recorded_at_utc": "2026-07-18T19:31:22.541435+00:00",
+      "runtime_seconds": 2359.7774486765265,
+      "stage": "D1_partial_state_target_delta"
+    },
+    {
+      "estimated_cost_usd": 0.028731057528654735,
+      "gpu_count": 1,
+      "hourly_rate_usd": 0.44,
+      "notes": "Train-only state-conditioned protection variants on CounterFact smoke20",
+      "recorded_at_utc": "2026-07-18T19:38:21.882791+00:00",
+      "runtime_seconds": 235.07228887081146,
+      "stage": "D2_state_conditioned_protection"
+    },
+    {
+      "estimated_cost_usd": 0.07951789468783471,
+      "gpu_count": 1,
+      "hourly_rate_usd": 0.44,
+      "notes": "Complete smoke20 method registry and bounded integration calibration",
+      "recorded_at_utc": "2026-07-18T19:56:43.694546+00:00",
+      "runtime_seconds": 650.6009565368295,
+      "stage": "E1_smoke20"
+    },
+    {
+      "estimated_cost_usd": 0.46560818937064874,
+      "gpu_count": 1,
+      "hourly_rate_usd": 0.44,
+      "notes": "Complete fixed pilot100 registry and claim-class selection",
+      "recorded_at_utc": "2026-07-18T21:04:43.518071+00:00",
+      "runtime_seconds": 3809.521549396217,
+      "stage": "E2_pilot100"
+    },
+    {
+      "estimated_cost_usd": 0.0,
+      "gpu_count": 0,
+      "hourly_rate_usd": 0.44,
+      "notes": "Terminal package assembly",
+      "recorded_at_utc": "2026-07-18T21:09:30.873476+00:00",
+      "runtime_seconds": 5.327218841761351,
+      "stage": "H1_final_package"
+    }
+  ],
+  "updated_at_utc": "2026-07-18T21:09:30.873525+00:00"
+}

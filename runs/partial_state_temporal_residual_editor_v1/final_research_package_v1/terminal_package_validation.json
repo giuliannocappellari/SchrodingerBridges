@@ -1,0 +1,146 @@
+{
+  "acceptance_pass": true,
+  "all_recorded_hashes_match": true,
+  "all_stage_statuses_terminal": true,
+  "artifact_hashes": [
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/final_research_package_v1/artifact_availability_manifest.json",
+      "sha256": "b5983f93eda4da4e07f58c927d75797b564c954ee4c8d0627d490b71887aecb6",
+      "size_bytes": 2571
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/final_research_package_v1/causal_heatmap.png",
+      "sha256": "aafa10dbb0d4ccb7134460df288a941f52b784c8aaf4d8973e5e4b3a34b563cc",
+      "size_bytes": 37510
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/final_research_package_v1/causal_localization_table.csv",
+      "sha256": "6c67be4bdbf355ac0f20bc171a963e18d2aa4e18f232595b444bef10ffd54225",
+      "size_bytes": 196080
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/final_research_package_v1/compute_storage_table.csv",
+      "sha256": "44e6815557515d531950aa1e8455d928e18b9bfe1d3581727aae2b255898b579",
+      "size_bytes": 2572
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/final_research_package_v1/failure_cases.csv",
+      "sha256": "f75315554c57235c33b153bbe7fda4b2bda52079667e73a85f42f13a33ac744f",
+      "size_bytes": 73460
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/final_research_package_v1/final_research_report.md",
+      "sha256": "84c3af34f691f1096d487363287a7009362b905189ff1b250d644def2781cf5d",
+      "size_bytes": 1555
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/final_research_package_v1/formal_stop_checkpoint.md",
+      "sha256": "6e4c1cfa09b3d1c99d55e2907e3b07453b9d94edd1be03f1785bbd6608aadc78",
+      "size_bytes": 234
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/final_research_package_v1/locality_table.csv",
+      "sha256": "6476c2a575f3f4b9dee7a72aa9d9058c2884e799ef0e2144c2432bf00d99097d",
+      "size_bytes": 3201
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/final_research_package_v1/main_results_table.csv",
+      "sha256": "b297beafaf1963915cc36d92a08b0a07d99a927359e65733c242e364c1bf720a",
+      "size_bytes": 5744
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/final_research_package_v1/multi_token_plot.png",
+      "sha256": "b1cc38ded933497509efd6b0c00568b7f10f8b43756e732ba404c1477826675e",
+      "size_bytes": 82651
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/final_research_package_v1/multi_token_table.csv",
+      "sha256": "0ea014dc5a81d97d0e7c610bb46d2f7f255c15108375cfcb2bff71c133d2a218",
+      "size_bytes": 418
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/final_research_package_v1/negative_result_report.md",
+      "sha256": "b49238504e1daa2542c27c4e234324540458afe8402f6a75569224d57efafaa0",
+      "size_bytes": 359
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/final_research_package_v1/next_research_recommendation.md",
+      "sha256": "83fca78aa6fb3b24abe954bbf16b4f1cf9ebbd7ce99e3aed2282fcb43dcf3ec9",
+      "size_bytes": 245
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/final_research_package_v1/paired_bootstrap.csv",
+      "sha256": "51e9f5a72c8d3f5078f2c4a060ae13e2f98879af5a80c3fd9097ab72348a2a75",
+      "size_bytes": 530
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/final_research_package_v1/paper_claim_recommendation.md",
+      "sha256": "13b9192977483870ba237fc2e40670712e7af21abcc9a81c6e286818cb4e2f2a",
+      "size_bytes": 353
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/final_research_package_v1/relation_table.csv",
+      "sha256": "8bff48ffad89adb35b7a28efc97047a064129e00cc20dad7f377887c14024564",
+      "size_bytes": 11770
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/final_research_package_v1/report_summary.json",
+      "sha256": "eb7090103e368c7690481381ecb316a8398197121a9e4a983231bb931069cda3",
+      "size_bytes": 2664
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/final_research_package_v1/reproducibility_manifest.json",
+      "sha256": "4610137d05b3ec30bf74224376e46027e5c3e903c77fa5aa6d8d5cb80ca06acc",
+      "size_bytes": 18177
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/final_research_package_v1/rewrite_locality_pareto.png",
+      "sha256": "9a3d12af580407c2e90e612f340f1aeed6255f2d39c2a45ca2b189b0dcb0bcea",
+      "size_bytes": 59826
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/final_research_package_v1/same_subject_stress_table.csv",
+      "sha256": "6476c2a575f3f4b9dee7a72aa9d9058c2884e799ef0e2144c2432bf00d99097d",
+      "size_bytes": 3201
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/final_research_package_v1/state_bucket_ablation.csv",
+      "sha256": "bc88b66dfaa6fb2ce752a124cacd60c1882100d72b7669a9036ddcbef5df0179",
+      "size_bytes": 3174
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/final_research_package_v1/state_bucket_plot.png",
+      "sha256": "b031dc0b6b299a71be4e4870467b72f40f63eba9f9cef13425e00159ad08ec6b",
+      "size_bytes": 158616
+    }
+  ],
+  "campaign_id": "partial_state_temporal_residual_editor_v1",
+  "claim_follows_frozen_evidence": true,
+  "historical_analysis_final_unused": true,
+  "nonempty_files": true,
+  "pod_idle_before_shutdown": true,
+  "required_files": [
+    "report_summary.json",
+    "main_results_table.csv",
+    "multi_token_table.csv",
+    "same_subject_stress_table.csv",
+    "locality_table.csv",
+    "causal_localization_table.csv",
+    "state_bucket_ablation.csv",
+    "relation_table.csv",
+    "compute_storage_table.csv",
+    "paired_bootstrap.csv",
+    "rewrite_locality_pareto.png",
+    "state_bucket_plot.png",
+    "multi_token_plot.png",
+    "causal_heatmap.png",
+    "failure_cases.csv",
+    "artifact_availability_manifest.json",
+    "reproducibility_manifest.json",
+    "final_research_report.md",
+    "paper_claim_recommendation.md",
+    "terminal_package_validation.json"
+  ],
+  "required_files_present": true,
+  "self_hash_excluded_to_avoid_recursive_manifest": true
+}

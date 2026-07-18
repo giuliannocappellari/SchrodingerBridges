@@ -1,0 +1,390 @@
+{
+  "analysis_500_used": false,
+  "artifact_commands": {
+    "causal_heatmap.png": "python scripts/finalize_trm_campaign.py --pod_idle_verified 1",
+    "causal_localization_table.csv": "python scripts/finalize_trm_campaign.py --pod_idle_verified 1",
+    "compute_storage_table.csv": "python scripts/finalize_trm_campaign.py --pod_idle_verified 1",
+    "failure_cases.csv": "python scripts/finalize_trm_campaign.py --pod_idle_verified 1",
+    "locality_table.csv": "python scripts/finalize_trm_campaign.py --pod_idle_verified 1",
+    "main_results_table.csv": "python scripts/finalize_trm_campaign.py --pod_idle_verified 1",
+    "multi_token_plot.png": "python scripts/finalize_trm_campaign.py --pod_idle_verified 1",
+    "multi_token_table.csv": "python scripts/finalize_trm_campaign.py --pod_idle_verified 1",
+    "paired_bootstrap.csv": "python scripts/finalize_trm_campaign.py --pod_idle_verified 1",
+    "relation_table.csv": "python scripts/finalize_trm_campaign.py --pod_idle_verified 1",
+    "rewrite_locality_pareto.png": "python scripts/finalize_trm_campaign.py --pod_idle_verified 1",
+    "same_subject_stress_table.csv": "python scripts/finalize_trm_campaign.py --pod_idle_verified 1",
+    "state_bucket_ablation.csv": "python scripts/finalize_trm_campaign.py --pod_idle_verified 1",
+    "state_bucket_plot.png": "python scripts/finalize_trm_campaign.py --pod_idle_verified 1"
+  },
+  "bootstrap_seeds": [
+    260718901,
+    260718902
+  ],
+  "campaign_id": "partial_state_temporal_residual_editor_v1",
+  "commands": {
+    "finalize": "python scripts/finalize_trm_campaign.py --pod_idle_verified 1",
+    "pilot": "python scripts/run_trm_e2_pilot.py",
+    "smoke": "python scripts/run_trm_e1_smoke.py"
+  },
+  "final_test_used": false,
+  "git_commit": "280b5368505e569f29fc19c0f078aa000bff6087",
+  "models": [
+    {
+      "id": "GSAI-ML/LLaDA-8B-Instruct",
+      "revision": "08b83a6feb34df1a6011b80c3c00c7563e963b07",
+      "role": "primary"
+    },
+    {
+      "id": "GSAI-ML/LLaDA-8B-Base",
+      "revision": "0f2787f2d87eac5eed8a087d5ecd24277e6255b2",
+      "role": "source"
+    },
+    {
+      "id": "Dream-org/Dream-v0-Instruct-7B",
+      "revision": "05334cb9faaf763692dcf9d8737c642be2b2a6ae",
+      "role": "secondary"
+    }
+  ],
+  "protocol_artifacts": [
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/protocol_v1/cf_trm_anchor_train_500.jsonl",
+      "sha256": "299ede07f4bd0cfe809ae6f3c4f9941398782c3c99028f254bb807d6585956fb"
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/protocol_v1/cf_trm_dev_200.jsonl",
+      "sha256": "6895e205c5fc803b8174fd11dbfb198db9d2736c4d50420f9d1f189e376f8956"
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/protocol_v1/cf_trm_localize_50.jsonl",
+      "sha256": "739ed3fe61c9db201d9c6011a8f765eb80e21d947b07b0f65206121992936cd4"
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/protocol_v1/cf_trm_locked_500.jsonl",
+      "sha256": "ddeec362ad791f026d231b80951b499f13b4df6ec619a22d459ae82e3afc1f6e"
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/protocol_v1/cf_trm_pilot_100.jsonl",
+      "sha256": "30281f7b7cc23a91b32b6e68a7c69b4a8e75e043e15c00761315d66641eb980e"
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/protocol_v1/cf_trm_scaling_100.jsonl",
+      "sha256": "08124cd2162dd286400d05ad2c305bdafc0e30ac8c9564d567dc8f9a316d179c"
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/protocol_v1/cf_trm_smoke_20.jsonl",
+      "sha256": "0a5ade457088b33223afe590e56b461b1f7e40cf22080de11c8fa8af0c712365"
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/protocol_v1/historical_exclusion_manifest.json",
+      "sha256": "43d23a0ac88e43fde82c847e5f891fffa0a6f63f719d8d5f0cbfbb7ff9e599fa"
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/protocol_v1/kamel_trm_dev_50_n2.jsonl",
+      "sha256": "711da3c4b59475f37dcaf2c24be2f22f9ecc75f9aa5b0fcc61110528a866669e"
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/protocol_v1/kamel_trm_dev_50_n3.jsonl",
+      "sha256": "047bc8175eb178b1527d60431e0e6f0e7a141a122b43e9e24cf142abe0a4e2d3"
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/protocol_v1/kamel_trm_dev_50_n4.jsonl",
+      "sha256": "969f45c1c5e894070802d89cb550cdce860c103eefd2a69065b7d6d68f4a39a1"
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/protocol_v1/kamel_trm_locked_200_n2.jsonl",
+      "sha256": "c62a40ca7c4625975e42de28d83aedc63a07cd476422b31e863f5ecf324fb737"
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/protocol_v1/kamel_trm_locked_200_n3.jsonl",
+      "sha256": "836040a516dce29b0ac8665b82df9b94b8312afee05f48835604aed6508082ff"
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/protocol_v1/kamel_trm_locked_200_n4.jsonl",
+      "sha256": "6177c493b44a812b3b088dc7d41489e8064698d44605c3831c13c708d9b6c612"
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/protocol_v1/kamel_trm_pilot_100_n2.jsonl",
+      "sha256": "2ee76a3c19b2153212c2cca3a7a106a9fd2d2a3c32c160b69d4f04984ecad03d"
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/protocol_v1/kamel_trm_pilot_100_n3.jsonl",
+      "sha256": "5efff4c080cdb953e09d881efecff8dc5db9205c94753a9ad32fad4ba1fa97a6"
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/protocol_v1/kamel_trm_pilot_100_n4.jsonl",
+      "sha256": "daef5908ac38310c811e015410aa6192bd8c2a510bce2b25cc8f15f67a22dd01"
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/protocol_v1/locked_manifest_registry.json",
+      "sha256": "fd94a37eb715a6e3e75e6cf38d06ea65d8b8a8d6f8a228df39116003a2ee2d56"
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/protocol_v1/report_summary.json",
+      "sha256": "b2151b9310329e7a8e1bff39cecdf5b72089fe122cd329b95a20a6d7b9259df5"
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/protocol_v1/run_config.json",
+      "sha256": "0c24cac5d1197941d5ea404a109034c12267b928d046afffefc2be706f878e96"
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/protocol_v1/source_registry.json",
+      "sha256": "e618fcad2e82fa83dc3d37b5769b38ba0eacd5dfc93a724d48908c01fc1a4790"
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/protocol_v1/split_summary.json",
+      "sha256": "785bf3338fe7ca630aa57ebba4db69a3d3892320fd8e42eeb8cefa3321d27180"
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/protocol_v1/validation_report.json",
+      "sha256": "b1b06ffd6ee1c12c40bd4fb95273b38cb4122f7f6e504ba3b5e83d6f90145619"
+    }
+  ],
+  "run_configs": [
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/A0_bootstrap_v1/run_config.json",
+      "sha256": "e185b9df12f6e26b14e46a11b629e31fbaf1adb8ab60fa2488143c4c4a297d81"
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/A1_source_audit_v1/run_config.json",
+      "sha256": "656f70c865d920e0ab4b98afe0667a6682d8b348587905422847e15c131e1d32"
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/C1_temporal_localization_v1/run_config.json",
+      "sha256": "b47d597413170e3cd4c5fd979e92eaaf63c13c793f3696df807782b50a0995dd"
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/C2_fullmask_temporal_residual_v1/pilot100_v1/random_site_top1/run_config.json",
+      "sha256": "b7dc6abe32230d9f21515f29f2fcc143218bbd04c1e350cad530a7b6270a1c80"
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/C2_fullmask_temporal_residual_v1/pilot100_v1/stable_temporal_top1/run_config.json",
+      "sha256": "1269d0b1c22a478f201a5f86c69a3e4136db79c7637663738c10802f460ffce2"
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/C2_fullmask_temporal_residual_v1/run_config.json",
+      "sha256": "dcb876e9de7474f75cafebb3ca7696a8242dd4f09f35fff9d7ad1c73ae947e92"
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/C2_fullmask_temporal_residual_v1/smoke20_v1/random_site_top1/run_config.json",
+      "sha256": "12370810e1c54d4040bc72c09123287958f35105eabf5f2265b59b8f51c34ec1"
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/C2_fullmask_temporal_residual_v1/smoke20_v1/stable_temporal_top1/run_config.json",
+      "sha256": "ae8e559e6621c8a3bf0cf30af98b2442b34780817ff6321def8770b926dea537"
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/D1_partial_state_target_delta_v1/run_config.json",
+      "sha256": "12092c295f1cce9193b16977c79e6cf84a5707354998ce964d9c53828c9e6c0b"
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/D2_state_conditioned_protection_v1/run_config.json",
+      "sha256": "2756053264859d0d0f60dde21446bc1afbfe73be56cb06d2ae0958d2d82bb82d"
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/E1_smoke20_v1/fixed_site_partial_state_residual/run_config.json",
+      "sha256": "7be20ba35ce2c93f93ca5c212737bc824e26af193ed64e3e014d77fddad19758"
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/E1_smoke20_v1/ordinary_mdm_memit/run_config.json",
+      "sha256": "ddafdd8152548bcf324768055b864d918382030fb25d5511320bed1a4eefcd54"
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/E1_smoke20_v1/partial_state_mdm_memit/run_config.json",
+      "sha256": "cb182b8c3eb0889eefcd4921c806e7af923d0acfb7e40893954bd77ed932f88c"
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/E1_smoke20_v1/prompt_memory/run_config.json",
+      "sha256": "7e8b52ab8cc48e070d9ae031a47759d064dad6b32d5eb800d7ffd77b82473622"
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/E1_smoke20_v1/random_site_partial_state_residual/run_config.json",
+      "sha256": "034ba7fc46dbb5ba52473c9aa566a9ed10f1da71d782c7e1c085e85da2d61545"
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/E1_smoke20_v1/run_config.json",
+      "sha256": "39bb2689e4c32cab3306faf97a0d40299b0c13f94d5a3bfc2c8d17b030f6beb9"
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/E1_smoke20_v1/static_nullspace_partial_state_memit/run_config.json",
+      "sha256": "8f66018215ade844dfe459d013994379ff778b682c76756d5177997bf8bfcc4b"
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/E1_smoke20_v1/target_logit_bias/run_config.json",
+      "sha256": "88ea40b3c73b754a28940a8e2911f390914410dc7f298a1f5b18015c1c9d1ce3"
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/E1_smoke20_v1/timerome_partial_state_state_bucketed/run_config.json",
+      "sha256": "550273254e0a3e598c9c6721ccb7606ce725548bc0255821587bb603ad9ab95f"
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/E1_smoke20_v1/timerome_source_style_fullmask/run_config.json",
+      "sha256": "e7b9e462d50a9fcf245fd3bb2cffc665165afbff0635422c00c0895f708b1e04"
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/E1_smoke20_v1/train_only_covariance_layer6/run_config.json",
+      "sha256": "d917b4305d9c7e05086c9401db0b82b46fb68f44a1fe2cc16dcea03c58a8a29e"
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/E2_pilot100_v1/fixed_site_partial_state_residual/run_config.json",
+      "sha256": "e25cc81869ee23dc975d07f9d32fc6f01ec32cfda7f1181b1916e91ad612f5ec"
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/E2_pilot100_v1/ordinary_mdm_memit/run_config.json",
+      "sha256": "34dd9f6d753224581b9c31a4124e8bbaeb7a3db34acdc3eec71f06b8d95bdd6a"
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/E2_pilot100_v1/partial_state_mdm_memit/run_config.json",
+      "sha256": "7ea355da2df5440e99ac47bf9150829d1a186a762ed3e9a417d2bd86845efa4b"
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/E2_pilot100_v1/prompt_memory/run_config.json",
+      "sha256": "4aba171ce05316a7082eb6926a581a72f484bc4ed24a0b89cdc0cae3e6cabeba"
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/E2_pilot100_v1/random_site_partial_state_residual/run_config.json",
+      "sha256": "34ac57fcd629731861ec900258cef26c9c63d67815958cdf1066f89e1058504e"
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/E2_pilot100_v1/run_config.json",
+      "sha256": "ba3ee43b38f0bcd7a3beb34e74164fdfb528ab5375d9f7d725379caef2fdfe1d"
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/E2_pilot100_v1/static_nullspace_partial_state_memit/run_config.json",
+      "sha256": "58cc8be20e9ecc071e3abc9e82e506d67bdf917632e30989cad98b87107ab7d5"
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/E2_pilot100_v1/target_logit_bias/run_config.json",
+      "sha256": "4060c6f4bf000368292739d9b34d76644cbbc9513ad986050a071c344dfed8fc"
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/E2_pilot100_v1/timerome_counterfact_partial_state/run_config.json",
+      "sha256": "06cdc40a0734dd449fe866e2815ec068ec672a45766d8c928a69c0a1c30684b3"
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/E2_pilot100_v1/timerome_partial_state_state_bucketed/run_config.json",
+      "sha256": "be7d6cf9266c2815eaadfa74e148ae35869c13c86d19755fa8cf923e046e1d76"
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/E2_pilot100_v1/timerome_partial_state_state_protected/run_config.json",
+      "sha256": "62990f34a95e661f48a03c56007ae53e198eca610397896003e6a1cf273dd749"
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/E2_pilot100_v1/timerome_shared_soft_preservation/run_config.json",
+      "sha256": "cbb8c59da274386df3386da1610ff97857dba0ceb6594310f2aabfaa209fadae"
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/E2_pilot100_v1/timerome_source_style_fullmask/run_config.json",
+      "sha256": "ade3da7d40aa3ceed1a77aebd54a8ede071299550c80ee05405052b175d58925"
+    },
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/protocol_v1/run_config.json",
+      "sha256": "0c24cac5d1197941d5ea404a109034c12267b928d046afffefc2be706f878e96"
+    }
+  ],
+  "runtime_environment": {
+    "accelerate": "1.14.0",
+    "bitsandbytes": "0.49.2",
+    "cuda_available": true,
+    "cuda_version": "12.8",
+    "cudnn_version": 91002,
+    "gpu_name": "NVIDIA A40",
+    "platform": "Linux-6.8.0-57-generic-x86_64-with-glibc2.39",
+    "python": "3.12.3",
+    "runpod_image": null,
+    "runpod_pod_id": "xvxyggxtkmnny2",
+    "torch": "2.8.0+cu128",
+    "transformers": "4.46.3"
+  },
+  "runtime_feature_schemas": [
+    {
+      "path": "runs/partial_state_temporal_residual_editor_v1/C1_temporal_localization_v1/residual_memory_schema.json",
+      "sha256": "ff68b14ad2de6ea5835fc8c4bd6f20c9c10be386120be3ffe7fff7cd82140d4a"
+    }
+  ],
+  "source_scripts": [
+    {
+      "path": "scripts/audit_trm_sources.py",
+      "sha256": "e89dbdef05005a87cf866814b891af098048ecb29b3c49e91aff5e82637575ee"
+    },
+    {
+      "path": "scripts/bootstrap_trm_campaign.py",
+      "sha256": "19af991c7ec08867c6dffb24d88211d968c6001a053ccfe1891f5bf5a5076d54"
+    },
+    {
+      "path": "scripts/build_trm_covariance.py",
+      "sha256": "a96cf8b99bd52a62009e08cbb079a15ed9bad8f35dded4e3f792387abe61769c"
+    },
+    {
+      "path": "scripts/build_trm_protocol.py",
+      "sha256": "6dc06701d7ab26fe699165092235f7cb9bac40d40130a13c014dff4c7a7d201b"
+    },
+    {
+      "path": "scripts/finalize_trm_campaign.py",
+      "sha256": "40223bebfc7fed3cbaaa0dfe12d1c9a08317c54970e7a295efe266eaa999e93d"
+    },
+    {
+      "path": "scripts/run_dnpe_editor.py",
+      "sha256": "d9d2bc9126f47907acdde19a176bc453c90520a832561a19d9797d543411faad"
+    },
+    {
+      "path": "scripts/run_dnpe_runtime_baseline.py",
+      "sha256": "70829d29d22a9f784d2f7066295abc717656508b660dc64575c1e7716c4ebb73"
+    },
+    {
+      "path": "scripts/run_trm_e1_smoke.py",
+      "sha256": "a3bace1750e7a4e9d61343197340c9990b27b03a81f8a07a9c4b81eaff3518b6"
+    },
+    {
+      "path": "scripts/run_trm_e2_pilot.py",
+      "sha256": "232c1fafa14646abd4d74353768bb5a1264514ba59a69828b31ed06c18580ce1"
+    },
+    {
+      "path": "scripts/run_trm_editor_experiment.py",
+      "sha256": "79eaa2909ee7f5e90ba3d8537634589c677808bd796673075b303f67bb5d6f26"
+    },
+    {
+      "path": "scripts/run_trm_fullmask_baseline.py",
+      "sha256": "93fea83e6dac3fec4ecc897c7efb2ad76b8228da419d31195d5241a1eff47f32"
+    },
+    {
+      "path": "scripts/run_trm_partial_state_target_delta.py",
+      "sha256": "e01c5a04817a04a54c7313cd1b02ed99a4eda8b51079f243ce4adbf0cdc1fd1e"
+    },
+    {
+      "path": "scripts/run_trm_relation_conditioned_rescue.py",
+      "sha256": "dfc4533a86580cbe5f3893ca96ee7661cc25532b69fae9d1e44aa679b2d9f441"
+    },
+    {
+      "path": "scripts/run_trm_source_reproduction.py",
+      "sha256": "ddda4dfb87af0df776a30318ca229da748962dd049a5508af377c876e38aa139"
+    },
+    {
+      "path": "scripts/run_trm_state_conditioned_protection.py",
+      "sha256": "d4576e1b6e15c2a94eae9a24bd319b6f56a6ed377824f4030ce4cb5608449dc0"
+    },
+    {
+      "path": "scripts/run_trm_temporal_localization.py",
+      "sha256": "a22fcecb3dc6ca62bb8368f7fab59114046a02f3eaf2e3506826e2b0aedfd7d8"
+    },
+    {
+      "path": "scripts/trm_common.py",
+      "sha256": "15e8916291e59c27368d5f0a01b6c2538431389a9aaa7ec112aa5c62ce1090db"
+    },
+    {
+      "path": "scripts/trm_editor.py",
+      "sha256": "01ed4cc738e758e91564d7f778b4eace0529a4b026992b3b599724a673794228"
+    },
+    {
+      "path": "scripts/trm_localization.py",
+      "sha256": "6983d8cd374c92b8538290489a0b6f18c056638a5d23dd99af3b53a9babae9c6"
+    },
+    {
+      "path": "scripts/trm_protection.py",
+      "sha256": "4c7552ede7dab00bc9b1376c9b0ced07281dbbe9cb275a881f3d8d34ce3cdcf5"
+    },
+    {
+      "path": "scripts/trm_residual.py",
+      "sha256": "f1882fbc9540b5f3535f2e8854df234bd2b1b894d61886428b3acca38900db35"
+    }
+  ]
+}

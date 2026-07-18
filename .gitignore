@@ -42,6 +42,25 @@ runs/counterfact_direction3_controller_v1/direction3_autonomous_stop_checkpoint_
 !runs/counterfact_direction3_controller_v1/direction3_autonomous_stop_checkpoint_v1/*.csv
 !runs/counterfact_direction3_controller_v1/direction3_autonomous_stop_checkpoint_v1/*.md
 
+# Preserve the compact terminal record for the temporal residual campaign.
+!runs/partial_state_temporal_residual_editor_v1/
+runs/partial_state_temporal_residual_editor_v1/*
+!runs/partial_state_temporal_residual_editor_v1/autonomous_campaign_v1/
+runs/partial_state_temporal_residual_editor_v1/autonomous_campaign_v1/*
+!runs/partial_state_temporal_residual_editor_v1/autonomous_campaign_v1/*.json
+!runs/partial_state_temporal_residual_editor_v1/autonomous_campaign_v1/*.csv
+!runs/partial_state_temporal_residual_editor_v1/autonomous_campaign_v1/*.md
+!runs/partial_state_temporal_residual_editor_v1/E2_pilot100_v1/
+runs/partial_state_temporal_residual_editor_v1/E2_pilot100_v1/*
+!runs/partial_state_temporal_residual_editor_v1/E2_pilot100_v1/*.json
+!runs/partial_state_temporal_residual_editor_v1/E2_pilot100_v1/*.csv
+!runs/partial_state_temporal_residual_editor_v1/final_research_package_v1/
+runs/partial_state_temporal_residual_editor_v1/final_research_package_v1/*
+!runs/partial_state_temporal_residual_editor_v1/final_research_package_v1/*.json
+!runs/partial_state_temporal_residual_editor_v1/final_research_package_v1/*.csv
+!runs/partial_state_temporal_residual_editor_v1/final_research_package_v1/*.md
+!runs/partial_state_temporal_residual_editor_v1/final_research_package_v1/*.png
+
 # Large model/checkpoint artifacts
 *.safetensors
 *.pt

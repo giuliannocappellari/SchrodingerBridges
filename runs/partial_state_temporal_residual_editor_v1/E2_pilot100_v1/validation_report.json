@@ -1,0 +1,16 @@
+{
+  "acceptance_pass": false,
+  "integrity": {
+    "all_comparable_metrics_finite": true,
+    "all_runtime_inputs_deployable": true,
+    "candidate_count_at_most_three": true,
+    "complete_required_registry": true,
+    "no_analysis_or_final_used": true
+  },
+  "positive_classes": {
+    "diffusion_specific_partial_state": false,
+    "full_editor": false,
+    "pareto_locality": false,
+    "state_conditioning": false
+  }
+}

@@ -1,0 +1,117 @@
+{
+  "campaign_id": "partial_state_temporal_residual_editor_v1",
+  "stages": [
+    {
+      "acceptance_pass": true,
+      "analysis_500_used": false,
+      "available": true,
+      "final_test_used": false,
+      "stage": "A0"
+    },
+    {
+      "acceptance_pass": true,
+      "analysis_500_used": false,
+      "available": true,
+      "final_test_used": false,
+      "stage": "A1"
+    },
+    {
+      "acceptance_pass": null,
+      "analysis_500_used": false,
+      "available": false,
+      "final_test_used": false,
+      "stage": "B0"
+    },
+    {
+      "acceptance_pass": true,
+      "analysis_500_used": false,
+      "available": true,
+      "final_test_used": false,
+      "stage": "C0"
+    },
+    {
+      "acceptance_pass": true,
+      "analysis_500_used": false,
+      "available": true,
+      "final_test_used": false,
+      "stage": "C1"
+    },
+    {
+      "acceptance_pass": true,
+      "analysis_500_used": false,
+      "available": true,
+      "final_test_used": false,
+      "stage": "C2"
+    },
+    {
+      "acceptance_pass": true,
+      "analysis_500_used": false,
+      "available": true,
+      "final_test_used": false,
+      "stage": "D1"
+    },
+    {
+      "acceptance_pass": true,
+      "analysis_500_used": false,
+      "available": true,
+      "final_test_used": false,
+      "stage": "D2"
+    },
+    {
+      "acceptance_pass": true,
+      "analysis_500_used": false,
+      "available": true,
+      "final_test_used": false,
+      "stage": "E1"
+    },
+    {
+      "acceptance_pass": false,
+      "analysis_500_used": false,
+      "available": true,
+      "final_test_used": false,
+      "stage": "E2"
+    },
+    {
+      "acceptance_pass": null,
+      "analysis_500_used": false,
+      "available": false,
+      "final_test_used": false,
+      "stage": "E3"
+    },
+    {
+      "acceptance_pass": null,
+      "analysis_500_used": false,
+      "available": false,
+      "final_test_used": false,
+      "stage": "F1"
+    },
+    {
+      "acceptance_pass": null,
+      "analysis_500_used": false,
+      "available": false,
+      "final_test_used": false,
+      "stage": "F2"
+    },
+    {
+      "acceptance_pass": null,
+      "analysis_500_used": false,
+      "available": false,
+      "final_test_used": false,
+      "stage": "F3"
+    },
+    {
+      "acceptance_pass": null,
+      "analysis_500_used": false,
+      "available": false,
+      "final_test_used": false,
+      "stage": "G1"
+    },
+    {
+      "acceptance_pass": null,
+      "analysis_500_used": false,
+      "available": false,
+      "final_test_used": false,
+      "stage": "G2"
+    }
+  ]
+}
