@@ -338,6 +338,11 @@ def main() -> None:
     paraphrase = edited_summary.get("declarative_paraphrase", {}).get("expected_exact", 0.0)
     malformed = max((item["malformed_rate"] for item in edited_summary.values()), default=0.0)
     pre_edit_target = base_summary.get("rewrite", {}).get("target_new_tfpr_or_exact", 0.0)
+    utility_agreements = [
+        bool(row["base_agreement"])
+        for row in edited_rows
+        if row["bucket"] in {"near_locality", "far_locality", "generation", "attribute"}
+    ]
     elapsed = time.monotonic() - begin
     write_csv(args.output_dir / "base_per_prompt.csv", base_rows)
     write_csv(args.output_dir / "edited_per_prompt.csv", edited_rows)
@@ -378,7 +383,13 @@ def main() -> None:
         "near_tfpr": edited_summary.get("near_locality", {}).get("target_new_tfpr_or_exact", 0.0),
         "far_tfpr": edited_summary.get("far_locality", {}).get("target_new_tfpr_or_exact", 0.0),
         "generation_tfpr": edited_summary.get("generation", {}).get("target_new_tfpr_or_exact", 0.0),
+        "attribute_tfpr": edited_summary.get("attribute", {}).get("target_new_tfpr_or_exact", 0.0),
         "malformed_rate": malformed,
+        "utility_base_agreement": (
+            sum(utility_agreements) / len(utility_agreements)
+            if utility_agreements
+            else 1.0
+        ),
         "rollback_checksum_pass": rollback_pass,
         "runtime_seconds": elapsed,
         "gpu_minutes_per_edit": elapsed / 60.0 / len(rows),

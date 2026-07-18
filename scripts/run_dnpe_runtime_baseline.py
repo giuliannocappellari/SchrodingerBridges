@@ -166,6 +166,11 @@ def main() -> None:
     rewrite = edited_summary.get("rewrite", {}).get("expected_exact", 0.0)
     paraphrase = edited_summary.get("declarative_paraphrase", {}).get("expected_exact", 0.0)
     malformed = max((value["malformed_rate"] for value in edited_summary.values()), default=0.0)
+    utility_agreements = [
+        bool(row["base_agreement"])
+        for row in edited_rows
+        if row["bucket"] in {"near_locality", "far_locality", "generation", "attribute"}
+    ]
     runtime = time.monotonic() - begin
     write_csv(args.output_dir / "base_per_prompt.csv", base_rows)
     write_csv(args.output_dir / "edited_per_prompt.csv", edited_rows)
@@ -190,12 +195,22 @@ def main() -> None:
         "edited_summary": edited_summary,
         "rewrite_exact": rewrite,
         "declarative_paraphrase_exact": paraphrase,
+        "target_token_f1": edited_summary.get("rewrite", {}).get("target_token_f1", 0.0),
+        "old_target_suppression": 1.0 - edited_summary.get("rewrite", {}).get("target_true_exact", 0.0),
         "same_subject_tfpr": edited_summary.get("same_subject", {}).get("target_new_tfpr_or_exact", 0.0),
         "near_tfpr": edited_summary.get("near_locality", {}).get("target_new_tfpr_or_exact", 0.0),
         "far_tfpr": edited_summary.get("far_locality", {}).get("target_new_tfpr_or_exact", 0.0),
+        "generation_tfpr": edited_summary.get("generation", {}).get("target_new_tfpr_or_exact", 0.0),
+        "attribute_tfpr": edited_summary.get("attribute", {}).get("target_new_tfpr_or_exact", 0.0),
         "malformed_rate": malformed,
+        "utility_base_agreement": (
+            sum(utility_agreements) / len(utility_agreements)
+            if utility_agreements
+            else 1.0
+        ),
         "runtime_seconds": runtime,
         "gpu_minutes_per_edit": runtime / 60.0 / len(rows),
+        "model_eval_count": sum(value["model_eval_count"] for value in edited_summary.values()),
         "environment": {"python": platform.python_version(), "torch": __import__("torch").__version__, "transformers": __import__("transformers").__version__, "gpu": __import__("torch").cuda.get_device_name(0)},
         "acceptance_pass": malformed <= 0.05,
     }

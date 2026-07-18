@@ -121,6 +121,7 @@ def normalized_report_row(
         "stress_aware_aggregate": stress,
         "gpu_minutes_per_edit": float(source.get("gpu_minutes_per_edit", 0.0)),
         "memory_storage_bytes": int(source.get("memory_storage_bytes", 0)),
+        "utility_base_agreement": float(source.get("utility_base_agreement", 1.0)),
         "runtime_schema_present": bool(source.get("runtime_feature_schema", True)),
         "all_metrics_finite": all(
             math.isfinite(value)
@@ -184,6 +185,7 @@ def base_row(path: Path) -> dict[str, Any]:
         ),
         "gpu_minutes_per_edit": 0.0,
         "memory_storage_bytes": 0,
+        "utility_base_agreement": 1.0,
         "runtime_schema_present": True,
         "all_metrics_finite": True,
         "analysis_500_used": False,
@@ -492,6 +494,7 @@ def main() -> None:
             "stress_aware_aggregate": "",
             "gpu_minutes_per_edit": 0.0,
             "memory_storage_bytes": 0,
+            "utility_base_agreement": 1.0,
             "runtime_schema_present": True,
             "all_metrics_finite": bool(source_report.get("acceptance_pass")),
             "analysis_500_used": False,
