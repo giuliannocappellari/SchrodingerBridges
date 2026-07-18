@@ -28,6 +28,18 @@
   },
   "final_test_used": false,
   "git_commit": "280b5368505e569f29fc19c0f078aa000bff6087",
+  "post_generation_corrections": [
+    {
+      "corrected_files": [
+        "artifact_availability_manifest.json",
+        "final_research_report.md",
+        "report_summary.json"
+      ],
+      "generator_fix": "Read B0 from protocol_v1 rather than the nonexistent B0_fresh_protocol_v1 directory.",
+      "reason": "The initial terminal narrative incorrectly marked the completed B0 fresh-protocol stage as unavailable.",
+      "scientific_metrics_changed": false
+    }
+  ],
   "models": [
     {
       "id": "GSAI-ML/LLaDA-8B-Instruct",
@@ -320,7 +332,7 @@
     },
     {
       "path": "scripts/finalize_trm_campaign.py",
-      "sha256": "40223bebfc7fed3cbaaa0dfe12d1c9a08317c54970e7a295efe266eaa999e93d"
+      "sha256": "134d04af4f755e4d4995cdeec2c2c745d35621acb3c19174a54a8910cde892c5"
     },
     {
       "path": "scripts/run_dnpe_editor.py",

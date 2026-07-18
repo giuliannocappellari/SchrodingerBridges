@@ -70,7 +70,7 @@
   "stage_acceptance": {
     "A0": true,
     "A1": true,
-    "B0": null,
+    "B0": true,
     "C0": true,
     "C1": true,
     "C2": true,

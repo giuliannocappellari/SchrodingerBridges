@@ -460,7 +460,7 @@ def stage_reports() -> dict[str, dict[str, Any] | None]:
     mapping = {
         "A0": "A0_bootstrap_v1",
         "A1": "A1_source_audit_v1",
-        "B0": "B0_fresh_protocol_v1",
+        "B0": "protocol_v1",
         "C0": "C0_timerome_source_reproduction_v1",
         "C1": "C1_temporal_localization_v1",
         "C2": "C2_fullmask_temporal_residual_v1",

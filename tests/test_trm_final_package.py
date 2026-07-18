@@ -96,6 +96,16 @@ def test_runtime_environment_is_serializable():
     assert "cuda_available" in payload
 
 
+def test_stage_reports_reads_fresh_protocol_directory(monkeypatch, tmp_path):
+    campaign = tmp_path / "runs" / finalizer.CAMPAIGN_ID
+    protocol = campaign / "protocol_v1"
+    protocol.mkdir(parents=True)
+    finalizer.write_json(protocol / "report_summary.json", {"acceptance_pass": True})
+    monkeypatch.setattr(finalizer, "CAMPAIGN_ROOT", campaign)
+
+    assert finalizer.stage_reports()["B0"]["acceptance_pass"] is True
+
+
 def test_scientific_evidence_selects_strongest_tradeoff(monkeypatch, tmp_path):
     campaign = tmp_path / "runs" / finalizer.CAMPAIGN_ID
     monkeypatch.setattr(finalizer, "CAMPAIGN_ROOT", campaign)

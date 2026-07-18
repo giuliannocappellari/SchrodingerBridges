@@ -16,9 +16,9 @@
       "stage": "A1"
     },
     {
-      "acceptance_pass": null,
+      "acceptance_pass": true,
       "analysis_500_used": false,
-      "available": false,
+      "available": true,
       "final_test_used": false,
       "stage": "B0"
     },

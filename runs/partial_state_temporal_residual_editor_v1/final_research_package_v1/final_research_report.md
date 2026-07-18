@@ -9,7 +9,7 @@
 
 - A0: `True`
 - A1: `True`
-- B0: `not run`
+- B0: `True`
 - C0: `True`
 - C1: `True`
 - C2: `True`
