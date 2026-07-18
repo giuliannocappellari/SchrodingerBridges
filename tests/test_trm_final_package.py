@@ -77,3 +77,13 @@ def test_terminal_status_set_is_bounded():
     assert "passed_component_branch" in finalizer.TERMINAL_STAGE_STATUSES
     assert "not_run_trigger_not_met" in finalizer.TERMINAL_STAGE_STATUSES
     assert "not_run_due_formal_pilot_stop" in finalizer.TERMINAL_STAGE_STATUSES
+
+
+def test_artifact_hashes_exclude_recursive_validator(monkeypatch, tmp_path):
+    monkeypatch.setattr(finalizer, "ROOT", tmp_path)
+    package = tmp_path / "final"
+    package.mkdir()
+    (package / "report_summary.json").write_text("{}\n", encoding="utf-8")
+    (package / "terminal_package_validation.json").write_text("{}\n", encoding="utf-8")
+    rows = finalizer.artifact_hashes(package)
+    assert [Path(row["path"]).name for row in rows] == ["report_summary.json"]

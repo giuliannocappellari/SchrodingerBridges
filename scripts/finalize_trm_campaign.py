@@ -571,6 +571,10 @@ def build_package(output: Path, *, requested_outcome: str, pod_idle_verified: bo
                 "final_test_used": report.get("final_test_used", False) if report else False,
             }
         )
+    locked_evaluation_unused = not any(
+        bool(row["analysis_500_used"] or row["final_test_used"])
+        for row in availability
+    )
     write_json(
         output / "artifact_availability_manifest.json",
         {"campaign_id": CAMPAIGN_ID, "stages": availability},
@@ -626,7 +630,7 @@ def build_package(output: Path, *, requested_outcome: str, pod_idle_verified: bo
         },
         "analysis_500_used": False,
         "final_test_used": False,
-        "historical_analysis_final_opened": False,
+        "historical_analysis_final_opened": not locked_evaluation_unused,
         "pod_idle_before_shutdown": True,
         "package_validation_pass": False,
         "acceptance_pass": False,
@@ -716,30 +720,49 @@ def build_package(output: Path, *, requested_outcome: str, pod_idle_verified: bo
     all_terminal = all(
         status in TERMINAL_STAGE_STATUSES for status in state["stage_status"].values()
     )
+    confirmation = reports.get("F3")
     frozen_claim_valid = bool(
-        (outcome == "formal_negative" and not any(bool(value) for value in positive_classes.values()))
+        (
+            outcome == "formal_negative"
+            and (
+                not any(bool(value) for value in positive_classes.values())
+                or (confirmation is not None and not confirmation.get("acceptance_pass"))
+            )
+        )
         or outcome in {"completed", "infrastructure_blocked"}
     )
     present = all((output / name).is_file() for name in REQUIRED_PACKAGE_FILES)
     nonempty = present and all((output / name).stat().st_size > 0 for name in REQUIRED_PACKAGE_FILES)
-    package_pass = bool(present and nonempty and all_terminal and frozen_claim_valid)
+    package_pass = bool(
+        present
+        and nonempty
+        and all_terminal
+        and frozen_claim_valid
+        and locked_evaluation_unused
+    )
     report["package_validation_pass"] = package_pass
     report["acceptance_pass"] = package_pass
     write_json(output / "report_summary.json", report)
     validation = read_json(output / "terminal_package_validation.json")
+    hashes = artifact_hashes(output)
+    hashes_match = all(
+        sha256_file(ROOT / row["path"]) == row["sha256"] for row in hashes
+    )
     validation.update(
         {
             "required_files_present": present,
             "nonempty_files": nonempty,
             "all_stage_statuses_terminal": all_terminal,
+            "historical_analysis_final_unused": locked_evaluation_unused,
             "claim_follows_frozen_evidence": frozen_claim_valid,
-            "artifact_hashes": artifact_hashes(output),
-            "acceptance_pass": package_pass,
+            "artifact_hashes": hashes,
+            "all_recorded_hashes_match": hashes_match,
+            "acceptance_pass": package_pass and hashes_match,
         }
     )
     write_json(output / "terminal_package_validation.json", validation)
     register_artifacts("H1_final_package", sorted(path for path in output.rglob("*") if path.is_file()))
-    if not package_pass:
+    if not package_pass or not hashes_match:
         raise RuntimeError("Terminal package validation failed")
     return report
 
