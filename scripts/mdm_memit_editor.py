@@ -905,6 +905,16 @@ def apply_memit_batch(
     *,
     target_cache_dir: Path | None = None,
     protected_basis_loader: Callable[[int], torch.Tensor | None] | None = None,
+    key_transform: Callable[
+        [int, torch.Tensor, Sequence[Mapping[str, Any]]],
+        torch.Tensor | tuple[torch.Tensor, Mapping[str, Any]],
+    ]
+    | None = None,
+    update_transform: Callable[
+        [int, torch.Tensor, Mapping[str, Any]],
+        torch.Tensor | tuple[torch.Tensor, Mapping[str, Any]],
+    ]
+    | None = None,
 ) -> tuple[WeightRollback, dict[str, Any]]:
     """Optimize values and apply a multi-layer MEMIT update in place."""
 
@@ -945,6 +955,17 @@ def apply_memit_batch(
                 reveal_policy=config.reveal_policy,
                 seed=config.seed,
             )
+            key_transform_report: Mapping[str, Any] | None = None
+            if key_transform is not None:
+                transformed = key_transform(layer, keys, requests)
+                if isinstance(transformed, tuple):
+                    keys, key_transform_report = transformed
+                else:
+                    keys = transformed
+                if keys.ndim != 2 or keys.shape[0] != len(requests):
+                    raise ValueError("key_transform returned invalid key geometry")
+                if not torch.isfinite(keys).all():
+                    raise FloatingPointError("key_transform returned non-finite keys")
             residual = (target_matrix - current_outputs) / float(len(config.layers) - index)
             covariance = covariance_loader(layer)
             update = solve_memit_update(
@@ -954,6 +975,28 @@ def apply_memit_batch(
                 config.covariance_weight,
                 config.update_ridge,
             )
+            update_transform_report: Mapping[str, Any] | None = None
+            if update_transform is not None:
+                transformed = update_transform(
+                    layer,
+                    update,
+                    {
+                        "keys": keys,
+                        "residuals": residual,
+                        "covariance": covariance,
+                        "requests": requests,
+                        "layer_index": index,
+                        "num_layers": len(config.layers),
+                    },
+                )
+                if isinstance(transformed, tuple):
+                    update, update_transform_report = transformed
+                else:
+                    update = transformed
+                if update.ndim != 2:
+                    raise ValueError("update_transform returned a non-matrix update")
+                if not torch.isfinite(update).all():
+                    raise FloatingPointError("update_transform returned non-finite values")
             projection_report: dict[str, Any] | None = None
             if protected_basis_loader is not None:
                 basis = protected_basis_loader(layer)
@@ -967,6 +1010,8 @@ def apply_memit_batch(
                     "key_width": keys.shape[1],
                     "mean_residual_norm": float(residual.norm(dim=1).mean()),
                     "update_norm": float(update.norm()),
+                    "key_transform": dict(key_transform_report or {}),
+                    "update_transform": dict(update_transform_report or {}),
                     "projection": projection_report,
                     "weight_norm": float(
                         get_module(
@@ -977,6 +1022,7 @@ def apply_memit_batch(
                         )
                         .weight.float()
                         .norm()
+                        .detach()
                     ),
                 }
             )

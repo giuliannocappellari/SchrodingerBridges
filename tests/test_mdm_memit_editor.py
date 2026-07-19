@@ -22,6 +22,54 @@ from scripts.mdm_memit_editor import (
 )
 
 
+def test_memit_transform_callback_contract_is_identity_safe(monkeypatch):
+    import scripts.mdm_memit_editor as editor
+
+    model = TinyModel()
+    tokenizer = TinyTokenizer()
+    request = {
+        "case_id": "tiny-1",
+        "subject": "Ada",
+        "rewrite_prompt": "Ada works as",
+        "target_new": "mathematician",
+        "target_new_token_ids": [7],
+    }
+    target = torch.zeros(3)
+    monkeypatch.setattr(editor, "optimize_target_value", lambda *_args, **_kwargs: (target, {}))
+    monkeypatch.setattr(
+        editor,
+        "extract_keys_and_outputs",
+        lambda *_args, **_kwargs: (torch.ones(1, 5), torch.zeros(1, 3)),
+    )
+    seen = {"key": 0, "update": 0}
+
+    def key_transform(layer, keys, requests):
+        seen["key"] += 1
+        assert layer == 0 and requests[0]["case_id"] == "tiny-1"
+        return keys, {"mode": "identity"}
+
+    def update_transform(layer, update, context):
+        seen["update"] += 1
+        assert layer == 0 and context["keys"].shape == (1, 5)
+        return update, {"mode": "identity"}
+
+    config = editor.MemitConfig(layers=(0,), covariance_weight=1.0)
+    rollback, report = editor.apply_memit_batch(
+        model,
+        tokenizer,
+        [request],
+        config,
+        lambda _layer: torch.ones(5),
+        key_transform=key_transform,
+        update_transform=update_transform,
+    )
+    assert seen == {"key": 1, "update": 1}
+    assert report["layer_updates"][0]["key_transform"]["mode"] == "identity"
+    assert report["layer_updates"][0]["update_transform"]["mode"] == "identity"
+    rollback.rollback()
+    assert rollback.checksum_matches()
+
+
 class TinyTokenizer:
     pad_token_id = 0
 

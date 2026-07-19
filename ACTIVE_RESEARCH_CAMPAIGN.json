@@ -1,28 +1,26 @@
 {
-  "campaign_id": "partial_state_temporal_residual_editor_v1",
-  "active_protocol": "partial_state_temporal_residual_editor_v1",
-  "active_plan": "PARTIAL_STATE_TEMPORAL_RESIDUAL_EDITOR_AUTONOMOUS_PLAN.md",
-  "execution_mode": "autonomous_goal",
+  "campaign_id": "diffusion_editor_next_direction_selection_v1",
   "campaign_status": "ready_to_start",
-  "current_stage": "A0_bootstrap_and_source_audit",
-  "autonomous_env_var": "PS_TRM_AUTONOMOUS_MODE",
-  "primary_model": "GSAI-ML/LLaDA-8B-Instruct",
-  "source_reproduction_model": "source-paper-compatible LLaDA checkpoint",
-  "historical_protocols": {
-    "counterfact_direction1_v1": "closed",
-    "counterfact_direction2_bridge_adapter_v1": "closed_protocol_infeasible",
-    "counterfact_direction3_controller_v1": "closed_bounded_negative",
-    "counterfact_sb_alternatives_campaign_v1": "closed_scientific_negative",
-    "masked_diffusion_memit_sb_positive_result_v1": "closed_mixed_positive",
-    "mask_pattern_sb_publication_confirmation_v1": "closed_fresh_confirmation_failed",
-    "diffusion_native_causal_partial_state_editor_v1": "closed_bounded_negative"
-  },
-  "historical_analysis_final_splits_locked": true,
-  "pod_policy": {
-    "start_once": true,
-    "keep_running_between_stages": true,
-    "monetary_budget_guard": false,
-    "stop_only_after_terminal_package_or_unrecoverable_issue": true
-  },
-  "new_protocol_required_for_scope_change": true
+  "execution_mode": "autonomous_goal",
+  "active_protocol": "diffusion_editor_next_direction_selection_v1",
+  "authoritative_plan": "NEXT_DIRECTION_SELECTION_AUTONOMOUS_PLAN.md",
+  "goal": "Select the most promising next research direction for diffusion-language-model factual editing using bounded comparable pilots.",
+  "base_model": "GSAI-ML/LLaDA-8B-Instruct",
+  "current_stage": "S0_bootstrap_and_fresh_manifests",
+  "mandatory_tracks": [
+    "N1_relation_residualized_editing",
+    "N2_fisher_constrained_editing",
+    "N3_primal_dual_locality",
+    "N4_selective_conformal_editing",
+    "N5_joint_answer_span_coupling"
+  ],
+  "conditional_track": "N6_integrated_candidate",
+  "historical_protocols_immutable": true,
+  "historical_analysis_final_locked": true,
+  "analysis_500_used": false,
+  "final_test_used": false,
+  "start_pod_once": true,
+  "keep_pod_running_until_terminal": true,
+  "stop_pod_on_terminal_or_unrecoverable_infrastructure_only": true,
+  "automatically_execute_selected_full_direction": false
 }

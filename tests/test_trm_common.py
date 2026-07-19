@@ -3,15 +3,17 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from scripts import trm_common
+from scripts import nds_common, trm_common
 
 
-def test_trm_identity_matches_active_registry() -> None:
+def test_trm_identity_remains_registered_as_closed_history() -> None:
     root = Path(__file__).resolve().parents[1]
     active = json.loads((root / "ACTIVE_RESEARCH_CAMPAIGN.json").read_text())
     registry = json.loads((root / "EXPERIMENT_PROTOCOL_REGISTRY.json").read_text())
-    assert active["active_protocol"] == trm_common.CAMPAIGN_ID
+    assert active["active_protocol"] == nds_common.CAMPAIGN_ID
+    assert active["historical_protocols_immutable"] is True
     assert registry["protocol_version"] == trm_common.CAMPAIGN_ID
+    assert trm_common.CAMPAIGN_ID in nds_common.HISTORICAL_CAMPAIGNS
     assert "diffusion_native_causal_partial_state_editor_v1" in trm_common.HISTORICAL_CAMPAIGNS
 
 

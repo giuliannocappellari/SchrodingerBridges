@@ -1,50 +1,40 @@
-# Partial-State Temporal Residual Editor Autonomous Campaign
+# Diffusion Editor Next-Direction Selection Goal
 
-This bundle launches a fresh autonomous campaign for the question:
-
-> Can a temporally localized residual editor preserve factual-editing locality when its target deltas and preservation constraints are optimized across partial denoising states?
-
-## Files
+This bundle instructs Codex to run a bounded autonomous screening campaign over five remaining statistically and physically motivated directions:
 
 ```text
-AGENTS.md
-ACTIVE_RESEARCH_CAMPAIGN.json
-EXPERIMENT_PROTOCOL_REGISTRY.json
-PARTIAL_STATE_TEMPORAL_RESIDUAL_EDITOR_AUTONOMOUS_PLAN.md
-START_PARTIAL_STATE_TEMPORAL_RESIDUAL_EDITOR_GOAL.md
-PRIMARY_SOURCES.md
-TIMEROME_REPRODUCTION_PLAN.md
-COUNTERFACT_TEMPORAL_RESIDUAL_ADAPTATION_PLAN.md
-PARTIAL_STATE_TARGET_DELTA_PLAN.md
-STATE_CONDITIONED_LOCALITY_PLAN.md
-MAIN_EDITOR_AND_BASELINES_PLAN.md
-LOCKED_CONFIRMATION_PLAN.md
-SECOND_BACKBONE_AND_SCALING_PLAN.md
-PAPER_REPRODUCIBILITY_PLAN.md
-BUNDLE_MANIFEST.json
+N1 relation residualization
+N2 Fisher-constrained editing
+N3 primal-dual locality constraints
+N4 selective conformal editing
+N5 joint answer-span coupling
 ```
 
-## Core method
+A conditional N6 integration stage may combine only components that pass their own mechanism gates.
 
-The base MDLM remains frozen. A temporally localized low-rank residual memory is applied during each diffusion forward pass. The campaign tests whether:
+The campaign does not execute the final selected direction at full scale. It ends after fresh confirmation, ranked selection, and generation of a draft full-campaign plan.
 
-```text
-partial-state target-delta construction
-+ early/middle/late state conditioning
-+ same-subject preservation anchors
-+ sparse low-rank residual memory
+## Installation
+
+Copy every file in this bundle to the repository root, replacing the active campaign control files.
+
+## Environment
+
+```bash
+export NEXT_DIRECTION_AUTONOMOUS_MODE=1
+export NEXT_DIRECTION_MAX_INFRA_RETRIES=3
+export NEXT_DIRECTION_MAX_SCIENTIFIC_RESCUES_PER_TRACK=1
+
+export RUNPOD_POD_ID="<existing-pod-id>"
+export RUNPOD_SSH_KEY="$HOME/.ssh/<private-key-file>"
+export RUNPOD_SSH_USER="root"
+export RUNPOD_SSH_HOST="<current-host>"
+export RUNPOD_SSH_PORT="<current-port>"
+export REMOTE_REPO_DIR="/workspace/SB"
 ```
 
-moves the efficacy-locality Pareto frontier beyond MDM-MEMIT, static null-space projection, and ordinary temporal residual editing.
+Ensure `runpodctl` is configured with the RunPod API key.
 
 ## Launch
 
-Configure RunPod variables, set:
-
-```bash
-export PS_TRM_AUTONOMOUS_MODE=1
-```
-
-Use Codex Goal mode and paste `START_PARTIAL_STATE_TEMPORAL_RESIDUAL_EDITOR_GOAL.md`.
-
-There is no monetary budget guard. The Pod remains running until the campaign and final package are terminal, or an unrecoverable infrastructure/data-integrity failure occurs.
+Use Goal mode and paste `START_NEXT_DIRECTION_SELECTION_GOAL.md`.

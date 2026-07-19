@@ -1,0 +1,48 @@
+{
+  "protocol_version": "diffusion_editor_next_direction_selection_v1",
+  "tracks": [
+    {
+      "track_id": "N1",
+      "name": "relation_residualized_editing",
+      "mandatory": true,
+      "plan": "RELATION_RESIDUALIZATION_PLAN.md",
+      "primary_question": "Does removing subject and relation main effects isolate a more local subject-relation edit direction?"
+    },
+    {
+      "track_id": "N2",
+      "name": "fisher_constrained_editing",
+      "mandatory": true,
+      "plan": "FISHER_CONSTRAINED_EDITING_PLAN.md",
+      "primary_question": "Does Fisher-Rao preconditioning reduce protected distribution drift at matched efficacy?"
+    },
+    {
+      "track_id": "N3",
+      "name": "primal_dual_locality",
+      "mandatory": true,
+      "plan": "PRIMAL_DUAL_LOCALITY_PLAN.md",
+      "primary_question": "Do explicit locality constraints outperform fixed penalty weights?"
+    },
+    {
+      "track_id": "N4",
+      "name": "selective_conformal_editing",
+      "mandatory": true,
+      "plan": "SELECTIVE_CONFORMAL_EDITING_PLAN.md",
+      "primary_question": "Can the editor safely edit a substantial calibrated subset by abstaining on high-risk edits?"
+    },
+    {
+      "track_id": "N5",
+      "name": "joint_answer_span_coupling",
+      "mandatory": true,
+      "plan": "JOINT_ANSWER_SPAN_COUPLING_PLAN.md",
+      "primary_question": "Does explicit token coupling improve multi-token factual realization beyond factorized decoding?"
+    },
+    {
+      "track_id": "N6",
+      "name": "integrated_relation_fisher_constrained_selective_editor",
+      "mandatory": false,
+      "conditional": true,
+      "plan": "INTEGRATED_CANDIDATE_PLAN.md",
+      "primary_question": "Do the strongest independently validated components compose into a superior editor or selective policy?"
+    }
+  ]
+}
