@@ -1,0 +1,110 @@
+{
+  "campaign_id": "diffusion_editor_next_direction_selection_v1",
+  "git_commit": "c87661a66d18b94047c2d8b2c522d49d1b412676",
+  "historical_analysis_final_opened": false,
+  "plans": [
+    {
+      "path": "NEXT_DIRECTION_SELECTION_AUTONOMOUS_PLAN.md",
+      "sha256": "d5878399925ee1228b37f89307174d1e0a34bfccb12f1aa849833c0751755126"
+    },
+    {
+      "path": "RELATION_RESIDUALIZATION_PLAN.md",
+      "sha256": "e03ed90ab81eb08431635bd70367ad789bf3de76fdf0566078e999c0b66dbc3c"
+    },
+    {
+      "path": "FISHER_CONSTRAINED_EDITING_PLAN.md",
+      "sha256": "1f7f7a25a4e644085d99ab4b315415a85f77842283a4e42b4941df532f3fba4c"
+    },
+    {
+      "path": "PRIMAL_DUAL_LOCALITY_PLAN.md",
+      "sha256": "c4fb5c58d2ce557988c9af70379daedb956d981041ee7ea61d447afb763cd638"
+    },
+    {
+      "path": "SELECTIVE_CONFORMAL_EDITING_PLAN.md",
+      "sha256": "6253d014ae8c94304adc8e1c57f5996d219d70cb6bf4c97d8bce98975f7855f5"
+    },
+    {
+      "path": "JOINT_ANSWER_SPAN_COUPLING_PLAN.md",
+      "sha256": "9386ef68569cd15137eb278fcf9d75f36c74ce09956df84a0d3a6b672a5e5134"
+    },
+    {
+      "path": "INTEGRATED_CANDIDATE_PLAN.md",
+      "sha256": "5f5a62315426f50338c8537b97977319683cbd371dcbe89b5316dbe8e67596c5"
+    },
+    {
+      "path": "FINAL_SELECTION_AND_REPORTING_PLAN.md",
+      "sha256": "42ffa7daed92bff863f1c1f1e5746610916345183c1de010a881fe5e85897ae6"
+    }
+  ],
+  "protocol_manifests": [
+    {
+      "path": "runs/diffusion_editor_next_direction_selection_v1/protocol_v1/cf_nds_calibration_200.jsonl",
+      "sha256": "e21b124597363b3cb35853a286cb9025823e050c003413b47784237bf6479c65"
+    },
+    {
+      "path": "runs/diffusion_editor_next_direction_selection_v1/protocol_v1/cf_nds_confirmation_200.jsonl",
+      "sha256": "f624b0368e12d09cc9642fa19924928607ecaf57afca144954cb1e59f3063561"
+    },
+    {
+      "path": "runs/diffusion_editor_next_direction_selection_v1/protocol_v1/cf_nds_pilot_100.jsonl",
+      "sha256": "da872042d7d55226dfeccdbddd02ed811446ff9b8f69079757ec90e350a95859"
+    },
+    {
+      "path": "runs/diffusion_editor_next_direction_selection_v1/protocol_v1/cf_nds_smoke_20.jsonl",
+      "sha256": "36b2edb3eabccbff83b78000ea84adee3af7091c647fbf581f9a0ff71df565df"
+    },
+    {
+      "path": "runs/diffusion_editor_next_direction_selection_v1/protocol_v1/cf_nds_statistics_train_500.jsonl",
+      "sha256": "97e8a370abd2403a7700ee20ded6df348209ca20b6b2f081080ae217019074eb"
+    },
+    {
+      "path": "runs/diffusion_editor_next_direction_selection_v1/protocol_v1/kamel_nds_calibration_100_n2.jsonl",
+      "sha256": "7350e612fef1f120307d7a48012aa00abe888e732191480d844abb8a485a6173"
+    },
+    {
+      "path": "runs/diffusion_editor_next_direction_selection_v1/protocol_v1/kamel_nds_calibration_100_n3.jsonl",
+      "sha256": "36105fb97c4e4c04a559611a1b1c53abd31634314c10e2ef9f0992c8355d749a"
+    },
+    {
+      "path": "runs/diffusion_editor_next_direction_selection_v1/protocol_v1/kamel_nds_calibration_100_n4.jsonl",
+      "sha256": "8fe0cb41cf8ebe8eac055bf06fd9eb159188e46d495799bd3dd83a4a4cb96473"
+    },
+    {
+      "path": "runs/diffusion_editor_next_direction_selection_v1/protocol_v1/kamel_nds_confirmation_200_n2.jsonl",
+      "sha256": "457cce299409173f976f08ebbbb19c82755efff9f3855e766a537ccb12dc06a1"
+    },
+    {
+      "path": "runs/diffusion_editor_next_direction_selection_v1/protocol_v1/kamel_nds_confirmation_200_n3.jsonl",
+      "sha256": "8f05d089726f7d6f990f9d166889f6739df979fc785614808f60cc48c4d2ca7e"
+    },
+    {
+      "path": "runs/diffusion_editor_next_direction_selection_v1/protocol_v1/kamel_nds_confirmation_200_n4.jsonl",
+      "sha256": "2a75c5377af0ebd5c11c51ed35985d27f4b31ff02818fcab1bfa47754f0e20d0"
+    },
+    {
+      "path": "runs/diffusion_editor_next_direction_selection_v1/protocol_v1/kamel_nds_pilot_100_n2.jsonl",
+      "sha256": "17ea50304f8c21f9cdbcc701882e98ce39446cab34c8473bb5a06469467fbfea"
+    },
+    {
+      "path": "runs/diffusion_editor_next_direction_selection_v1/protocol_v1/kamel_nds_pilot_100_n3.jsonl",
+      "sha256": "a4d79d1a702c524d26ae49f8b6717dbf2e6eb5efa3b89ae6a1e6d677d2f827e8"
+    },
+    {
+      "path": "runs/diffusion_editor_next_direction_selection_v1/protocol_v1/kamel_nds_pilot_100_n4.jsonl",
+      "sha256": "276338894f10d73be83fdbf0ee3ea7816541f4b8afd96f32ebc46b399346d19a"
+    },
+    {
+      "path": "runs/diffusion_editor_next_direction_selection_v1/protocol_v1/kamel_nds_train_200_n2.jsonl",
+      "sha256": "f0a1988360a6afa4cd62329774fda47d7fd41ebaee4314bec200e4d4b35319a5"
+    },
+    {
+      "path": "runs/diffusion_editor_next_direction_selection_v1/protocol_v1/kamel_nds_train_200_n3.jsonl",
+      "sha256": "15b869398e602ff5a9a8a194f92c018086c3d7384d0cc405e67314e5f7699d1d"
+    },
+    {
+      "path": "runs/diffusion_editor_next_direction_selection_v1/protocol_v1/kamel_nds_train_200_n4.jsonl",
+      "sha256": "394055f82eb4b5a43dea705797bb795980426decbdbc574399b0cf486d921b11"
+    }
+  ],
+  "selected_full_campaign_executed": false
+}

@@ -1,0 +1,64 @@
+{
+  "artifacts": [
+    {
+      "path": "SELECTED_DIRECTION_FULL_CAMPAIGN_DRAFT.md",
+      "sha256": "a8cf416635d9d3504a0d6c2f5dd59388e563c8a5bd8a19a3f12075d2de574924",
+      "size_bytes": 627
+    },
+    {
+      "path": "coverage_risk_plot.png",
+      "sha256": "9491bd7085a10e9ebe68969ff97b956673fea2a719bf961beb8634e00481c931",
+      "size_bytes": 32695
+    },
+    {
+      "path": "direction_selection_matrix.csv",
+      "sha256": "f2f153badb786748a635afc94f7694172b72c58362333adaaa377a5a665bd7de",
+      "size_bytes": 866
+    },
+    {
+      "path": "efficacy_locality_pareto.png",
+      "sha256": "35a924cf961c455d82ea7b0036c967b3ffafc7d132edfa48a716049634039c42",
+      "size_bytes": 54263
+    },
+    {
+      "path": "failure_taxonomy.csv",
+      "sha256": "0bee3ad4d9772b91f453872bc4258317232788d294d193f33f9c7c3e733e8e65",
+      "size_bytes": 354
+    },
+    {
+      "path": "final_research_report.md",
+      "sha256": "9968d6b6e063697801bec5f13640a8bc8080d88bfe429816c5e55f05f3792a0a",
+      "size_bytes": 562
+    },
+    {
+      "path": "multi_token_results.csv",
+      "sha256": "579495fda03ffa7d05b63192408dc7d9d56a75938a294dfac294406777f4cc37",
+      "size_bytes": 707
+    },
+    {
+      "path": "next_direction_recommendation.md",
+      "sha256": "e344cffe3d23053a15591b8251ac0a9cd633aa399f473fd7210f174dea9b7233",
+      "size_bytes": 247
+    },
+    {
+      "path": "paired_bootstrap.csv",
+      "sha256": "57a5a98538a51abd197100237bd42538fe0c7baccb262ba033de543add2bdfbb",
+      "size_bytes": 286
+    },
+    {
+      "path": "report_summary.json",
+      "sha256": "d461f7f9ef3e5748349da2a0256e07ef8e81ffcfc537ef35aeb34ee920a6a8a6",
+      "size_bytes": 578
+    },
+    {
+      "path": "reproducibility_manifest.json",
+      "sha256": "9952ec3bc933f8787de2559f361fd3dd3d017e03cacb7f4395b20a4946fe7740",
+      "size_bytes": 4947
+    },
+    {
+      "path": "track_results.csv",
+      "sha256": "f2f153badb786748a635afc94f7694172b72c58362333adaaa377a5a665bd7de",
+      "size_bytes": 866
+    }
+  ]
+}

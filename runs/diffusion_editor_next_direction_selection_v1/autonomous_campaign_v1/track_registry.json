@@ -1,0 +1,75 @@
+{
+  "campaign_id": "diffusion_editor_next_direction_selection_v1",
+  "tracks": [
+    {
+      "mandatory": true,
+      "mechanism_pass": true,
+      "name": "relation_residualized_editing",
+      "nominated_candidate": "relation_full",
+      "notes": "Frozen pilot candidate validated against the predeclared track criteria.",
+      "pilot_pass": false,
+      "report_path": "runs/diffusion_editor_next_direction_selection_v1/N1_pilot_v1/report_summary.json",
+      "rescue_used": false,
+      "status": "pilot_failed",
+      "track_id": "N1"
+    },
+    {
+      "failure_classification": "offline_scientific_failure",
+      "mandatory": true,
+      "mechanism_pass": false,
+      "name": "fisher_constrained_editing",
+      "nominated_candidate": null,
+      "notes": "Formal bounded track stop package written.",
+      "report_path": "runs/diffusion_editor_next_direction_selection_v1/N2_track_stop_v1/report_summary.json",
+      "rescue_used": true,
+      "status": "pilot_failed",
+      "track_id": "N2"
+    },
+    {
+      "failure_classification": "offline_scientific_failure",
+      "mandatory": true,
+      "mechanism_pass": false,
+      "name": "primal_dual_locality",
+      "nominated_candidate": null,
+      "notes": "Formal bounded track stop package written.",
+      "report_path": "runs/diffusion_editor_next_direction_selection_v1/N3_track_stop_v1/report_summary.json",
+      "rescue_used": false,
+      "status": "pilot_failed",
+      "track_id": "N3"
+    },
+    {
+      "mandatory": true,
+      "mechanism_pass": false,
+      "name": "selective_conformal_editing",
+      "nominated_candidate": "selective_logistic",
+      "notes": "Pre-edit selective wrapper evaluated with exact one-sided risk control.",
+      "pilot_pass": false,
+      "report_path": "runs/diffusion_editor_next_direction_selection_v1/N4_selective_conformal_pilot_v1/report_summary.json",
+      "rescue_used": false,
+      "status": "pilot_failed",
+      "track_id": "N4"
+    },
+    {
+      "mandatory": true,
+      "mechanism_pass": false,
+      "name": "joint_answer_span_coupling",
+      "nominated_candidate": "joint_span_rank64",
+      "notes": "Joint and factorized span decoders used identical top-k support.",
+      "pilot_pass": false,
+      "report_path": "runs/diffusion_editor_next_direction_selection_v1/N5_joint_span_rank64_rescue_pilot_v1/report_summary.json",
+      "rescue_used": true,
+      "status": "pilot_failed",
+      "track_id": "N5"
+    },
+    {
+      "mandatory": false,
+      "name": "integrated_candidate",
+      "nominated_candidate": null,
+      "notes": "No predeclared composition had independently passed components.",
+      "report_path": "runs/diffusion_editor_next_direction_selection_v1/N6_not_triggered_v1/report_summary.json",
+      "rescue_used": false,
+      "status": "not_triggered",
+      "track_id": "N6"
+    }
+  ]
+}

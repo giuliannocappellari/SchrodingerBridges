@@ -1,0 +1,102 @@
+{
+  "analysis_500_used": false,
+  "autonomous_mode": true,
+  "campaign_id": "diffusion_editor_next_direction_selection_v1",
+  "campaign_status": "terminal",
+  "completed_stages": [
+    "S0_bootstrap",
+    "S0_fresh_manifests",
+    "S1_shared_measurements",
+    "S1_common_baselines",
+    "N6_integrated_pilot",
+    "S4_fresh_confirmation",
+    "S5_final_selection",
+    "S6_final_package"
+  ],
+  "created_at_utc": "2026-07-20T18:40:35.732120+00:00",
+  "current_stage": "S6_final_package",
+  "failed_stages": [
+    "N1_pilot",
+    "N2_pilot",
+    "N3_pilot",
+    "N4_pilot",
+    "N5_pilot"
+  ],
+  "final_test_used": false,
+  "historical_protocols_read_only": true,
+  "last_git_commit": "c87661a66d18b94047c2d8b2c522d49d1b412676",
+  "next_stage": null,
+  "pod_status": "stop_pending",
+  "protocol_version": "diffusion_editor_next_direction_selection_v1",
+  "rescues_used": {
+    "N1": 0,
+    "N2": 1,
+    "N3": 0,
+    "N4": 0,
+    "N5": 1,
+    "N6": 0
+  },
+  "selected_candidate": null,
+  "selected_track": null,
+  "stage_status": {
+    "N1_pilot": "failed",
+    "N2_pilot": "failed",
+    "N3_pilot": "failed",
+    "N4_pilot": "failed",
+    "N5_pilot": "failed",
+    "N6_integrated_pilot": "not_triggered",
+    "S0_bootstrap": "passed",
+    "S0_fresh_manifests": "passed",
+    "S1_common_baselines": "passed",
+    "S1_shared_measurements": "passed",
+    "S4_fresh_confirmation": "passed",
+    "S5_final_selection": "passed",
+    "S6_final_package": "passed"
+  },
+  "terminal_outcome": "no_promising_direction",
+  "track_details": {
+    "N1": {
+      "candidate_id": "relation_full",
+      "mechanism_pass": true,
+      "nominated_candidate": "relation_full",
+      "notes": "Frozen pilot candidate validated against the predeclared track criteria.",
+      "pilot_pass": false
+    },
+    "N2": {
+      "failure_classification": "offline_scientific_failure",
+      "mechanism_pass": false,
+      "notes": "Formal bounded track stop package written."
+    },
+    "N3": {
+      "failure_classification": "offline_scientific_failure",
+      "mechanism_pass": false,
+      "notes": "Formal bounded track stop package written."
+    },
+    "N4": {
+      "candidate_id": "selective_logistic",
+      "mechanism_pass": false,
+      "nominated_candidate": "selective_logistic",
+      "notes": "Pre-edit selective wrapper evaluated with exact one-sided risk control.",
+      "pilot_pass": false
+    },
+    "N5": {
+      "candidate_id": "joint_span_rank64",
+      "mechanism_pass": false,
+      "nominated_candidate": "joint_span_rank64",
+      "notes": "Joint and factorized span decoders used identical top-k support.",
+      "pilot_pass": false
+    },
+    "N6": {
+      "notes": "No predeclared composition had independently passed components."
+    }
+  },
+  "track_status": {
+    "N1": "pilot_failed",
+    "N2": "pilot_failed",
+    "N3": "pilot_failed",
+    "N4": "pilot_failed",
+    "N5": "pilot_failed",
+    "N6": "not_triggered"
+  },
+  "updated_at_utc": "2026-07-20T21:49:29.759244+00:00"
+}

@@ -1,0 +1,13 @@
+bucket,exact,malformed_rate,method,num_edits,num_rows,target_length,token_f1
+declarative_paraphrase,0.02,0.0,coupled,100,100,2,0.07
+rewrite,0.03,0.0,coupled,100,100,2,0.095
+declarative_paraphrase,0.01,0.0,coupled,100,100,3,0.07
+rewrite,0.01,0.0,coupled,100,100,3,0.06333333333333332
+declarative_paraphrase,0.0,0.0,coupled,100,100,4,0.0725
+rewrite,0.0,0.0,coupled,100,100,4,0.105
+declarative_paraphrase,0.0,0.0,factorized,100,100,2,0.01
+rewrite,0.0,0.0,factorized,100,100,2,0.025
+declarative_paraphrase,0.0,0.0,factorized,100,100,3,0.02
+rewrite,0.0,0.0,factorized,100,100,3,0.03333333333333333
+declarative_paraphrase,0.0,0.0,factorized,100,100,4,0.03
+rewrite,0.0,0.0,factorized,100,100,4,0.0525

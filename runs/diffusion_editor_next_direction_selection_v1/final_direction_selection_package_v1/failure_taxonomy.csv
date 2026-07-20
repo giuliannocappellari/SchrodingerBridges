@@ -1,0 +1,7 @@
+confirmation_pass,failure_classification,mechanism_pass,pilot_pass,status,track_id
+,pilot_failure,True,False,pilot_failed,N1
+,offline_scientific_failure,False,,pilot_failed,N2
+,offline_scientific_failure,False,,pilot_failed,N3
+,pilot_failure,False,False,pilot_failed,N4
+,pilot_failure,False,False,pilot_failed,N5
+,pilot_failure,,,not_triggered,N6

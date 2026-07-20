@@ -61,6 +61,21 @@ runs/partial_state_temporal_residual_editor_v1/final_research_package_v1/*
 !runs/partial_state_temporal_residual_editor_v1/final_research_package_v1/*.md
 !runs/partial_state_temporal_residual_editor_v1/final_research_package_v1/*.png
 
+# Preserve the compact terminal record for the next-direction selection campaign.
+!runs/diffusion_editor_next_direction_selection_v1/
+runs/diffusion_editor_next_direction_selection_v1/*
+!runs/diffusion_editor_next_direction_selection_v1/autonomous_campaign_v1/
+runs/diffusion_editor_next_direction_selection_v1/autonomous_campaign_v1/*
+!runs/diffusion_editor_next_direction_selection_v1/autonomous_campaign_v1/*.json
+!runs/diffusion_editor_next_direction_selection_v1/autonomous_campaign_v1/*.csv
+!runs/diffusion_editor_next_direction_selection_v1/autonomous_campaign_v1/*.md
+!runs/diffusion_editor_next_direction_selection_v1/final_direction_selection_package_v1/
+runs/diffusion_editor_next_direction_selection_v1/final_direction_selection_package_v1/*
+!runs/diffusion_editor_next_direction_selection_v1/final_direction_selection_package_v1/*.json
+!runs/diffusion_editor_next_direction_selection_v1/final_direction_selection_package_v1/*.csv
+!runs/diffusion_editor_next_direction_selection_v1/final_direction_selection_package_v1/*.md
+!runs/diffusion_editor_next_direction_selection_v1/final_direction_selection_package_v1/*.png
+
 # Large model/checkpoint artifacts
 *.safetensors
 *.pt

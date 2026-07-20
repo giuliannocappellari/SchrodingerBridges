@@ -1,0 +1,16 @@
+{
+  "analysis_500_used": false,
+  "campaign_id": "diffusion_editor_next_direction_selection_v1",
+  "campaign_status": "terminal",
+  "created_at_utc": "2026-07-20T21:49:28.528281+00:00",
+  "final_test_used": false,
+  "git_commit": "c87661a66d18b94047c2d8b2c522d49d1b412676",
+  "mandatory_tracks_terminal": true,
+  "package_validation_pass": true,
+  "recommendation_status": "no_promising_next_direction",
+  "selected_candidate": null,
+  "selected_full_campaign_executed": false,
+  "selected_track": null,
+  "success_class": null,
+  "terminal_outcome": "no_promising_direction"
+}

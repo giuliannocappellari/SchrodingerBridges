@@ -1,0 +1,7 @@
+candidate_id,confirmation_status,coverage,distributional_locality_kl,far_tfpr,gpu_minutes_per_edit,implementation_risk,multi_token_exact_delta,near_tfpr,paired_ci_high,paired_ci_low,paraphrase,pilot_status,recommended,rewrite,risk_upper_bound,same_subject_tfpr,success_class,track_id,track_status
+relation_full,not_run,,0.30682286620140076,0.0,,medium,,0.011990407673860911,0.02,-0.06,0.06,failed,False,0.2,,0.01,,N1,pilot_failed
+,not_run,,,,,medium,,,,,,failed,False,,,,,N2,pilot_failed
+,not_run,,,,,high,,,,,,failed,False,,,,,N3,pilot_failed
+selective_logistic,not_run,0.0,,,,medium,,,,,,failed,False,,1.0,1.0,,N4,pilot_failed
+joint_span_rank64,not_run,,,,0.1095567419112453,medium,"{""2"": 0.03, ""3"": 0.01, ""4"": 0.0}",,0.02666666666666667,0.0033333333333333335,,failed,False,,,,,N5,pilot_failed
+,not_run,,,,,high,,,,,,failed,False,,,,,N6,not_triggered

@@ -1,0 +1,24 @@
+{
+  "acceptance_pass": true,
+  "campaign_id": "diffusion_editor_next_direction_selection_v1",
+  "historical_analysis_final_opened": false,
+  "mandatory_tracks_terminal": true,
+  "missing_files_before_validation_write": [],
+  "required_files": [
+    "report_summary.json",
+    "direction_selection_matrix.csv",
+    "track_results.csv",
+    "paired_bootstrap.csv",
+    "efficacy_locality_pareto.png",
+    "coverage_risk_plot.png",
+    "multi_token_results.csv",
+    "failure_taxonomy.csv",
+    "artifact_availability_manifest.json",
+    "reproducibility_manifest.json",
+    "final_research_report.md",
+    "next_direction_recommendation.md",
+    "SELECTED_DIRECTION_FULL_CAMPAIGN_DRAFT.md",
+    "terminal_package_validation.json"
+  ],
+  "selected_full_campaign_executed": false
+}

@@ -1,0 +1,27 @@
+# Next-Direction Autonomous Log
+
+- 2026-07-20T18:40:35.777683+00:00: campaign initialized.
+- 2026-07-20T18:40:36.484760+00:00: S0_bootstrap -> passed; acceptance=True; Authoritative plans, registry, autonomous state, and immutable-history policy validated.
+- 2026-07-20T18:53:49.626814+00:00: S0_fresh_manifests -> passed; acceptance=True; Fresh CounterFact and KAMEL manifests built with identity-only historical exclusion.
+- 2026-07-20T19:08:32.184527+00:00: S0_fresh_manifests -> passed; acceptance=True; Fresh CounterFact and KAMEL manifests built with identity-only historical exclusion.
+- 2026-07-20T19:26:10.614345+00:00: S1_shared_measurements -> passed; acceptance=True; Cached training/calibration keys and Fisher sketches for 4 layers.
+- 2026-07-20T19:56:42.322703+00:00: S1_common_baselines -> passed; acceptance=True; partial-state floor pass=True; repair=False
+- 2026-07-20T19:56:51.920553+00:00: N1 -> running; candidate=relation_full
+- 2026-07-20T20:03:57.049442+00:00: N1 -> pilot_failed; candidate=relation_full
+- 2026-07-20T20:03:57.780397+00:00: N1_pilot -> failed; acceptance=False; candidate=relation_full; class=None
+- 2026-07-20T20:04:00.459780+00:00: N2 -> pilot_failed; candidate=None
+- 2026-07-20T20:04:01.089227+00:00: N2 -> pilot_failed; candidate=None
+- 2026-07-20T20:04:01.220661+00:00: N2_pilot -> failed; acceptance=False; Offline mechanism gate failed after bounded rescue.
+- 2026-07-20T20:09:26.647532+00:00: N3 -> pilot_failed; candidate=None
+- 2026-07-20T20:09:27.650893+00:00: N3 -> pilot_failed; candidate=None
+- 2026-07-20T20:09:27.942716+00:00: N3_pilot -> failed; acceptance=False; Offline mechanism gate failed after bounded rescue.
+- 2026-07-20T20:43:13.943437+00:00: N4 -> pilot_failed; candidate=selective_logistic
+- 2026-07-20T20:43:14.655307+00:00: N4_pilot -> failed; acceptance=False; underlying=partial_state_memit; coverage=0.0
+- 2026-07-20T21:16:15.478450+00:00: N5 -> pilot_failed; candidate=joint_span_rank32
+- 2026-07-20T21:49:11.177788+00:00: N5 -> pilot_failed; candidate=joint_span_rank64
+- 2026-07-20T21:49:12.761228+00:00: N5_pilot -> failed; acceptance=False; rank=64; lengths_with_gain=0
+- 2026-07-20T21:49:25.491312+00:00: N6 -> not_triggered; candidate=None
+- 2026-07-20T21:49:25.863863+00:00: N6_integrated_pilot -> not_triggered; acceptance=True; mechanism_trigger=True; compositions=0
+- 2026-07-20T21:49:26.290319+00:00: S4_fresh_confirmation -> passed; acceptance=True; Every pilot-passed candidate was evaluated once on its fresh frozen confirmation split.
+- 2026-07-20T21:49:29.382234+00:00: S5_final_selection -> passed; acceptance=True; recommendation=no_promising_next_direction
+- 2026-07-20T21:49:29.970391+00:00: S6_final_package -> passed; acceptance=True; Terminal package validated; selected full campaign remains draft-only.
