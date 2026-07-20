@@ -25,3 +25,4 @@
 - 2026-07-20T21:49:26.290319+00:00: S4_fresh_confirmation -> passed; acceptance=True; Every pilot-passed candidate was evaluated once on its fresh frozen confirmation split.
 - 2026-07-20T21:49:29.382234+00:00: S5_final_selection -> passed; acceptance=True; recommendation=no_promising_next_direction
 - 2026-07-20T21:49:29.970391+00:00: S6_final_package -> passed; acceptance=True; Terminal package validated; selected full campaign remains draft-only.
+- 2026-07-20T21:56:26+00:00: pod_stop -> passed; verified RunPod resource 7vhuw3tdxvmaxp for SSH route 63.141.33.33:22172 stopped with desiredStatus=EXITED; stale configured ID fkmfc0ypucaupg returned 404.
