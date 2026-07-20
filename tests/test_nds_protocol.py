@@ -60,3 +60,34 @@ def test_auxiliary_allocation_and_overlap_are_disjoint():
     source, prompts = overlap_audit({"train": [left], "calibration": [right]})
     assert all(row["overlap_count"] == 0 for row in source)
     assert all(row["prompt_overlap_count"] == 0 for row in prompts)
+
+
+def test_auxiliary_allocation_assigns_duplicate_paraphrase_once():
+    train = _row(10)
+    confirmation = _row(20, relation="P2")
+    duplicate = "A shared real paraphrase"
+    train["paraphrase_prompts"] = [duplicate]
+    confirmation["paraphrase_prompts"] = [duplicate]
+    donors = [_row(30, relation="P3"), _row(40, relation="P4")]
+    role_splits = {
+        "cf_nds_statistics_train_500": [train],
+        "cf_nds_calibration_200": [],
+        "cf_nds_smoke_20": [],
+        "cf_nds_pilot_100": [],
+        "cf_nds_confirmation_200": [confirmation],
+    }
+
+    allocation = allocate_auxiliary_prompts(
+        role_splits,
+        [train, confirmation, *donors],
+        {train["case_id"], confirmation["case_id"]},
+    )
+
+    assert confirmation["paraphrase_prompts"] == [duplicate]
+    assert train["paraphrase_prompts"] == []
+    assert allocation["duplicate_or_rewrite_colliding_paraphrases_dropped"] == 1
+    source, prompts = overlap_audit(
+        {"train": [train], "confirmation": [confirmation]}
+    )
+    assert all(row["overlap_count"] == 0 for row in source)
+    assert all(row["prompt_overlap_count"] == 0 for row in prompts)

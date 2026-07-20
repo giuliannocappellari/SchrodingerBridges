@@ -95,13 +95,66 @@ def _primary_prompt_fingerprints(
     return values
 
 
+def sanitize_primary_paraphrases(
+    splits: dict[str, list[dict[str, Any]]],
+) -> dict[str, int]:
+    """Assign duplicated paraphrases to one split without touching rewrites."""
+
+    priority = (
+        "cf_nds_confirmation_200",
+        "cf_nds_pilot_100",
+        "cf_nds_smoke_20",
+        "cf_nds_calibration_200",
+        "cf_nds_statistics_train_500",
+    )
+    ordered_roles = [role for role in priority if role in splits]
+    ordered_roles.extend(role for role in splits if role not in ordered_roles)
+
+    rewrite_owners: dict[str, tuple[str, str]] = {}
+    for role in ordered_roles:
+        for row in splits[role]:
+            fingerprint = prompt_fingerprint(str(row["rewrite_prompt"]))
+            owner = (role, str(row["case_id"]))
+            previous = rewrite_owners.get(fingerprint)
+            if previous is not None and previous != owner:
+                raise RuntimeError(
+                    "Duplicate rewrite prompt across fresh splits: "
+                    f"{previous[0]}/{previous[1]} vs {owner[0]}/{owner[1]}"
+                )
+            rewrite_owners[fingerprint] = owner
+
+    used = set(rewrite_owners)
+    kept = 0
+    dropped = 0
+    for role in ordered_roles:
+        for row in splits[role]:
+            unique = []
+            for prompt in row.get("paraphrase_prompts", []):
+                if not str(prompt).strip():
+                    continue
+                fingerprint = prompt_fingerprint(str(prompt))
+                if fingerprint in used:
+                    dropped += 1
+                    continue
+                used.add(fingerprint)
+                unique.append(prompt)
+                kept += 1
+            row["paraphrase_prompts"] = unique
+    return {
+        "rewrite_prompt_count": len(rewrite_owners),
+        "paraphrase_prompt_count_kept": kept,
+        "duplicate_or_rewrite_colliding_paraphrases_dropped": dropped,
+    }
+
+
 def allocate_auxiliary_prompts(
     splits: dict[str, list[dict[str, Any]]],
     candidates: Sequence[Mapping[str, Any]],
     selected_ids: set[str],
-) -> None:
+) -> dict[str, int]:
     """Allocate auxiliary prompts once across all fresh split roles."""
 
+    allocation = sanitize_primary_paraphrases(splits)
     used = _primary_prompt_fingerprints(splits)
     priority = (
         "cf_nds_confirmation_200",
@@ -164,11 +217,12 @@ def allocate_auxiliary_prompts(
                 break
             else:
                 raise RuntimeError("Insufficient unique far-locality donors")
+    return allocation
 
 
 def select_counterfact(
     candidates: Sequence[dict[str, Any]],
-) -> dict[str, list[dict[str, Any]]]:
+) -> tuple[dict[str, list[dict[str, Any]]], dict[str, int]]:
     used: set[str] = set()
     splits: dict[str, list[dict[str, Any]]] = {}
     for offset, (role, count) in enumerate(CF_COUNTS.items()):
@@ -189,8 +243,8 @@ def select_counterfact(
             )
             normalized.append(row)
         splits[role] = normalized
-    allocate_auxiliary_prompts(splits, candidates, used)
-    return splits
+    allocation = allocate_auxiliary_prompts(splits, candidates, used)
+    return splits, allocation
 
 
 def select_kamel(
@@ -294,7 +348,13 @@ def overlap_audit(
                 }
             )
             if source_overlap or prompt_overlap:
-                raise RuntimeError(f"Fresh split overlap: {left} vs {right}")
+                raise RuntimeError(
+                    f"Fresh split overlap: {left} vs {right}; "
+                    f"source_count={len(source_overlap)} "
+                    f"prompt_count={len(prompt_overlap)} "
+                    f"source_samples={sorted(source_overlap)[:3]} "
+                    f"prompt_samples={sorted(prompt_overlap)[:3]}"
+                )
     return source_rows, prompt_rows
 
 
@@ -342,7 +402,7 @@ def main() -> None:
         tokenizer, args.counterfact_dataset, exclusions
     )
     cf_candidates = normalize_counterfact_candidates(raw_cf)
-    cf_splits = select_counterfact(cf_candidates)
+    cf_splits, cf_prompt_allocation = select_counterfact(cf_candidates)
     kamel_rows, templates, kamel_source = load_kamel_sources(args.cache_dir)
     kamel_splits, kamel_filter = select_kamel(
         kamel_rows, templates, tokenizer, exclusions
@@ -457,6 +517,7 @@ def main() -> None:
         "split_summaries": summaries,
         "counterfact_filter": counterfact_filter,
         "counterfact_single_token_candidates": len(cf_candidates),
+        "counterfact_prompt_allocation": cf_prompt_allocation,
         "kamel_filter": kamel_filter,
         "checks": checks,
         "analysis_500_used": False,
