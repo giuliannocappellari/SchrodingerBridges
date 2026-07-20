@@ -424,6 +424,24 @@ def forbid_historical_locked_content(path: str | Path) -> None:
                 raise PermissionError(f"Historical locked content is forbidden: {candidate}")
 
 
+def historical_identity_manifest_candidates(root: Path) -> set[Path]:
+    """Return only frozen split manifests that may contribute exclusion identities."""
+
+    candidates: set[Path] = set()
+    patterns = (
+        "**/protocol/**/*.jsonl",
+        "**/protocol_v1/*.jsonl",
+        "**/*_protocol_v1/*.jsonl",
+        "**/*manifest*.jsonl",
+        "controller_train*.jsonl",
+        "controller_val*.jsonl",
+        "dev_smoke*.jsonl",
+    )
+    for pattern in patterns:
+        candidates.update(path for path in root.glob(pattern) if path.is_file())
+    return candidates
+
+
 def collect_historical_exclusions() -> dict[str, Any]:
     """Collect identity/fingerprint fields without using historical prompt content."""
 
@@ -447,8 +465,7 @@ def collect_historical_exclusions() -> dict[str, Any]:
                 }
             )
             continue
-        for pattern in ("**/protocol/**/*.jsonl", "**/protocol_v1/*.jsonl", "**/*manifest*.jsonl"):
-            candidates.update(root.glob(pattern))
+        candidates.update(historical_identity_manifest_candidates(root))
     allowed_fields = {
         "case_id",
         "id",

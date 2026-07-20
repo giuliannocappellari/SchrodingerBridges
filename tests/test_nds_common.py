@@ -48,6 +48,31 @@ def test_historical_exclusion_uses_identity_fields_only(monkeypatch, tmp_path):
     assert exclusions["audit"][0]["locked_manifest"] is True
 
 
+def test_historical_identity_candidates_cover_frozen_split_layouts(tmp_path):
+    root = tmp_path / "historical"
+    common_protocol = root / "common_protocol_v1" / "train.jsonl"
+    direction3_train = root / "controller_train_100.jsonl"
+    direction3_val = root / "controller_val_50.jsonl"
+    direction3_smoke = root / "dev_smoke_50.jsonl"
+    teacher_output = root / "teacher_cache_v1" / "teacher_states_train.jsonl"
+    for path in (
+        common_protocol,
+        direction3_train,
+        direction3_val,
+        direction3_smoke,
+        teacher_output,
+    ):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("{}\n", encoding="utf-8")
+
+    candidates = common.historical_identity_manifest_candidates(root)
+    assert common_protocol in candidates
+    assert direction3_train in candidates
+    assert direction3_val in candidates
+    assert direction3_smoke in candidates
+    assert teacher_output not in candidates
+
+
 def test_runtime_guard_rejects_historical_locked_path(monkeypatch, tmp_path):
     monkeypatch.setattr(common, "ROOT", tmp_path)
     monkeypatch.setattr(common, "HISTORICAL_CAMPAIGNS", ("historical",))
