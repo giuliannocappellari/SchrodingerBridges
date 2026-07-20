@@ -356,6 +356,10 @@ def select_counterfact(
         ]
         if not missing:
             allocation["protected_prompt_replacement_count"] = len(replacements)
+            allocation["protected_prompt_cross_relation_replacement_count"] = sum(
+                row["removed_relation_id"] != row["replacement_relation_id"]
+                for row in replacements
+            )
             allocation["protected_prompt_repair_rounds"] = attempt
             return splits, allocation
 
@@ -372,11 +376,15 @@ def select_counterfact(
         for role, missing_row in missing:
             missing_id = str(missing_row["case_id"])
             relation = str(missing_row["relation_id"])
+            relation_counts = Counter(
+                str(candidates_by_id[case_id]["relation_id"])
+                for case_id in assignments[role]
+                if case_id != missing_id
+            )
             pool = [
                 row
                 for row in candidates
                 if str(row["case_id"]) not in selected_ids
-                and str(row["relation_id"]) == relation
                 and candidate_has_disjoint_prompt_coverage(row, forbidden)
             ]
             if not pool:
@@ -386,8 +394,16 @@ def select_counterfact(
                 )
             chosen = min(
                 pool,
-                key=lambda row: stable_hash(
-                    SEED, "protected-prompt-replacement", role, missing_id, row["case_id"]
+                key=lambda row: (
+                    str(row["relation_id"]) != relation,
+                    relation_counts[str(row["relation_id"])],
+                    stable_hash(
+                        SEED,
+                        "protected-prompt-replacement",
+                        role,
+                        missing_id,
+                        row["case_id"],
+                    ),
                 ),
             )
             chosen_id = str(chosen["case_id"])
@@ -401,6 +417,8 @@ def select_counterfact(
                     "role": role,
                     "removed_case_id": missing_id,
                     "replacement_case_id": chosen_id,
+                    "removed_relation_id": relation,
+                    "replacement_relation_id": str(chosen["relation_id"]),
                 }
             )
             made_replacement = True
