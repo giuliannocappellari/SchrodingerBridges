@@ -80,6 +80,38 @@ def normalize_counterfact_candidates(
     return output
 
 
+def deduplicate_rewrite_prompts(
+    rows: Sequence[dict[str, Any]],
+    *,
+    namespace: str,
+) -> tuple[list[dict[str, Any]], dict[str, int]]:
+    """Keep one deterministic edit for each normalized rewrite prompt."""
+
+    groups: dict[str, list[dict[str, Any]]] = {}
+    for row in rows:
+        fingerprint = prompt_fingerprint(str(row["rewrite_prompt"]))
+        groups.setdefault(fingerprint, []).append(row)
+    keep_ids = set()
+    duplicate_groups = 0
+    for fingerprint, candidates in groups.items():
+        if len(candidates) > 1:
+            duplicate_groups += 1
+        chosen = min(
+            candidates,
+            key=lambda row: stable_hash(
+                SEED, namespace, fingerprint, str(row["case_id"])
+            ),
+        )
+        keep_ids.add(str(chosen["case_id"]))
+    kept = [row for row in rows if str(row["case_id"]) in keep_ids]
+    return kept, {
+        "input_count": len(rows),
+        "kept_count": len(kept),
+        "duplicate_rows_dropped": len(rows) - len(kept),
+        "duplicate_prompt_groups": duplicate_groups,
+    }
+
+
 def _primary_prompt_fingerprints(
     splits: Mapping[str, Sequence[Mapping[str, Any]]],
 ) -> set[str]:
@@ -271,6 +303,15 @@ def select_kamel(
         row["tokenizer_revision"] = PRIMARY_MODEL_REVISION
         row["prompt_fingerprint"] = prompt_fingerprint(str(row["rewrite_prompt"]))
         normalized.append(row)
+    normalized, rewrite_dedup = deduplicate_rewrite_prompts(
+        normalized, namespace="kamel"
+    )
+    counters.update(
+        {
+            f"rewrite_prompt_dedup_{key}": value
+            for key, value in rewrite_dedup.items()
+        }
+    )
     splits: dict[str, list[dict[str, Any]]] = {}
     used: set[str] = set()
     for length in (2, 3, 4):
@@ -402,6 +443,9 @@ def main() -> None:
         tokenizer, args.counterfact_dataset, exclusions
     )
     cf_candidates = normalize_counterfact_candidates(raw_cf)
+    cf_candidates, cf_rewrite_dedup = deduplicate_rewrite_prompts(
+        cf_candidates, namespace="counterfact"
+    )
     cf_splits, cf_prompt_allocation = select_counterfact(cf_candidates)
     kamel_rows, templates, kamel_source = load_kamel_sources(args.cache_dir)
     kamel_splits, kamel_filter = select_kamel(
@@ -517,6 +561,7 @@ def main() -> None:
         "split_summaries": summaries,
         "counterfact_filter": counterfact_filter,
         "counterfact_single_token_candidates": len(cf_candidates),
+        "counterfact_rewrite_prompt_dedup": cf_rewrite_dedup,
         "counterfact_prompt_allocation": cf_prompt_allocation,
         "kamel_filter": kamel_filter,
         "checks": checks,

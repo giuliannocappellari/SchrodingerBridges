@@ -1,5 +1,6 @@
 from scripts.build_next_direction_protocol import (
     allocate_auxiliary_prompts,
+    deduplicate_rewrite_prompts,
     normalize_counterfact_candidates,
     overlap_audit,
     select_counterfact,
@@ -36,6 +37,26 @@ def test_counterfact_normalization_filters_to_single_token():
     rows = normalize_counterfact_candidates([_row(1, length=1), _row(2, length=2)])
     assert [row["case_id"] for row in rows] == ["nds_cf_1"]
     assert rows[0]["protocol_version"] == "diffusion_editor_next_direction_selection_v1"
+
+
+def test_rewrite_prompt_deduplication_is_deterministic():
+    left = _row(1)
+    duplicate = _row(2)
+    duplicate["rewrite_prompt"] = left["rewrite_prompt"]
+    distinct = _row(3)
+
+    first, summary = deduplicate_rewrite_prompts(
+        [left, duplicate, distinct], namespace="test"
+    )
+    second, second_summary = deduplicate_rewrite_prompts(
+        [duplicate, distinct, left], namespace="test"
+    )
+
+    assert {row["case_id"] for row in first} == {row["case_id"] for row in second}
+    assert summary == second_summary
+    assert summary["kept_count"] == 2
+    assert summary["duplicate_rows_dropped"] == 1
+    assert summary["duplicate_prompt_groups"] == 1
 
 
 def test_auxiliary_allocation_and_overlap_are_disjoint():
