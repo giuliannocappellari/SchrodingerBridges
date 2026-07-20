@@ -17,6 +17,7 @@ from scripts.mdm_memit_editor import (
     get_module,
     partial_mask_state,
     render_masked_input,
+    request_lookup_index,
     solve_memit_update,
     sparse_support_kl,
 )
@@ -130,6 +131,14 @@ class TinyDenoiser(nn.Module):
 def test_subject_locator_returns_last_subject_token():
     tokenizer = TinyTokenizer()
     assert find_last_subject_token(tokenizer, "Before Ada Lovelace wrote", "Ada Lovelace") == 2
+
+
+def test_request_lookup_index_supports_prompt_local_fallback():
+    tokenizer = TinyTokenizer()
+    prompt = "Detroit City Hall, by"
+    assert request_lookup_index(
+        tokenizer, prompt, "Joe Louis Arena", lookup_mode="last_prompt_token"
+    ) == len(tokenizer(prompt, add_special_tokens=False)["input_ids"]) - 1
 
 
 def test_mask_count_equals_target_length_and_context_is_preserved():

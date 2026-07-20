@@ -40,6 +40,12 @@ def test_protected_families_are_explicit_and_training_only():
     for family in ("same_subject", "near", "far", "unrelated"):
         request = build_protected_requests([row], family)[0]
         assert request["prompt_provenance"] == f"allowed_{family}_training_prompt"
+        expected = (
+            "last_subject"
+            if row["subject"] in request["rewrite_prompt"]
+            else "last_prompt_token"
+        )
+        assert request["lookup_mode"] == expected
 
 
 def test_measurement_manifest_guard_rejects_locked_roles():

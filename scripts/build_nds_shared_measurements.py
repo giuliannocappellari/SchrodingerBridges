@@ -130,15 +130,24 @@ def _first_prompt(row: Mapping[str, Any], family: str) -> str:
 def build_protected_requests(
     rows: Sequence[Mapping[str, Any]], family: str
 ) -> list[dict[str, Any]]:
-    return [
-        {
-            **dict(row),
-            "case_id": f"{row['case_id']}::protected::{family}",
-            "rewrite_prompt": _first_prompt(row, family),
-            "prompt_provenance": f"allowed_{family}_training_prompt",
-        }
-        for row in rows
-    ]
+    output = []
+    for row in rows:
+        prompt = _first_prompt(row, family)
+        subject = str(row["subject"])
+        subject_present = subject.casefold() in prompt.casefold()
+        output.append(
+            {
+                **dict(row),
+                "case_id": f"{row['case_id']}::protected::{family}",
+                "rewrite_prompt": prompt,
+                "lookup_subject": subject if subject_present else "",
+                "lookup_mode": (
+                    "last_subject" if subject_present else "last_prompt_token"
+                ),
+                "prompt_provenance": f"allowed_{family}_training_prompt",
+            }
+        )
+    return output
 
 
 @torch.no_grad()
@@ -374,6 +383,10 @@ def main() -> None:
         "statistics_edits": len(splits["statistics_train"]),
         "calibration_edits": len(splits["calibration"]),
         "protected_families": list(PROTECTED_FAMILIES),
+        "protected_lookup_semantics": {
+            "edited_subject_present": "last_subject",
+            "edited_subject_absent": "last_prompt_token",
+        },
         "relation_count": len(bank),
         "runtime_feature_schema": [
             "base_target_rank",

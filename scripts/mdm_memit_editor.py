@@ -154,6 +154,22 @@ def find_last_subject_token(tokenizer: Any, prompt: str, subject: str) -> int:
     return find_subject_token_span(tokenizer, prompt, subject)[1]
 
 
+def request_lookup_index(
+    tokenizer: Any,
+    prompt: str,
+    subject: str,
+    lookup_mode: str = "last_subject",
+) -> int:
+    if lookup_mode == "last_subject":
+        return find_last_subject_token(tokenizer, prompt, subject)
+    if lookup_mode == "last_prompt_token":
+        token_ids = tokenizer(prompt, add_special_tokens=False)["input_ids"]
+        if not token_ids:
+            raise ValueError("Cannot locate the last token of an empty prompt")
+        return len(token_ids) - 1
+    raise ValueError(f"Unknown lookup mode: {lookup_mode}")
+
+
 def partial_mask_state(
     target_ids: Sequence[int],
     *,
@@ -662,7 +678,8 @@ def extract_keys_and_outputs(
         lookups: list[int] = []
         request_indices: list[int] = []
         for request_index, request in enumerate(subset):
-            subject = str(request["subject"])
+            subject = str(request.get("lookup_subject") or request["subject"])
+            lookup_mode = str(request.get("lookup_mode") or "last_subject")
             base_prompt = str(request.get("rewrite_prompt") or str(request["rewrite_template"]).format(subject))
             target_ids = list(request.get("target_new_token_ids") or contextual_target_ids(tokenizer, base_prompt, request["target_new"]))
             confidence = None
@@ -685,7 +702,11 @@ def extract_keys_and_outputs(
                         confidence=confidence,
                     )
                 )
-                lookups.append(find_last_subject_token(tokenizer, prompt, subject))
+                lookups.append(
+                    request_lookup_index(
+                        tokenizer, prompt, subject, lookup_mode=lookup_mode
+                    )
+                )
                 request_indices.append(request_index)
         batch = pad_batch(rows, int(tokenizer.pad_token_id), device)
         offsets = batch["left_offsets"].tolist()
