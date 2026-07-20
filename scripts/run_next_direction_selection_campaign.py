@@ -332,6 +332,8 @@ def main() -> None:
             "none",
             "--anchor_manifest",
             protocol / "cf_nds_statistics_train_500.jsonl",
+            "--anchor_role",
+            "cf_nds_statistics_train_500",
             "--partial_mask_schedule",
             "cycle",
             "--reveal_policy",

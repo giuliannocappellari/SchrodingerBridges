@@ -53,6 +53,10 @@ BUCKET_SCHEDULES = {
 }
 PROTECTION_MODES = {"none", "static", "shared", "state"}
 STATE_MODES = {"shared", "bucketed"}
+ALLOWED_ANCHOR_ROLES = {
+    "cf_trm_anchor_train_500",
+    "cf_nds_statistics_train_500",
+}
 
 
 def validate_mode(state_mode: str, protection_mode: str) -> None:
@@ -72,6 +76,18 @@ def validate_manifest_access(path: Path) -> None:
         raise PermissionError("Historical analysis/final manifests are forbidden")
     if "locked" in path.name.casefold() and os.environ.get("PS_TRM_DEV_METHOD_LOCKED") != "1":
         raise PermissionError("Fresh TRM locked confirmation requires a validated dev lock")
+
+
+def validate_anchor_role(
+    anchors: Sequence[Mapping[str, Any]], expected_role: str
+) -> None:
+    if expected_role not in ALLOWED_ANCHOR_ROLES:
+        raise PermissionError(f"Anchor role is not training-only: {expected_role}")
+    roles = {str(row.get("split_role") or "") for row in anchors}
+    if not anchors or roles != {expected_role}:
+        raise RuntimeError(
+            f"Temporal protection diagnostics require {expected_role}; got {sorted(roles)}"
+        )
 
 
 def grouped_diagnostics(rows: Sequence[Mapping[str, Any]]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
@@ -126,6 +142,11 @@ def main() -> None:
         type=Path,
         default=PROTOCOL_ROOT / "cf_trm_anchor_train_500.jsonl",
     )
+    parser.add_argument(
+        "--anchor_role",
+        choices=sorted(ALLOWED_ANCHOR_ROLES),
+        default="cf_trm_anchor_train_500",
+    )
     parser.add_argument("--anchor_per_family", type=int, default=32)
     parser.add_argument("--partial_mask_schedule", default="uniform")
     parser.add_argument("--reveal_policy", default="random")
@@ -154,10 +175,7 @@ def main() -> None:
     if not rows:
         raise RuntimeError("No edit rows selected")
     anchors = read_jsonl(args.anchor_manifest)
-    if not anchors or {str(row["split_role"]) for row in anchors} != {
-        "cf_trm_anchor_train_500"
-    }:
-        raise RuntimeError("Temporal protection diagnostics require fresh anchor500")
+    validate_anchor_role(anchors, args.anchor_role)
     records, anchor_summary = build_protection_prompt_records(
         anchors, max_per_family=args.anchor_per_family
     )
@@ -185,6 +203,7 @@ def main() -> None:
         "alpha": args.alpha,
         "top_q": args.top_q,
         "anchor_manifest": str(args.anchor_manifest),
+        "anchor_role": args.anchor_role,
         "anchor_manifest_sha256": sha256_file(args.anchor_manifest),
         "runtime_feature_schema": [
             "current_hidden_state",

@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import torch
+import pytest
 
 from scripts.trm_editor import build_input_protection_basis, fit_factorized_residual_memory
+from scripts.run_trm_editor_experiment import validate_anchor_role
 from scripts.trm_protection import (
     REQUIRED_PROTECTION_FAMILIES,
     build_protection_prompt_records,
@@ -21,6 +23,14 @@ def _anchor(index: int, relation: str) -> dict:
         "generation_prompts": [f"Subject {index} is known for"],
         "attribute_prompts": [f"Attribute subject {index} works in"],
     }
+
+
+def test_temporal_diagnostic_accepts_explicit_nds_training_role() -> None:
+    rows = [_anchor(0, "r0")]
+    rows[0]["split_role"] = "cf_nds_statistics_train_500"
+    validate_anchor_role(rows, "cf_nds_statistics_train_500")
+    with pytest.raises(PermissionError):
+        validate_anchor_role(rows, "cf_nds_confirmation_200")
 
 
 def test_protection_prompt_builder_covers_every_required_family() -> None:
