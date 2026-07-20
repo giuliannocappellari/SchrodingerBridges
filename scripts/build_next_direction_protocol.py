@@ -252,11 +252,87 @@ def allocate_auxiliary_prompts(
     return allocation
 
 
+def candidate_has_disjoint_prompt_coverage(
+    row: Mapping[str, Any], forbidden: set[str]
+) -> bool:
+    """Check that a replacement edit retains every required real prompt family."""
+
+    rewrite = prompt_fingerprint(str(row["rewrite_prompt"]))
+    paraphrases = {
+        prompt_fingerprint(str(prompt))
+        for prompt in row.get("paraphrase_prompts", [])
+        if str(prompt).strip()
+    }
+    near = {
+        prompt_fingerprint(str(prompt))
+        for prompt in row.get("near_locality_prompts", [])
+        if str(prompt).strip()
+    }
+    same_subject = {
+        prompt_fingerprint(str(candidate["prompt"]))
+        for candidate in row.get("same_subject_prompt_candidates", [])
+        if str(candidate.get("prompt", "")).strip()
+    }
+    unrelated = {
+        prompt_fingerprint(str(prompt))
+        for field in ("attribute_prompts", "generation_prompts")
+        for prompt in row.get(field, [])
+        if str(prompt).strip()
+    }
+    return bool(
+        rewrite not in forbidden
+        and (paraphrases - forbidden)
+        and (near - forbidden)
+        and (same_subject - forbidden)
+        and (unrelated - forbidden)
+    )
+
+
+def raw_candidate_prompt_fingerprints(row: Mapping[str, Any]) -> set[str]:
+    values = {prompt_fingerprint(str(row["rewrite_prompt"]))}
+    for field in (
+        "paraphrase_prompts",
+        "near_locality_prompts",
+        "attribute_prompts",
+        "generation_prompts",
+    ):
+        values.update(
+            prompt_fingerprint(str(prompt))
+            for prompt in row.get(field, [])
+            if str(prompt).strip()
+        )
+    values.update(
+        prompt_fingerprint(str(candidate["prompt"]))
+        for candidate in row.get("same_subject_prompt_candidates", [])
+        if str(candidate.get("prompt", "")).strip()
+    )
+    return values
+
+
+def materialize_counterfact_splits(
+    assignments: Mapping[str, Sequence[str]],
+    candidates_by_id: Mapping[str, Mapping[str, Any]],
+) -> dict[str, list[dict[str, Any]]]:
+    splits: dict[str, list[dict[str, Any]]] = {}
+    for role, case_ids in assignments.items():
+        rows = []
+        for rank, case_id in enumerate(case_ids):
+            row = dict(candidates_by_id[case_id])
+            row["split_role"] = role
+            row["selection_rank"] = rank
+            row["role_access"] = (
+                "fresh_confirmation_only" if "confirmation" in role else "development"
+            )
+            rows.append(row)
+        splits[role] = rows
+    return splits
+
+
 def select_counterfact(
     candidates: Sequence[dict[str, Any]],
 ) -> tuple[dict[str, list[dict[str, Any]]], dict[str, int]]:
     used: set[str] = set()
-    splits: dict[str, list[dict[str, Any]]] = {}
+    assignments: dict[str, list[str]] = {}
     for offset, (role, count) in enumerate(CF_COUNTS.items()):
         selected = round_robin_stratified(
             list(candidates),
@@ -265,18 +341,73 @@ def select_counterfact(
             used=used,
             group_fields=("relation_id",),
         )
-        normalized = []
-        for rank, source in enumerate(selected):
-            row = dict(source)
-            row["split_role"] = role
-            row["selection_rank"] = rank
-            row["role_access"] = (
-                "fresh_confirmation_only" if "confirmation" in role else "development"
+        assignments[role] = [str(row["case_id"]) for row in selected]
+
+    candidates_by_id = {str(row["case_id"]): row for row in candidates}
+    replacements: list[dict[str, str]] = []
+    for attempt in range(20):
+        splits = materialize_counterfact_splits(assignments, candidates_by_id)
+        allocation = allocate_auxiliary_prompts(splits, candidates, set(used))
+        missing = [
+            (role, row)
+            for role, rows in splits.items()
+            for row in rows
+            if not row.get("near_locality_prompts")
+        ]
+        if not missing:
+            allocation["protected_prompt_replacement_count"] = len(replacements)
+            allocation["protected_prompt_repair_rounds"] = attempt
+            return splits, allocation
+
+        selected_ids = {
+            case_id for case_ids in assignments.values() for case_id in case_ids
+        }
+        forbidden = {
+            fingerprint
+            for rows in splits.values()
+            for row in rows
+            for fingerprint in all_prompt_fingerprints([row])
+        }
+        made_replacement = False
+        for role, missing_row in missing:
+            missing_id = str(missing_row["case_id"])
+            relation = str(missing_row["relation_id"])
+            pool = [
+                row
+                for row in candidates
+                if str(row["case_id"]) not in selected_ids
+                and str(row["relation_id"]) == relation
+                and candidate_has_disjoint_prompt_coverage(row, forbidden)
+            ]
+            if not pool:
+                raise RuntimeError(
+                    "No prompt-disjoint replacement for "
+                    f"{role}/{missing_id} relation={relation}"
+                )
+            chosen = min(
+                pool,
+                key=lambda row: stable_hash(
+                    SEED, "protected-prompt-replacement", role, missing_id, row["case_id"]
+                ),
             )
-            normalized.append(row)
-        splits[role] = normalized
-    allocation = allocate_auxiliary_prompts(splits, candidates, used)
-    return splits, allocation
+            chosen_id = str(chosen["case_id"])
+            index = assignments[role].index(missing_id)
+            assignments[role][index] = chosen_id
+            selected_ids.remove(missing_id)
+            selected_ids.add(chosen_id)
+            forbidden.update(raw_candidate_prompt_fingerprints(chosen))
+            replacements.append(
+                {
+                    "role": role,
+                    "removed_case_id": missing_id,
+                    "replacement_case_id": chosen_id,
+                }
+            )
+            made_replacement = True
+        used = set(selected_ids)
+        if not made_replacement:
+            break
+    raise RuntimeError("Could not allocate complete protected prompts after 20 rounds")
 
 
 def select_kamel(

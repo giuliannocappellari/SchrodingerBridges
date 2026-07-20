@@ -1,8 +1,10 @@
 from scripts.build_next_direction_protocol import (
     allocate_auxiliary_prompts,
+    candidate_has_disjoint_prompt_coverage,
     deduplicate_rewrite_prompts,
     normalize_counterfact_candidates,
     overlap_audit,
+    prompt_fingerprint,
     select_counterfact,
 )
 
@@ -57,6 +59,14 @@ def test_rewrite_prompt_deduplication_is_deterministic():
     assert summary["kept_count"] == 2
     assert summary["duplicate_rows_dropped"] == 1
     assert summary["duplicate_prompt_groups"] == 1
+
+
+def test_replacement_coverage_requires_every_real_prompt_family():
+    row = _row(5)
+    assert candidate_has_disjoint_prompt_coverage(row, set())
+
+    near_fingerprint = prompt_fingerprint(row["near_locality_prompts"][0])
+    assert not candidate_has_disjoint_prompt_coverage(row, {near_fingerprint})
 
 
 def test_auxiliary_allocation_and_overlap_are_disjoint():
