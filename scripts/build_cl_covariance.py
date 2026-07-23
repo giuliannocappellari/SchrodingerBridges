@@ -37,6 +37,10 @@ def parse_layers(value: str) -> list[int]:
     return layers
 
 
+def resolve_output_dir(path: Path) -> Path:
+    return path.resolve() if path.is_absolute() else (ROOT / path).resolve()
+
+
 def wikipedia_texts(dataset_name: str, config_name: str) -> Iterable[str]:
     from datasets import load_dataset
 
@@ -58,6 +62,7 @@ def main() -> None:
     parser.add_argument("--dataset_config", default="20231101.en")
     parser.add_argument("--output_dir", type=Path, default=DEFAULT_OUTPUT)
     args = parser.parse_args()
+    args.output_dir = resolve_output_dir(args.output_dir)
     if args.output_dir.exists():
         report = args.output_dir / "report_summary.json"
         if report.is_file():
