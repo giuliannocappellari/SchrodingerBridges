@@ -118,13 +118,22 @@ def parse_layers(value: str) -> tuple[int, ...]:
     return layers
 
 
-def load_covariance(path: Path, layer: int):
+def select_covariance_representation(covariance, representation: str):
+    if representation == "full":
+        return covariance
+    if representation == "diagonal":
+        return covariance.diagonal().clone() if covariance.ndim == 2 else covariance
+    raise ValueError(f"Unsupported covariance representation: {representation}")
+
+
+def load_covariance(path: Path, layer: int, representation: str):
     import torch
 
     candidate = path / f"layer_{layer}_covariance.pt"
     if not candidate.is_file():
         raise FileNotFoundError(candidate)
-    return torch.load(candidate, map_location="cpu", weights_only=True).to("cuda")
+    covariance = torch.load(candidate, map_location="cpu", weights_only=True)
+    return select_covariance_representation(covariance, representation).to("cuda")
 
 
 def rank_truncate(update, rank: int):
@@ -318,6 +327,11 @@ def main() -> None:
     parser.add_argument("--dtype", choices=("float16", "bfloat16"), default="float16")
     parser.add_argument("--layers", type=parse_layers, default=parse_layers("4,5,6,7"))
     parser.add_argument("--covariance_dir", type=Path, default=CAMPAIGN_ROOT / "B1_covariance_cache_v1")
+    parser.add_argument(
+        "--covariance_representation",
+        choices=("diagonal", "full"),
+        default="diagonal",
+    )
     parser.add_argument("--target_optimization_steps", type=int, default=25)
     parser.add_argument("--learning_rate", type=float, default=0.1)
     parser.add_argument("--covariance_weight", type=float, default=15000.0)
@@ -453,7 +467,9 @@ def main() -> None:
                 tokenizer,
                 requests,
                 config,
-                lambda layer: load_covariance(args.covariance_dir, layer),
+                lambda layer: load_covariance(
+                    args.covariance_dir, layer, args.covariance_representation
+                ),
                 target_cache_dir=args.output_dir / "target_value_cache" / f"block_{block:03d}",
                 protected_basis_loader=(lambda layer: basis_by_layer.get(layer)) if basis_by_layer else None,
                 update_transform=update_transform,
@@ -590,6 +606,7 @@ def main() -> None:
         "model_revision": args.model_revision,
         "layers": list(args.layers),
         "memit": config.to_dict(),
+        "covariance_representation": args.covariance_representation,
         "lowrank_rank": args.lowrank_rank,
         "lora_rank": args.lora_rank,
         "lora_steps": args.lora_steps,

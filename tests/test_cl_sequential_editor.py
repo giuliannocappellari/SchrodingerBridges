@@ -3,7 +3,7 @@ from __future__ import annotations
 import torch
 
 from scripts.cl_lora import LoRABranch
-from scripts.run_cl_sequential_editor import rank_truncate
+from scripts.run_cl_sequential_editor import rank_truncate, select_covariance_representation
 
 
 class _Attention(torch.nn.Module):
@@ -57,3 +57,9 @@ def test_rank_truncate_obeys_rank_and_is_finite() -> None:
     assert report["rank"] == 2
     assert 0.0 < report["explained_update_energy"] <= 1.0
 
+
+def test_diagonal_covariance_representation_is_explicit() -> None:
+    covariance = torch.tensor([[2.0, 0.5], [0.5, 3.0]])
+    diagonal = select_covariance_representation(covariance, "diagonal")
+    assert torch.equal(diagonal, torch.tensor([2.0, 3.0]))
+    assert torch.equal(select_covariance_representation(covariance, "full"), covariance)
