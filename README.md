@@ -1,29 +1,52 @@
-# Diffusion Editor Next-Direction Selection Goal
+# Continual Diffusion Editing Goal Bundle
 
-This bundle instructs Codex to run a bounded autonomous screening campaign over five remaining statistically and physically motivated directions:
+This bundle launches an autonomous bounded selection campaign to test whether continual-learning methods can solve sequential factual editing in masked diffusion LMs.
+
+## Central new source
+
+The campaign is anchored in **DiffusionGrow**, a recent continual-learning proposal for diffusion language models that preserves an explicit frozen pretrained path and adds timestep-conditioned trainable branches.
+
+## Why this campaign differs from earlier editing campaigns
+
+Earlier work focused mostly on one edit or one fixed batch. This campaign evaluates:
 
 ```text
-N1 relation residualization
-N2 Fisher-constrained editing
-N3 primal-dual locality constraints
-N4 selective conformal editing
-N5 joint answer-span coupling
+sequential acquisition
+retention of earlier edits
+forgetting after every block
+preservation of the original denoiser
+same-subject locality
+storage and compute growth
 ```
 
-A conditional N6 integration stage may combine only components that pass their own mechanism gates.
+## Files
 
-The campaign does not execute the final selected direction at full scale. It ends after fresh confirmation, ranked selection, and generation of a draft full-campaign plan.
-
-## Installation
-
-Copy every file in this bundle to the repository root, replacing the active campaign control files.
+```text
+AGENTS.md
+ACTIVE_RESEARCH_CAMPAIGN.json
+CANDIDATE_DIRECTION_REGISTRY.json
+CONTINUAL_DIFFUSION_EDITING_AUTONOMOUS_PLAN.md
+CONTINUAL_LEARNING_ALTERNATIVES_CATALOG.md
+DIFFUSIONGROW_CONTINUAL_EDITING_PLAN.md
+PARTIAL_STATE_REPLAY_PLAN.md
+SPARSE_MEMORY_ROUTING_PLAN.md
+GATED_ADAPTER_EXPANSION_PLAN.md
+ORTHOGONAL_FISHER_CONTINUAL_PLAN.md
+FUNCTIONAL_REPLAY_PLAN.md
+BRIDGE_GENERATIVE_REPLAY_PLAN.md
+MULTIMARGINAL_SB_CONSOLIDATION_PLAN.md
+DUAL_MEMORY_CONSOLIDATION_PLAN.md
+FINAL_SELECTION_AND_REPORTING_PLAN.md
+PRIMARY_SOURCES.md
+START_CONTINUAL_DIFFUSION_EDITING_GOAL.md
+```
 
 ## Environment
 
 ```bash
-export NEXT_DIRECTION_AUTONOMOUS_MODE=1
-export NEXT_DIRECTION_MAX_INFRA_RETRIES=3
-export NEXT_DIRECTION_MAX_SCIENTIFIC_RESCUES_PER_TRACK=1
+export CL_DLLM_AUTONOMOUS_MODE=1
+export CL_DLLM_MAX_INFRA_RETRIES="3"
+export CL_DLLM_MAX_SCIENTIFIC_RESCUES_PER_TRACK="1"
 
 export RUNPOD_POD_ID="<existing-pod-id>"
 export RUNPOD_SSH_KEY="$HOME/.ssh/<private-key-file>"
@@ -33,8 +56,8 @@ export RUNPOD_SSH_PORT="<current-port>"
 export REMOTE_REPO_DIR="/workspace/SB"
 ```
 
-Ensure `runpodctl` is configured with the RunPod API key.
-
 ## Launch
 
-Use Goal mode and paste `START_NEXT_DIRECTION_SELECTION_GOAL.md`.
+Use Codex Goal mode and paste `START_CONTINUAL_DIFFUSION_EDITING_GOAL.md`.
+
+The Pod remains running until the final validated selection package is complete or an unrecoverable infrastructure issue remains.

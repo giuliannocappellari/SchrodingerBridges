@@ -1,42 +1,71 @@
-# Primary Sources
+# Primary Sources and Source Status
 
-The implementation and report must cite and distinguish these sources.
+The autonomous campaign must independently verify URLs, code availability, licenses, and revisions before execution.
 
-## TimeROME-DLM
+## Diffusion-language-model continual learning
 
-- **TimeROME-DLM: Temporal Causal Tracing and Low-Rank Inference-Time Knowledge Editing for Masked Diffusion Language Models**
-- arXiv:2606.12841
-- Core ideas used by this campaign:
-  - Temporal Indirect Effect causal tracing over denoising time.
-  - A closed-form, low-rank residual edit memory.
-  - Ridge regularization and sparsification.
-  - Frozen backbone; residual applied during diffusion forwards.
-  - Transfer across several masked diffusion language-model backbones.
+- **DiffusionGrow: Continual Learning for Diffusion Language Models**  
+  OpenReview submission: https://openreview.net/forum?id=pvqJiLXmUn  
+  Reported idea: function-preserving growth with timestep-conditioned trainable branches and learned gates, leaving the pretrained denoiser path frozen. Treat as a recent submission, not an established accepted result, until source audit confirms status.
 
-## Knowledge Editing in Masked Diffusion Language Models
+- **Stable-DiffCoder: Pushing the Frontier of Code Diffusion Large Language Model**  
+  arXiv: https://arxiv.org/abs/2601.15892  
+  Relevant idea: block-diffusion continual pretraining, small-block curriculum, and training/inference context alignment.
 
-- **Knowledge Editing in Masked Diffusion Language Models**
-- arXiv:2606.03924
-- Core ideas used by this campaign:
-  - Early-to-middle MLP localization at the last subject token.
-  - Multi-token degradation caused by partially unmasked inference states.
-  - Target optimization across partial-mask states.
+- **Multi-Mask Diffusion Language Models for Few-Step Generation**  
+  arXiv: https://arxiv.org/abs/2607.19686  
+  Relevant idea: continual training from a pretrained MDM using a modified mask process.
 
-## AlphaEdit
+## Continual and lifelong editing
 
-- **AlphaEdit: Null-Space Constrained Knowledge Editing for Language Models**
-- arXiv:2410.02355
-- Used as the protected-subspace/null-space baseline and motivation.
-- Its assumptions are not presumed to transfer unchanged to masked diffusion models.
+- **O-Edit**  
+  https://arxiv.org/abs/2410.11469
 
-## Historical local evidence
+- **MEMOIR**  
+  https://arxiv.org/abs/2506.07899
 
-The campaign must preserve and cite the repository's completed evidence showing:
+- **EvoEdit**  
+  https://arxiv.org/abs/2512.04545
 
-```text
-partial-state edit optimization produced large multi-token rewrite gains;
-a static null-space projection reduced same-subject leakage but did not satisfy the frozen joint criterion;
-rule-based runtime gates and learned value-controller routes were previously closed under their own protocols.
-```
+- **Sparse Memory Finetuning**  
+  https://arxiv.org/abs/2605.03229
 
-Historical results motivate the new protocol but cannot be tuned on or overwritten.
+## Continual PEFT and protected updates
+
+- **Continual Diffusion / C-LoRA**  
+  https://arxiv.org/abs/2304.06027
+
+- **GainLoRA**  
+  https://arxiv.org/abs/2505.15424
+
+- **FGGM**  
+  https://arxiv.org/abs/2601.18261
+
+- **NuSA-CL**  
+  https://arxiv.org/abs/2510.21175
+
+## Replay and distillation
+
+- **Learning without Forgetting**  
+  https://arxiv.org/abs/1606.09282
+
+- **Gradient Episodic Memory**  
+  https://arxiv.org/abs/1706.08840
+
+- **Dark Experience Replay**  
+  https://arxiv.org/abs/2004.07211
+
+## Schrödinger bridges
+
+- **Categorical Schrödinger Bridge Matching**  
+  https://arxiv.org/abs/2502.01416
+
+- **Diffusion Schrödinger Bridge Matching**  
+  https://arxiv.org/abs/2303.16852
+
+- **Unbalanced Diffusion Schrödinger Bridge**  
+  https://arxiv.org/abs/2306.09099
+
+## Repository evidence
+
+The user's dissertation proposal and prior campaign artifacts remain part of the scientific context. The proposal explicitly includes sequential editing/O-Edit and asks whether bridge adaptation can improve locality in diffusion LMs. Previous campaigns must remain immutable.

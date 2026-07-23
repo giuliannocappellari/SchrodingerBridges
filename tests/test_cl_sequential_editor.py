@@ -1,0 +1,59 @@
+from __future__ import annotations
+
+import torch
+
+from scripts.cl_lora import LoRABranch
+from scripts.run_cl_sequential_editor import rank_truncate
+
+
+class _Attention(torch.nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self.o_proj = torch.nn.Linear(4, 4, bias=False)
+
+    def forward(self, value: torch.Tensor) -> torch.Tensor:
+        return self.o_proj(value)
+
+
+class _Layer(torch.nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self.self_attn = _Attention()
+
+
+class _Backbone(torch.nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self.layers = torch.nn.ModuleList([_Layer()])
+
+
+class _Model(torch.nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self.model = _Backbone()
+
+
+def test_lora_branch_is_exact_identity_at_initialization() -> None:
+    torch.manual_seed(1)
+    model = _Model()
+    value = torch.randn(2, 3, 4)
+    expected = model.model.layers[0].self_attn(value).detach()
+    branch = LoRABranch(model, [0], rank=2)
+    actual = model.model.layers[0].self_attn(value)
+    assert torch.equal(expected, actual)
+    with torch.no_grad():
+        branch.parameters_by_layer[0][1].fill_(0.1)
+    changed = model.model.layers[0].self_attn(value)
+    assert not torch.equal(expected, changed)
+    branch.close()
+
+
+def test_rank_truncate_obeys_rank_and_is_finite() -> None:
+    torch.manual_seed(2)
+    update = torch.randn(8, 6)
+    truncated, report = rank_truncate(update, 2)
+    assert torch.linalg.matrix_rank(truncated, atol=1e-5) <= 2
+    assert torch.isfinite(truncated).all()
+    assert report["rank"] == 2
+    assert 0.0 < report["explained_update_energy"] <= 1.0
+

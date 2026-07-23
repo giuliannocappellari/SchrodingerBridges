@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from scripts import dnpe_common, nds_common
+from scripts import cl_common, dnpe_common, nds_common
 from scripts.build_dnpe_protocol import CF_COUNTS, _overlap_audit
 
 
@@ -13,8 +13,8 @@ def test_dnpe_identity_remains_registered_as_closed_history() -> None:
     root = Path(__file__).resolve().parents[1]
     active = json.loads((root / "ACTIVE_RESEARCH_CAMPAIGN.json").read_text())
     registry = json.loads((root / "EXPERIMENT_PROTOCOL_REGISTRY.json").read_text())
-    assert active["active_protocol"] == nds_common.CAMPAIGN_ID
-    assert active["historical_protocols_immutable"] is True
+    assert active["active_campaign"] == cl_common.CAMPAIGN_ID
+    assert active["historical_protocols"]["next_direction_statistics"] == "closed_no_promising_direction"
     assert dnpe_common.CAMPAIGN_ID in nds_common.HISTORICAL_CAMPAIGNS
     assert registry["protocol_version"] == "partial_state_temporal_residual_editor_v1"
 

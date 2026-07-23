@@ -1,48 +1,117 @@
 {
-  "protocol_version": "diffusion_editor_next_direction_selection_v1",
+  "schema_version": 1,
+  "protocol_version": "continual_diffusion_editing_sb_selection_v1",
   "tracks": [
     {
-      "track_id": "N1",
-      "name": "relation_residualized_editing",
+      "track_id": "C0",
+      "name": "DiffusionGrow source reproduction and continual factual-edit baseline",
       "mandatory": true,
-      "plan": "RELATION_RESIDUALIZATION_PLAN.md",
-      "primary_question": "Does removing subject and relation main effects isolate a more local subject-relation edit direction?"
+      "status": "pending"
     },
     {
-      "track_id": "N2",
-      "name": "fisher_constrained_editing",
+      "track_id": "C1",
+      "name": "Function-preserving growth branches for sequential factual edits",
       "mandatory": true,
-      "plan": "FISHER_CONSTRAINED_EDITING_PLAN.md",
-      "primary_question": "Does Fisher-Rao preconditioning reduce protected distribution drift at matched efficacy?"
+      "status": "pending"
     },
     {
-      "track_id": "N3",
-      "name": "primal_dual_locality",
+      "track_id": "C2",
+      "name": "Partial-state real and dark replay",
       "mandatory": true,
-      "plan": "PRIMAL_DUAL_LOCALITY_PLAN.md",
-      "primary_question": "Do explicit locality constraints outperform fixed penalty weights?"
+      "status": "pending"
     },
     {
-      "track_id": "N4",
-      "name": "selective_conformal_editing",
+      "track_id": "C3",
+      "name": "Sparse routed residual memory",
       "mandatory": true,
-      "plan": "SELECTIVE_CONFORMAL_EDITING_PLAN.md",
-      "primary_question": "Can the editor safely edit a substantial calibrated subset by abstaining on high-risk edits?"
+      "status": "pending"
     },
     {
-      "track_id": "N5",
-      "name": "joint_answer_span_coupling",
+      "track_id": "C4",
+      "name": "Gated continual adapter expansion",
       "mandatory": true,
-      "plan": "JOINT_ANSWER_SPAN_COUPLING_PLAN.md",
-      "primary_question": "Does explicit token coupling improve multi-token factual realization beyond factorized decoding?"
+      "status": "pending"
     },
     {
-      "track_id": "N6",
-      "name": "integrated_relation_fisher_constrained_selective_editor",
+      "track_id": "C5",
+      "name": "Orthogonal and Fisher-protected growth",
+      "mandatory": true,
+      "status": "pending"
+    },
+    {
+      "track_id": "C6",
+      "name": "Functional distillation, DER, and episodic gradient constraints",
+      "mandatory": true,
+      "status": "pending"
+    },
+    {
+      "track_id": "C7",
+      "name": "Schrodinger-bridge generative trajectory replay",
+      "mandatory": true,
+      "status": "pending"
+    },
+    {
+      "track_id": "C8",
+      "name": "Multi-marginal/function-space SB consolidation",
+      "mandatory": true,
+      "status": "pending"
+    },
+    {
+      "track_id": "C9",
+      "name": "Dual-memory fast/slow consolidation",
+      "mandatory": true,
+      "status": "pending"
+    },
+    {
+      "track_id": "C10",
+      "name": "Low-dimensional parameter-space SB consolidation",
       "mandatory": false,
-      "conditional": true,
-      "plan": "INTEGRATED_CANDIDATE_PLAN.md",
-      "primary_question": "Do the strongest independently validated components compose into a superior editor or selective policy?"
+      "trigger": "C1 or C4 passes and adapter latent is stable",
+      "status": "not_triggered"
+    },
+    {
+      "track_id": "C11",
+      "name": "Online Bayesian/Laplace continual adapter",
+      "mandatory": false,
+      "trigger": "C5 shows Fisher signal but misses end-to-end criteria",
+      "status": "not_triggered"
+    },
+    {
+      "track_id": "C12",
+      "name": "Spectral post-hoc unforgetting",
+      "mandatory": false,
+      "trigger": "a parametric track has strong acquisition but recoverable forgetting",
+      "status": "not_triggered"
+    },
+    {
+      "track_id": "C13",
+      "name": "Selective safe routing/abstention",
+      "mandatory": false,
+      "trigger": "a track has a reliable pre-edit risk signal",
+      "status": "not_triggered"
+    },
+    {
+      "track_id": "C14",
+      "name": "Integrated continual editor",
+      "mandatory": false,
+      "trigger": "two or more compatible components pass independently",
+      "status": "not_triggered"
     }
+  ],
+  "final_decisions": [
+    "pursue_diffusiongrow_continual_editor",
+    "pursue_partial_state_replay_editor",
+    "pursue_sparse_memory_editor",
+    "pursue_gated_adapter_editor",
+    "pursue_orthogonal_fisher_editor",
+    "pursue_functional_replay_editor",
+    "pursue_bridge_replay_editor",
+    "pursue_sb_consolidation_editor",
+    "pursue_dual_memory_editor",
+    "pursue_integrated_continual_editor",
+    "mechanism_only_result",
+    "no_promising_continual_direction",
+    "protocol_infeasible",
+    "infrastructure_blocked"
   ]
 }

@@ -1,61 +1,47 @@
-# Final Selection and Reporting Plan
+# Final Selection and Reporting
 
-## Track result schema
+## Confirmation rule
 
-Each track must be classified as one of:
+Only pilot-eligible candidates run on the fresh 200-edit confirmation stream. No retuning.
 
-```text
-confirmed_full_editor
-confirmed_selective_safe_editor
-confirmed_pareto_improvement
-confirmed_multi_token_result
-confirmed_mechanism_only
-pilot_failed
-confirmation_failed
-protocol_infeasible
-infrastructure_blocked
-```
-
-## Selection matrix columns
+## Selection hierarchy
 
 ```text
-track_id
-candidate_id
-pilot_status
-confirmation_status
-success_class
-rewrite
-paraphrase
-same_subject_tfpr
-near_tfpr
-far_tfpr
-distributional_locality_kl
-coverage
-risk_upper_bound
-multi_token_exact_delta
-paired_ci_low
-paired_ci_high
-gpu_minutes_per_edit
-implementation_risk
-recommended
+1. full continual editor
+2. confirmed SB-specific continual result
+3. confirmed retention/locality Pareto improvement
+4. confirmed efficiency/scaling result
+5. confirmed mechanism-only result
+6. no promising continual direction
 ```
 
-## Final recommendation
+## Tie-breaking
 
-`next_direction_recommendation.md` must include:
+1. lower average forgetting;
+2. lower same-subject TFPR;
+3. higher past-edit retention;
+4. lower base retention loss;
+5. lower storage growth;
+6. lower compute.
+
+## Required final outputs
 
 ```text
-selected direction or no-promising-direction decision
-why it outranked the alternatives
-which claims are supported
-which claims are not supported
-exact fresh evidence
-implementation and compute requirements
-main scientific risks
-predeclared next full-campaign stages
-conditions that would falsify the direction
+final_research_report.md
+direction_selection_matrix.csv
+plasticity_retention_curves.csv
+forgetting_by_block.csv
+same_subject_results.csv
+base_denoising_retention.csv
+multi_token_results.csv
+compute_storage_results.csv
+paired_bootstrap.csv
+track_status_registry.json
+next_direction_recommendation.md
+SELECTED_CONTINUAL_DIRECTION_FULL_CAMPAIGN_DRAFT.md
+terminal_package_validation.json
 ```
 
-## Draft only
+## Wording guard
 
-Generate `SELECTED_DIRECTION_FULL_CAMPAIGN_DRAFT.md` for the selected direction. It must not be executed within this campaign.
+A track that improves retention but fails factual acquisition is a mechanism result, not a successful editor. A bridge-based track must beat its matched non-SB baseline before receiving an SB-specific claim.

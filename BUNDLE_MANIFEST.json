@@ -1,71 +1,97 @@
 {
-  "bundle_name": "diffusion_editor_next_direction_selection_goal",
-  "protocol": "diffusion_editor_next_direction_selection_v1",
+  "bundle_name": "continual_diffusion_editing_goal_bundle",
+  "protocol_version": "continual_diffusion_editing_sb_selection_v1",
+  "created_utc": "2026-07-23T19:13:00+00:00",
   "files": [
     {
-      "name": "ACTIVE_RESEARCH_CAMPAIGN.json",
-      "sha256": "8a97e544709cc9fd67fc1f4eab7926e33baa8e75a7a0918f53049d9d26a3c3a4",
-      "size_bytes": 1128
+      "path": "ACTIVE_RESEARCH_CAMPAIGN.json",
+      "sha256": "37fb5344d5c6bba25b6bbec22516fb4485c9e81e0a605895421f09fa0e8cee0a",
+      "bytes": 1010
     },
     {
-      "name": "AGENTS.md",
-      "sha256": "d676bcb76e854c5d31e2c10caddc590ad8e7123de1a56921e5f54687bec6bf57",
-      "size_bytes": 8221
+      "path": "AGENTS.md",
+      "sha256": "5d1857bdecae5e29d36dec490a284931f23b82a66705d8f258fcaadafb351413",
+      "bytes": 9434
     },
     {
-      "name": "CANDIDATE_DIRECTION_REGISTRY.json",
-      "sha256": "5ed05961f44ddb31c77032f9ceebe35f5287191422d5f68dc1d3f5a3c1cfae88",
-      "size_bytes": 1801
+      "path": "BRIDGE_GENERATIVE_REPLAY_PLAN.md",
+      "sha256": "d06aff700866200539b6644ca6dcdc4c7d2e94fc544a6050da6bce4325356baa",
+      "bytes": 1377
     },
     {
-      "name": "FINAL_SELECTION_AND_REPORTING_PLAN.md",
-      "sha256": "42ffa7daed92bff863f1c1f1e5746610916345183c1de010a881fe5e85897ae6",
-      "size_bytes": 1197
+      "path": "CANDIDATE_DIRECTION_REGISTRY.json",
+      "sha256": "379a7c0389eb33697c570007030031b980f667c6a77dc8ff48cb513032882de5",
+      "bytes": 3281
     },
     {
-      "name": "FISHER_CONSTRAINED_EDITING_PLAN.md",
-      "sha256": "1f7f7a25a4e644085d99ab4b315415a85f77842283a4e42b4941df532f3fba4c",
-      "size_bytes": 1419
+      "path": "CONTINUAL_DIFFUSION_EDITING_AUTONOMOUS_PLAN.md",
+      "sha256": "265ead7bf50bf058e060b0be80f08a180a4766666136b2d80f8d448a7a1e90e9",
+      "bytes": 9704
     },
     {
-      "name": "INTEGRATED_CANDIDATE_PLAN.md",
-      "sha256": "5f5a62315426f50338c8537b97977319683cbd371dcbe89b5316dbe8e67596c5",
-      "size_bytes": 1045
+      "path": "CONTINUAL_LEARNING_ALTERNATIVES_CATALOG.md",
+      "sha256": "75ac4559834cb4759693151995f019fb4ea86b56cee9f8c3ca386c049e51c56b",
+      "bytes": 6756
     },
     {
-      "name": "JOINT_ANSWER_SPAN_COUPLING_PLAN.md",
-      "sha256": "9386ef68569cd15137eb278fcf9d75f36c74ce09956df84a0d3a6b672a5e5134",
-      "size_bytes": 1382
+      "path": "DIFFUSIONGROW_CONTINUAL_EDITING_PLAN.md",
+      "sha256": "36df0a36bfef54a98db59cc63f2cf2819a302698c3284f7dee7286824543768d",
+      "bytes": 1577
     },
     {
-      "name": "NEXT_DIRECTION_SELECTION_AUTONOMOUS_PLAN.md",
-      "sha256": "d5878399925ee1228b37f89307174d1e0a34bfccb12f1aa849833c0751755126",
-      "size_bytes": 7521
+      "path": "DUAL_MEMORY_CONSOLIDATION_PLAN.md",
+      "sha256": "dab9996518f9610a871144f75fc2cd12b618e2431a2c0f7252b5b433d93249b1",
+      "bytes": 935
     },
     {
-      "name": "PRIMAL_DUAL_LOCALITY_PLAN.md",
-      "sha256": "c4fb5c58d2ce557988c9af70379daedb956d981041ee7ea61d447afb763cd638",
-      "size_bytes": 1614
+      "path": "FINAL_SELECTION_AND_REPORTING_PLAN.md",
+      "sha256": "dd4d6b8a98832a855a53609151c97b0f6222884822862cabcedfa807348da905",
+      "bytes": 1241
     },
     {
-      "name": "README.md",
-      "sha256": "80f863c57f3a6738b4ead1c10e80a61160d185d954dbed0460a34f16d4cf8c81",
-      "size_bytes": 1306
+      "path": "FUNCTIONAL_REPLAY_PLAN.md",
+      "sha256": "58fb2fd403cf68949b8b704d12f4e422d3cf560e48bb81e5ada14d655fa026fd",
+      "bytes": 913
     },
     {
-      "name": "RELATION_RESIDUALIZATION_PLAN.md",
-      "sha256": "e03ed90ab81eb08431635bd70367ad789bf3de76fdf0566078e999c0b66dbc3c",
-      "size_bytes": 1669
+      "path": "GATED_ADAPTER_EXPANSION_PLAN.md",
+      "sha256": "cccd0e474cf438f9d62086f923338fd5a1c4fd01b15f12eb2b146ae8eaf7bc3f",
+      "bytes": 847
     },
     {
-      "name": "SELECTIVE_CONFORMAL_EDITING_PLAN.md",
-      "sha256": "6253d014ae8c94304adc8e1c57f5996d219d70cb6bf4c97d8bce98975f7855f5",
-      "size_bytes": 1822
+      "path": "MULTIMARGINAL_SB_CONSOLIDATION_PLAN.md",
+      "sha256": "d5cb6c8138816d4a11a32928181bec0eb324d8f7792eb26d8b9778bd4fcd97f2",
+      "bytes": 1251
     },
     {
-      "name": "START_NEXT_DIRECTION_SELECTION_GOAL.md",
-      "sha256": "b5280e73abc3052a90dc1c4dfabfb5a331ae5fa563bc447f9da848d7e74d5401",
-      "size_bytes": 1897
+      "path": "ORTHOGONAL_FISHER_CONTINUAL_PLAN.md",
+      "sha256": "39994191db9d288a475f33a7775748c8897ab735d31232bc9c38355177355fa0",
+      "bytes": 1017
+    },
+    {
+      "path": "PARTIAL_STATE_REPLAY_PLAN.md",
+      "sha256": "8d7c5b23dbb634c92ca82e49ac660fbeb39434bcfb00d39a20ef258c0c9cce1f",
+      "bytes": 1385
+    },
+    {
+      "path": "PRIMARY_SOURCES.md",
+      "sha256": "d93274e0e1b3e903190eb7ca31eacfb7994709e7fc0e46bd66aaa1e54d681d18",
+      "bytes": 2397
+    },
+    {
+      "path": "README.md",
+      "sha256": "391c2c3d2a76ae2ae35265dc0cf0caa801df44f3b473ec9cce693105fdfb0fbe",
+      "bytes": 1973
+    },
+    {
+      "path": "SPARSE_MEMORY_ROUTING_PLAN.md",
+      "sha256": "fb83ff3504d08be9513162f4901a918176a5fcb7a0cfc3916a75d3ecc3746b3c",
+      "bytes": 1090
+    },
+    {
+      "path": "START_CONTINUAL_DIFFUSION_EDITING_GOAL.md",
+      "sha256": "933e3f94e2c9905256f650682b83289e09fa83ff2aea69b66c0806b026c7c07a",
+      "bytes": 1954
     }
   ]
 }

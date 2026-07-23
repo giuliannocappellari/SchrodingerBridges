@@ -1,26 +1,23 @@
 {
-  "campaign_id": "diffusion_editor_next_direction_selection_v1",
-  "campaign_status": "ready_to_start",
+  "schema_version": 1,
+  "active_campaign": "continual_diffusion_editing_sb_selection_v1",
+  "active_plan": "CONTINUAL_DIFFUSION_EDITING_AUTONOMOUS_PLAN.md",
   "execution_mode": "autonomous_goal",
-  "active_protocol": "diffusion_editor_next_direction_selection_v1",
-  "authoritative_plan": "NEXT_DIRECTION_SELECTION_AUTONOMOUS_PLAN.md",
-  "goal": "Select the most promising next research direction for diffusion-language-model factual editing using bounded comparable pilots.",
-  "base_model": "GSAI-ML/LLaDA-8B-Instruct",
-  "current_stage": "S0_bootstrap_and_fresh_manifests",
-  "mandatory_tracks": [
-    "N1_relation_residualized_editing",
-    "N2_fisher_constrained_editing",
-    "N3_primal_dual_locality",
-    "N4_selective_conformal_editing",
-    "N5_joint_answer_span_coupling"
-  ],
-  "conditional_track": "N6_integrated_candidate",
-  "historical_protocols_immutable": true,
-  "historical_analysis_final_locked": true,
-  "analysis_500_used": false,
-  "final_test_used": false,
-  "start_pod_once": true,
-  "keep_pod_running_until_terminal": true,
-  "stop_pod_on_terminal_or_unrecoverable_infrastructure_only": true,
-  "automatically_execute_selected_full_direction": false
+  "campaign_status": "not_started",
+  "current_stage": "A0_bootstrap_and_source_audit",
+  "historical_protocols": {
+    "direction1": "closed",
+    "direction2_v1": "closed_protocol_infeasible",
+    "direction3_v1": "closed_bounded_negative",
+    "sb_alternatives": "closed_scientific_negative",
+    "mdm_memit_sb": "closed_mixed_positive_negative",
+    "mask_pattern_confirmation": "closed_fresh_confirmation_failed",
+    "parametric_editor": "closed_bounded_negative",
+    "temporal_residual_editor": "closed_bounded_negative",
+    "next_direction_statistics": "closed_no_promising_direction"
+  },
+  "historical_analysis_500_locked": true,
+  "historical_final_test_locked": true,
+  "new_protocol_required": true,
+  "pod_stop_policy": "stop_only_after_terminal_package_or_unrecoverable_infrastructure_issue"
 }

@@ -36,7 +36,8 @@ from scripts.run_publication_planner_dev import _safety_pass
 from scripts.run_publication_dream import _backbone_profile, _install_dream_attention_mask_adapter
 from scripts.mask_pattern_publication_stats import holm_adjust, paired_bootstrap, paired_values
 from scripts.mdm_memit_editor import model_hidden_size, resolved_block_name, resolved_key_module_name
-from scripts.nds_common import CAMPAIGN_ID as ACTIVE_CAMPAIGN_ID, HISTORICAL_CAMPAIGNS
+from scripts import cl_common
+from scripts.nds_common import HISTORICAL_CAMPAIGNS
 from reproduce_paper import check_dp
 from scripts.validate_publication_campaign import REPORTS
 
@@ -126,8 +127,8 @@ def test_publication_protocol_remains_registered_as_closed_history() -> None:
     root = Path(__file__).resolve().parents[1]
     active = json.loads((root / "ACTIVE_RESEARCH_CAMPAIGN.json").read_text())
     registry = json.loads((root / "PUBLICATION_PROTOCOL_REGISTRY.json").read_text())
-    assert active["active_protocol"] == ACTIVE_CAMPAIGN_ID
-    assert active["historical_protocols_immutable"] is True
+    assert active["active_campaign"] == cl_common.CAMPAIGN_ID
+    assert active["historical_protocols"]["mask_pattern_confirmation"] == "closed_fresh_confirmation_failed"
     assert "mask_pattern_sb_publication_confirmation_v1" in HISTORICAL_CAMPAIGNS
     assert registry["campaign"] == "mask_pattern_sb_publication_confirmation_v1"
     assert [track["id"] for track in registry["tracks"]] == [f"P{i}" for i in range(9)]
