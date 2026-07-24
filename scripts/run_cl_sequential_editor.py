@@ -750,6 +750,7 @@ def main() -> None:
         "lowrank_rank": args.lowrank_rank,
         "lora_rank": args.lora_rank,
         "lora_steps": args.lora_steps,
+        "lora_learning_rate": args.lora_learning_rate,
         "replay_items_per_block": args.replay_items_per_block,
         "runtime_feature_schema": (
             bank.activation_summary()["runtime_feature_schema"] if bank is not None else []
