@@ -504,6 +504,10 @@ def main() -> None:
 
     import torch
 
+    random.seed(args.seed)
+    torch.manual_seed(args.seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(args.seed)
     model, tokenizer = load_model(args.model_id, args.model_revision, args.dtype)
     for parameter in model.parameters():
         parameter.requires_grad_(False)
@@ -744,6 +748,7 @@ def main() -> None:
         "num_blocks": len(block_ids),
         "model_id": args.model_id,
         "model_revision": args.model_revision,
+        "seed": args.seed,
         "layers": list(args.layers),
         "memit": config.to_dict(),
         "covariance_representation": args.covariance_representation,

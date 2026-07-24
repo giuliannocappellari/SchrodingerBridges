@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import torch
 
 from scripts.cl_lora import LoRABranch
@@ -61,6 +63,16 @@ def test_rank_truncate_obeys_rank_and_is_finite() -> None:
     assert report["rank"] == 2
     assert report["decomposition"] == "exact_svd"
     assert 0.0 < report["explained_update_energy"] <= 1.0
+
+
+def test_editor_source_freezes_python_torch_and_cuda_seeds() -> None:
+    source = (
+        Path(__file__).resolve().parents[1] / "scripts" / "run_cl_sequential_editor.py"
+    ).read_text(encoding="utf-8")
+    assert "random.seed(args.seed)" in source
+    assert "torch.manual_seed(args.seed)" in source
+    assert "torch.cuda.manual_seed_all(args.seed)" in source
+    assert '"seed": args.seed' in source
 
 
 def test_diagonal_covariance_representation_is_explicit() -> None:
