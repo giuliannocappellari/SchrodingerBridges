@@ -202,6 +202,8 @@ def confirmation_acceptance(
     reasons = []
     if not set(pilot_classes) & set(confirmation_classes):
         reasons.append("pilot_success_class_not_reproduced")
+    if metric("paired_ci_low", -1.0) <= 0.0:
+        reasons.append("paired_retention_lower_bound_not_positive")
     if metric("same_subject_tfpr") > 0.03:
         reasons.append("same_subject_tfpr_above_0.03")
     if metric("near_tfpr") > 0.03:

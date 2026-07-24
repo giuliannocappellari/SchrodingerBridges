@@ -12,6 +12,7 @@ from scripts.run_cl_confirmation_suite import (
 def test_confirmation_requires_same_class_and_frozen_safety() -> None:
     row = {
         "success_classes": "A",
+        "paired_ci_low": 0.01,
         "same_subject_tfpr": 0.02,
         "near_tfpr": 0.01,
         "far_tfpr": 0.0,
@@ -28,6 +29,7 @@ def test_confirmation_requires_same_class_and_frozen_safety() -> None:
 def test_confirmation_rejects_class_drift() -> None:
     row = {
         "success_classes": "B",
+        "paired_ci_low": 0.01,
         "same_subject_tfpr": 0.0,
         "near_tfpr": 0.0,
         "far_tfpr": 0.0,
@@ -37,6 +39,21 @@ def test_confirmation_rejects_class_drift() -> None:
     passed, reasons = confirmation_acceptance(["A"], row)
     assert not passed
     assert "pilot_success_class_not_reproduced" in reasons
+
+
+def test_confirmation_requires_positive_paired_lower_bound() -> None:
+    row = {
+        "success_classes": "A",
+        "paired_ci_low": 0.0,
+        "same_subject_tfpr": 0.0,
+        "near_tfpr": 0.0,
+        "far_tfpr": 0.0,
+        "base_retention_loss_fraction": 0.0,
+        "malformed_rate": 0.0,
+    }
+    passed, reasons = confirmation_acceptance(["A"], row)
+    assert not passed
+    assert "paired_retention_lower_bound_not_positive" in reasons
 
 
 def test_frozen_confirmation_command_uses_pilot_hyperparameters(tmp_path: Path) -> None:
