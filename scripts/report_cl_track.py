@@ -174,6 +174,7 @@ def candidate_row(
         "method": report["method"],
         "report_path": str((candidate_dir / "report_summary.json").relative_to(REPO_ROOT)),
         "implementation_status": report.get("implementation_status"),
+        "implementation_equivalence_class": report.get("implementation_equivalence_class"),
         "exact_method_claim_eligible": exact,
         "sb_claim_eligible": track not in SB_TRACKS or exact,
         "success_classes": ",".join(classes),

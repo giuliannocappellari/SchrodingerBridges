@@ -276,6 +276,9 @@ def main() -> None:
                             (method_run_dir(args.output_dir, method, scale) / "report_summary.json")
                             .relative_to(ROOT)
                         ),
+                        "implementation_equivalence_class": report.get(
+                            "implementation_equivalence_class"
+                        ),
                         "current_rewrite_exact": report["current_rewrite_exact"],
                         "current_paraphrase_exact": report["current_paraphrase_exact"],
                         "past_retention": report["past_retention"],

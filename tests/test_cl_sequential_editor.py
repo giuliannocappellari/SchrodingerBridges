@@ -6,6 +6,7 @@ import torch
 
 from scripts.cl_lora import LoRABranch
 from scripts.run_cl_sequential_editor import (
+    METHOD_EQUIVALENCE_CLASS,
     _retention_mask_states,
     rank_truncate,
     select_covariance_representation,
@@ -73,6 +74,13 @@ def test_editor_source_freezes_python_torch_and_cuda_seeds() -> None:
     assert "torch.manual_seed(args.seed)" in source
     assert "torch.cuda.manual_seed_all(args.seed)" in source
     assert '"seed": args.seed' in source
+
+
+def test_conceptual_clone_methods_have_explicit_equivalence_class() -> None:
+    expected = "rank8_block_delta_subject_relation_router"
+    assert METHOD_EQUIVALENCE_CLASS["growth_block_gate"] == expected
+    assert METHOD_EQUIVALENCE_CLASS["sparse_routed_memory"] == expected
+    assert METHOD_EQUIVALENCE_CLASS["gated_adapter_expansion"] == expected
 
 
 def test_diagonal_covariance_representation_is_explicit() -> None:

@@ -110,6 +110,31 @@ METHOD_IMPLEMENTATION = {
     "agem_partial": ("partial_state_replay_proxy_not_agem", False),
 }
 
+METHOD_EQUIVALENCE_CLASS = {
+    "base": "frozen_base",
+    "sequential_fullmask_memit": "persistent_memit_fullmask",
+    "sequential_partial_memit": "persistent_memit_partial_cycle",
+    "sequential_lowrank_memit": "persistent_memit_partial_rank8",
+    "sequential_lora": "persistent_lora_rank8",
+    "oedit_partial_memit": "persistent_memit_partial_oedit_basis",
+    "ordinary_replay_memit": "persistent_memit_partial_clean_label_replay",
+    "lwf_partial_memit": "persistent_memit_partial_identity_regularized",
+    "growth_shared": "rank8_merged_delta_always_on",
+    "growth_block": "rank8_block_delta_always_on",
+    "growth_block_gate": "rank8_block_delta_subject_relation_router",
+    "sparse_routed_memory": "rank8_block_delta_subject_relation_router",
+    "gated_adapter_expansion": "rank8_block_delta_subject_relation_router",
+    "sb_function_barycenter": "rank8_norm_weighted_delta_merge_proxy",
+    "dual_memory_10": "rank8_delta_bank_merge_interval_10",
+    "dual_memory_25": "rank8_delta_bank_merge_interval_25",
+    "dual_memory_50": "rank8_delta_bank_merge_interval_50",
+    "replay_clean": "persistent_memit_fullmask_clean_label_replay",
+    "replay_partial": "persistent_memit_partial_clean_label_replay",
+    "bridge_replay": "persistent_memit_endpoint_biased_replay_proxy",
+    "der_partial": "persistent_memit_partial_identity_regularized",
+    "agem_partial": "persistent_memit_partial_clean_label_replay",
+}
+
 
 def parse_layers(value: str) -> tuple[int, ...]:
     layers = tuple(sorted({int(item.strip()) for item in value.split(",") if item.strip()}))
@@ -737,6 +762,7 @@ def main() -> None:
             for layer in args.layers
         )
     implementation_status, exact_method_claim_eligible = METHOD_IMPLEMENTATION[args.method]
+    implementation_equivalence_class = METHOD_EQUIVALENCE_CLASS[args.method]
     run_config = {
         "campaign_id": CAMPAIGN_ID,
         "method": args.method,
@@ -764,6 +790,7 @@ def main() -> None:
         "evaluation_bucket_runtime_input": False,
         "inference_overhead_measured": args.method == "base",
         "implementation_status": implementation_status,
+        "implementation_equivalence_class": implementation_equivalence_class,
         "exact_method_claim_eligible": exact_method_claim_eligible,
         "analysis_500_used": False,
         "final_test_used": False,
