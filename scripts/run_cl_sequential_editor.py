@@ -62,6 +62,7 @@ METHODS = {
     "growth_block_gate",
     "sparse_routed_memory",
     "gated_adapter_expansion",
+    "gated_adapter_shared_basis",
     "sb_function_barycenter",
     "dual_memory_10",
     "dual_memory_25",
@@ -75,6 +76,8 @@ METHODS = {
 
 RELATION_GATE_INITIAL_THRESHOLD = 0.20
 RELATION_GATE_RESCUE_THRESHOLDS = (0.35, 0.50)
+OEDIT_INITIAL_BASIS_RANK = 64
+OEDIT_RESCUE_BASIS_RANKS = (16, 32)
 
 BANK_METHODS = {
     "growth_shared",
@@ -82,6 +85,7 @@ BANK_METHODS = {
     "growth_block_gate",
     "sparse_routed_memory",
     "gated_adapter_expansion",
+    "gated_adapter_shared_basis",
     "sb_function_barycenter",
     "dual_memory_10",
     "dual_memory_25",
@@ -102,6 +106,7 @@ METHOD_IMPLEMENTATION = {
     "growth_block_gate": ("conceptual_diffusiongrow_adaptation", False),
     "sparse_routed_memory": ("conceptual_sparse_memory_adaptation", False),
     "gated_adapter_expansion": ("conceptual_gated_adapter_adaptation", False),
+    "gated_adapter_shared_basis": ("predeclared_shared_basis_rescue", False),
     "sb_function_barycenter": ("parameter_delta_barycenter_proxy", False),
     "dual_memory_10": ("conceptual_dual_memory_adaptation", False),
     "dual_memory_25": ("conceptual_dual_memory_adaptation", False),
@@ -127,6 +132,7 @@ METHOD_EQUIVALENCE_CLASS = {
     "growth_block_gate": "rank8_block_delta_subject_relation_router",
     "sparse_routed_memory": "rank8_block_delta_subject_relation_router",
     "gated_adapter_expansion": "rank8_block_delta_subject_relation_router",
+    "gated_adapter_shared_basis": "rank8_merged_delta_subject_relation_router",
     "sb_function_barycenter": "rank8_norm_weighted_delta_merge_proxy",
     "dual_memory_10": "rank8_delta_bank_merge_interval_10",
     "dual_memory_25": "rank8_delta_bank_merge_interval_25",
@@ -501,6 +507,7 @@ def main() -> None:
     parser.add_argument("--learning_rate", type=float, default=0.1)
     parser.add_argument("--covariance_weight", type=float, default=15000.0)
     parser.add_argument("--lowrank_rank", type=int, default=8)
+    parser.add_argument("--protected_basis_rank", type=int, default=OEDIT_INITIAL_BASIS_RANK)
     parser.add_argument("--lora_rank", type=int, default=8)
     parser.add_argument("--lora_steps", type=int, default=25)
     parser.add_argument("--lora_learning_rate", type=float, default=1e-3)
@@ -593,7 +600,12 @@ def main() -> None:
 
         route_mode = (
             "subject_relation"
-            if args.method in {"growth_block_gate", "sparse_routed_memory", "gated_adapter_expansion"}
+            if args.method in {
+                "growth_block_gate",
+                "sparse_routed_memory",
+                "gated_adapter_expansion",
+                "gated_adapter_shared_basis",
+            }
             else "always"
         )
         bank = DeltaBranchBank(
@@ -639,7 +651,9 @@ def main() -> None:
                         partial_mask_schedule="cycle", reveal_policy="random",
                         seed=args.seed + block,
                     )
-                    basis_by_layer[layer] = build_protected_basis(keys, 0.95, maximum_rank=64)[0]
+                    basis_by_layer[layer] = build_protected_basis(
+                        keys, 0.95, maximum_rank=args.protected_basis_rank
+                    )[0]
             update_transform: Callable | None = None
             if args.method == "sequential_lowrank_memit" or args.method in BANK_METHODS:
                 update_transform = lambda _layer, update, _context: rank_truncate(update, args.lowrank_rank)
@@ -668,7 +682,7 @@ def main() -> None:
                     raise RuntimeError("Frozen-base branch rollback failed")
                 bank.add_branch(deltas, current, block_index=block)
                 merge_report = None
-                if args.method == "growth_shared":
+                if args.method in {"growth_shared", "gated_adapter_shared_basis"}:
                     merge_report = bank.merge_all(rank=args.lowrank_rank)
                 elif args.method == "sb_function_barycenter":
                     norms = [
@@ -793,6 +807,8 @@ def main() -> None:
         "memit": config.to_dict(),
         "covariance_representation": args.covariance_representation,
         "lowrank_rank": args.lowrank_rank,
+        "protected_basis_rank": args.protected_basis_rank,
+        "oedit_rescue_basis_ranks": list(OEDIT_RESCUE_BASIS_RANKS),
         "lora_rank": args.lora_rank,
         "lora_steps": args.lora_steps,
         "lora_learning_rate": args.lora_learning_rate,

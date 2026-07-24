@@ -78,6 +78,8 @@ def frozen_editor_command(
         str(memit["covariance_weight"]),
         "--lowrank_rank",
         str(config["lowrank_rank"]),
+        "--protected_basis_rank",
+        str(config.get("protected_basis_rank", 64)),
         "--lora_rank",
         str(config["lora_rank"]),
         "--lora_steps",

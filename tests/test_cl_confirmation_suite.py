@@ -46,6 +46,7 @@ def test_frozen_confirmation_command_uses_pilot_hyperparameters(tmp_path: Path) 
           "layers": [4, 5],
           "covariance_representation": "diagonal",
           "lowrank_rank": 8,
+          "protected_basis_rank": 32,
           "lora_rank": 8,
           "lora_steps": 25,
           "lora_learning_rate": 0.001,
@@ -67,6 +68,7 @@ def test_frozen_confirmation_command_uses_pilot_hyperparameters(tmp_path: Path) 
     joined = " ".join(command)
     assert "--allow_confirmation 1" in joined
     assert "--lowrank_rank 8" in joined
+    assert "--protected_basis_rank 32" in joined
     assert "--layers 4,5" in joined
     assert "--relation_overlap_threshold 0.35" in joined
     assert "analysis_500" not in joined.casefold()

@@ -7,6 +7,8 @@ import torch
 from scripts.cl_lora import LoRABranch
 from scripts.run_cl_sequential_editor import (
     METHOD_EQUIVALENCE_CLASS,
+    OEDIT_INITIAL_BASIS_RANK,
+    OEDIT_RESCUE_BASIS_RANKS,
     RELATION_GATE_INITIAL_THRESHOLD,
     RELATION_GATE_RESCUE_THRESHOLDS,
     _retention_mask_states,
@@ -88,6 +90,12 @@ def test_conceptual_clone_methods_have_explicit_equivalence_class() -> None:
 def test_relation_gate_rescue_grid_is_frozen_before_pilots() -> None:
     assert RELATION_GATE_INITIAL_THRESHOLD == 0.20
     assert RELATION_GATE_RESCUE_THRESHOLDS == (0.35, 0.50)
+    assert OEDIT_INITIAL_BASIS_RANK == 64
+    assert OEDIT_RESCUE_BASIS_RANKS == (16, 32)
+    assert (
+        METHOD_EQUIVALENCE_CLASS["gated_adapter_shared_basis"]
+        == "rank8_merged_delta_subject_relation_router"
+    )
 
 
 def test_diagonal_covariance_representation_is_explicit() -> None:
