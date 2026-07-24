@@ -30,6 +30,7 @@ from scripts.cl_common import (
 
 
 PILOT_ROOT = CAMPAIGN_ROOT / "D_breadth_first_pilots_v1"
+RESCUE_ROOT = CAMPAIGN_ROOT / "D_bounded_rescues_v1"
 CONFIRMATION_ROOT = CAMPAIGN_ROOT / "F_fresh_confirmation_v1"
 CONDITIONAL_ROOT = CAMPAIGN_ROOT / "G_conditional_tracks_v1"
 DEFAULT_OUTPUT = CAMPAIGN_ROOT / "final_direction_selection_package_v1"
@@ -124,13 +125,39 @@ def select_recommendation(
     return "no_promising_continual_direction", None, "no_promising_continual_direction"
 
 
+def candidate_result_paths(
+    pilot_root: Path = PILOT_ROOT,
+    rescue_root: Path = RESCUE_ROOT,
+) -> list[Path]:
+    paths = [
+        pilot_root / "track_reports" / f"C{index}_pilot_v1" / "candidate_results.csv"
+        for index in range(1, 10)
+    ]
+    rescue_reports = rescue_root / "track_reports"
+    if rescue_reports.is_dir():
+        paths.extend(sorted(rescue_reports.glob("C*_rescue_v1/candidate_results.csv")))
+    return paths
+
+
 def candidate_rows() -> list[dict[str, Any]]:
     output = []
-    for index in range(1, 10):
-        track = f"C{index}"
-        path = PILOT_ROOT / "track_reports" / f"{track}_pilot_v1" / "candidate_results.csv"
+    for path in candidate_result_paths():
         output.extend(read_csv(path))
     return output
+
+
+def paired_bootstrap_paths(
+    pilot_root: Path = PILOT_ROOT,
+    rescue_root: Path = RESCUE_ROOT,
+) -> list[Path]:
+    paths = [
+        pilot_root / "track_reports" / f"C{index}_pilot_v1" / "paired_bootstrap.csv"
+        for index in range(1, 10)
+    ]
+    rescue_reports = rescue_root / "track_reports"
+    if rescue_reports.is_dir():
+        paths.extend(sorted(rescue_reports.glob("C*_rescue_v1/paired_bootstrap.csv")))
+    return paths
 
 
 def confirmed_rows() -> list[dict[str, Any]]:
@@ -331,11 +358,8 @@ def main() -> None:
         ],
     )
     bootstrap_rows = []
-    for index in range(1, 10):
-        track = f"C{index}"
-        bootstrap_rows.extend(
-            read_csv(PILOT_ROOT / "track_reports" / f"{track}_pilot_v1" / "paired_bootstrap.csv")
-        )
+    for path in paired_bootstrap_paths():
+        bootstrap_rows.extend(read_csv(path))
     write_csv(args.output_dir / "paired_bootstrap.csv", bootstrap_rows)
     write_markdown(args.output_dir, recommendation, selected, claim, track_matrix)
     report = {
@@ -359,6 +383,7 @@ def main() -> None:
         CAMPAIGN_ROOT / "protocol_v1" / "report_summary.json",
         CAMPAIGN_ROOT / "C0_common_baselines_v1" / "report_summary.json",
         PILOT_ROOT / "report_summary.json",
+        RESCUE_ROOT / "report_summary.json",
         CONFIRMATION_ROOT / "report_summary.json",
         CONDITIONAL_ROOT / "report_summary.json",
     ]

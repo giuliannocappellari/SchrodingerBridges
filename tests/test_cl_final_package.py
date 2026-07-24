@@ -1,6 +1,11 @@
 from __future__ import annotations
 
-from scripts.finalize_cl_campaign import REQUIRED_FILES, select_recommendation
+from scripts.finalize_cl_campaign import (
+    REQUIRED_FILES,
+    candidate_result_paths,
+    paired_bootstrap_paths,
+    select_recommendation,
+)
 
 
 def test_terminal_package_has_every_frozen_required_file() -> None:
@@ -44,3 +49,27 @@ def test_no_confirmation_returns_mechanism_or_negative() -> None:
         select_recommendation([], mechanism_signal_count=0)[0]
         == "no_promising_continual_direction"
     )
+
+
+def test_terminal_evidence_paths_include_bounded_rescues(tmp_path) -> None:
+    pilot_root = tmp_path / "pilots"
+    rescue_root = tmp_path / "rescues"
+    for index in range(1, 10):
+        report = pilot_root / "track_reports" / f"C{index}_pilot_v1"
+        report.mkdir(parents=True)
+        (report / "candidate_results.csv").write_text("track_id\n", encoding="utf-8")
+        (report / "paired_bootstrap.csv").write_text("track_id\n", encoding="utf-8")
+    rescue = rescue_root / "track_reports" / "C5_rescue_v1"
+    rescue.mkdir(parents=True)
+    rescue_candidate = rescue / "candidate_results.csv"
+    rescue_bootstrap = rescue / "paired_bootstrap.csv"
+    rescue_candidate.write_text("track_id\n", encoding="utf-8")
+    rescue_bootstrap.write_text("track_id\n", encoding="utf-8")
+
+    candidate_paths = candidate_result_paths(pilot_root, rescue_root)
+    bootstrap_paths = paired_bootstrap_paths(pilot_root, rescue_root)
+
+    assert len(candidate_paths) == 10
+    assert len(bootstrap_paths) == 10
+    assert rescue_candidate in candidate_paths
+    assert rescue_bootstrap in bootstrap_paths
