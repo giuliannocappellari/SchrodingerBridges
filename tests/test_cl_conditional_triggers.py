@@ -47,3 +47,21 @@ def test_spectral_trigger_requires_strong_acquisition_and_forgetting(monkeypatch
     decisions = {row["track_id"]: row for row in trigger_decisions([], pilot)}
     assert decisions["C12"]["triggered"]
     assert not decisions["C11"]["triggered"]
+
+
+def test_oedit_signal_without_fisher_evidence_cannot_trigger_laplace(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "scripts.evaluate_cl_conditional_triggers.confirmed_equivalence_classes",
+        lambda _rows: set(),
+    )
+    pilot = [
+        {
+            "track_id": "C5",
+            "current_rewrite_exact": "0.85",
+            "average_forgetting": "0.05",
+            "mechanism_signal_pass": "True",
+            "fisher_signal_present": "False",
+        }
+    ]
+    decisions = {row["track_id"]: row for row in trigger_decisions([], pilot)}
+    assert not decisions["C11"]["triggered"]

@@ -67,6 +67,7 @@ def trigger_decisions(
     c11 = any(
         str(row.get("track_id")) == "C5"
         and str(row.get("mechanism_signal_pass", "")).casefold() == "true"
+        and str(row.get("fisher_signal_present", "")).casefold() == "true"
         for row in pilot_rows
     ) and "C5" not in confirmed
     c12 = any(
