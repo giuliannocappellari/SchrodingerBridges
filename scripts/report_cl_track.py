@@ -119,11 +119,18 @@ def track_mechanism_signal(
     return False, "no separate mechanism-only gate"
 
 
+def is_confirmation_eligible(track: str, classes: Sequence[str], exact: bool) -> bool:
+    """Keep non-exact SB proxies out of confirmation and SB claims."""
+
+    return bool(classes) and (track not in SB_TRACKS or exact)
+
+
 def candidate_row(
     track: str,
     candidate_dir: Path,
     baseline_dir: Path,
     *,
+    mechanism_baseline_dir: Path | None,
     matched_non_sb_dir: Path | None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     report = read_json(candidate_dir / "report_summary.json")
@@ -147,7 +154,21 @@ def candidate_row(
             (matched_storage - candidate_storage) / matched_storage if matched_storage > 0 else 0.0
         )
     classes = success_classes(enriched, baseline)
-    mechanism_pass, mechanism_rule = track_mechanism_signal(track, enriched, baseline, bootstrap)
+    mechanism_baseline = (
+        read_json(mechanism_baseline_dir / "report_summary.json")
+        if mechanism_baseline_dir is not None
+        else baseline
+    )
+    mechanism_bootstrap = bootstrap
+    if mechanism_baseline_dir is not None:
+        mechanism_bootstrap = paired_bootstrap_delta(
+            terminal_past_rewrite(mechanism_baseline_dir),
+            terminal_past_rewrite(candidate_dir),
+        )
+    mechanism_pass, mechanism_rule = track_mechanism_signal(
+        track, enriched, mechanism_baseline, mechanism_bootstrap
+    )
+    confirmation_eligible = is_confirmation_eligible(track, classes, exact)
     row = {
         "track_id": track,
         "method": report["method"],
@@ -156,12 +177,16 @@ def candidate_row(
         "exact_method_claim_eligible": exact,
         "sb_claim_eligible": track not in SB_TRACKS or exact,
         "success_classes": ",".join(classes),
-        "confirmation_eligible": bool(classes),
+        "confirmation_eligible": confirmation_eligible,
         "mechanism_signal_pass": mechanism_pass,
         "mechanism_signal_rule": mechanism_rule,
         "paired_retention_delta": bootstrap["mean_delta"],
         "paired_ci_low": bootstrap["ci_low"],
         "paired_ci_high": bootstrap["ci_high"],
+        "mechanism_baseline_method": mechanism_baseline.get("method"),
+        "mechanism_paired_retention_delta": mechanism_bootstrap["mean_delta"],
+        "mechanism_paired_ci_low": mechanism_bootstrap["ci_low"],
+        "mechanism_paired_ci_high": mechanism_bootstrap["ci_high"],
         "current_rewrite_exact": report.get("current_rewrite_exact"),
         "current_paraphrase_exact": report.get("current_paraphrase_exact"),
         "past_retention": report.get("past_retention"),
@@ -199,6 +224,7 @@ def main() -> None:
     parser.add_argument("--track", choices=tuple(f"C{i}" for i in range(1, 10)), required=True)
     parser.add_argument("--baseline_dir", type=Path, required=True)
     parser.add_argument("--candidate_dir", type=Path, action="append", required=True)
+    parser.add_argument("--mechanism_baseline_dir", type=Path)
     parser.add_argument("--matched_non_sb_dir", type=Path)
     parser.add_argument("--output_dir", type=Path, required=True)
     parser.add_argument("--update_state", type=int, choices=(0, 1), default=1)
@@ -211,12 +237,23 @@ def main() -> None:
     matched = None
     if args.matched_non_sb_dir:
         matched = args.matched_non_sb_dir.resolve() if args.matched_non_sb_dir.is_absolute() else (ROOT / args.matched_non_sb_dir).resolve()
+    mechanism_baseline = None
+    if args.mechanism_baseline_dir:
+        mechanism_baseline = (
+            args.mechanism_baseline_dir.resolve()
+            if args.mechanism_baseline_dir.is_absolute()
+            else (ROOT / args.mechanism_baseline_dir).resolve()
+        )
     rows = []
     bootstraps = []
     for raw in args.candidate_dir:
         candidate_dir = raw.resolve() if raw.is_absolute() else (ROOT / raw).resolve()
         row, bootstrap = candidate_row(
-            args.track, candidate_dir, baseline_dir, matched_non_sb_dir=matched
+            args.track,
+            candidate_dir,
+            baseline_dir,
+            mechanism_baseline_dir=mechanism_baseline,
+            matched_non_sb_dir=matched,
         )
         rows.append(row)
         bootstraps.append({"track_id": args.track, "method": row["method"], **bootstrap})
@@ -232,6 +269,9 @@ def main() -> None:
             "campaign_id": CAMPAIGN_ID,
             "track_id": args.track,
             "baseline_dir": str(baseline_dir.relative_to(ROOT)),
+            "mechanism_baseline_dir": (
+                str(mechanism_baseline.relative_to(ROOT)) if mechanism_baseline else ""
+            ),
             "candidate_dirs": [str(path) for path in args.candidate_dir],
             "matched_non_sb_dir": str(args.matched_non_sb_dir or ""),
             "bootstrap_trials": 5000,
@@ -271,6 +311,23 @@ def main() -> None:
             "acceptance_pass": True,
         },
     )
+    if not selected:
+        (args.output_dir / "track_stop_checkpoint.md").write_text(
+            "\n".join(
+                (
+                    f"# {args.track} Pilot Stop Checkpoint",
+                    "",
+                    f"- Status: `{status}`",
+                    f"- Confirmation eligible candidates: `{len(eligible)}`",
+                    f"- Mechanism-only signals: `{len(mechanism_only)}`",
+                    "- Analysis split used: `false`",
+                    "- Final split used: `false`",
+                    "- Decision: do not confirm this track; continue breadth-first execution.",
+                    "",
+                )
+            ),
+            encoding="utf-8",
+        )
     if args.update_state:
         update_track(
             args.track,

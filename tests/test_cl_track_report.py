@@ -2,7 +2,11 @@ from __future__ import annotations
 
 import pytest
 
-from scripts.report_cl_track import paired_bootstrap_delta, track_mechanism_signal
+from scripts.report_cl_track import (
+    is_confirmation_eligible,
+    paired_bootstrap_delta,
+    track_mechanism_signal,
+)
 
 
 def test_paired_bootstrap_is_edit_aligned_and_deterministic() -> None:
@@ -30,3 +34,10 @@ def test_c2_mechanism_signal_requires_matched_efficacy_and_positive_pairing() ->
     assert passed
     passed, _ = track_mechanism_signal("C2", candidate, baseline, {"ci_low": 0.0})
     assert not passed
+
+
+def test_non_exact_sb_proxy_cannot_enter_confirmation() -> None:
+    assert not is_confirmation_eligible("C7", ["A"], exact=False)
+    assert not is_confirmation_eligible("C8", ["B"], exact=False)
+    assert is_confirmation_eligible("C7", ["C"], exact=True)
+    assert is_confirmation_eligible("C3", ["A"], exact=False)
