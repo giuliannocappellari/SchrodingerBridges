@@ -73,6 +73,9 @@ METHODS = {
     "agem_partial",
 }
 
+RELATION_GATE_INITIAL_THRESHOLD = 0.20
+RELATION_GATE_RESCUE_THRESHOLDS = (0.35, 0.50)
+
 BANK_METHODS = {
     "growth_shared",
     "growth_block",
@@ -502,6 +505,11 @@ def main() -> None:
     parser.add_argument("--lora_steps", type=int, default=25)
     parser.add_argument("--lora_learning_rate", type=float, default=1e-3)
     parser.add_argument("--replay_items_per_block", type=int, default=10)
+    parser.add_argument(
+        "--relation_overlap_threshold",
+        type=float,
+        default=RELATION_GATE_INITIAL_THRESHOLD,
+    )
     parser.add_argument("--decode_batch_size", type=int, default=16)
     parser.add_argument("--decode_steps", type=int, default=0)
     parser.add_argument("--limit", type=int, default=0)
@@ -588,7 +596,13 @@ def main() -> None:
             if args.method in {"growth_block_gate", "sparse_routed_memory", "gated_adapter_expansion"}
             else "always"
         )
-        bank = DeltaBranchBank(model, tokenizer, args.layers, route_mode=route_mode)
+        bank = DeltaBranchBank(
+            model,
+            tokenizer,
+            args.layers,
+            route_mode=route_mode,
+            relation_overlap_threshold=args.relation_overlap_threshold,
+        )
 
     all_result_rows = []
     block_rows = []
@@ -783,6 +797,8 @@ def main() -> None:
         "lora_steps": args.lora_steps,
         "lora_learning_rate": args.lora_learning_rate,
         "replay_items_per_block": args.replay_items_per_block,
+        "relation_overlap_threshold": args.relation_overlap_threshold,
+        "relation_gate_rescue_thresholds": list(RELATION_GATE_RESCUE_THRESHOLDS),
         "runtime_feature_schema": (
             bank.activation_summary()["runtime_feature_schema"] if bank is not None else []
         ),

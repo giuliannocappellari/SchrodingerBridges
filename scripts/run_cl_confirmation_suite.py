@@ -86,6 +86,8 @@ def frozen_editor_command(
         str(config.get("lora_learning_rate", 1e-3)),
         "--replay_items_per_block",
         str(config["replay_items_per_block"]),
+        "--relation_overlap_threshold",
+        str(config.get("relation_overlap_threshold", 0.20)),
         "--decode_batch_size",
         "16",
         "--allow_confirmation",

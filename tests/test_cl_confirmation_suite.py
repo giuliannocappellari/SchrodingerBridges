@@ -50,6 +50,7 @@ def test_frozen_confirmation_command_uses_pilot_hyperparameters(tmp_path: Path) 
           "lora_steps": 25,
           "lora_learning_rate": 0.001,
           "replay_items_per_block": 10,
+          "relation_overlap_threshold": 0.35,
           "memit": {
             "target_optimization_steps": 25,
             "learning_rate": 0.1,
@@ -67,5 +68,6 @@ def test_frozen_confirmation_command_uses_pilot_hyperparameters(tmp_path: Path) 
     assert "--allow_confirmation 1" in joined
     assert "--lowrank_rank 8" in joined
     assert "--layers 4,5" in joined
+    assert "--relation_overlap_threshold 0.35" in joined
     assert "analysis_500" not in joined.casefold()
     assert "final_test" not in joined.casefold()
