@@ -238,7 +238,8 @@ def main() -> None:
     pending_conditionals = [
         track
         for track, status in state["track_status"].items()
-        if track.startswith("C1") and status == "triggered_pending_pilot"
+        if track in {"C10", "C11", "C12", "C13", "C14"}
+        and status == "triggered_pending_pilot"
     ]
     if pending_conditionals:
         raise RuntimeError(f"Conditional tracks are not terminal: {pending_conditionals}")
