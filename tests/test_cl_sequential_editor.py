@@ -3,7 +3,11 @@ from __future__ import annotations
 import torch
 
 from scripts.cl_lora import LoRABranch
-from scripts.run_cl_sequential_editor import rank_truncate, select_covariance_representation
+from scripts.run_cl_sequential_editor import (
+    _retention_mask_states,
+    rank_truncate,
+    select_covariance_representation,
+)
 
 
 class _Attention(torch.nn.Module):
@@ -63,3 +67,17 @@ def test_diagonal_covariance_representation_is_explicit() -> None:
     diagonal = select_covariance_representation(covariance, "diagonal")
     assert torch.equal(diagonal, torch.tensor([2.0, 3.0]))
     assert torch.equal(select_covariance_representation(covariance, "full"), covariance)
+
+
+def test_retention_mask_states_are_deterministic_and_cover_ratios() -> None:
+    class Tokenizer:
+        def __call__(self, text, add_special_tokens=False):
+            return {"input_ids": list(range(1, len(str(text).split()) + 1))}
+
+    rows = [{"case_id": "case-1", "rewrite_prompt": "one two three", "target_true": "four"}]
+    first = _retention_mask_states(Tokenizer(), rows, 99)
+    second = _retention_mask_states(Tokenizer(), rows, 99)
+    assert first == second
+    assert {row["mask_ratio"] for row in first} == {0.25, 0.5, 1.0}
+    assert all(row["masked_positions"] for row in first)
+    assert all(99 in row["input_ids"] for row in first)

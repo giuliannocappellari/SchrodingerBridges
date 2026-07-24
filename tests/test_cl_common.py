@@ -57,9 +57,32 @@ def test_pareto_class_requires_positive_paired_lower_bound() -> None:
         "average_forgetting": 0.10,
         "past_retention": 0.62,
         "same_subject_tfpr": 0.03,
+        "protected_kl": 0.08,
     }
+    baseline["protected_kl"] = 0.10
     assert "B" not in success_classes(candidate, baseline)
     candidate["paired_lower_bound_positive"] = True
+    assert "B" in success_classes(candidate, baseline)
+
+
+def test_pareto_class_requires_every_frozen_improvement() -> None:
+    baseline = {
+        "current_rewrite_exact": 0.80,
+        "average_forgetting": 0.20,
+        "past_retention": 0.50,
+        "same_subject_tfpr": 0.03,
+        "protected_kl": 0.10,
+    }
+    candidate = {
+        "current_rewrite_exact": 0.79,
+        "average_forgetting": 0.10,
+        "past_retention": 0.62,
+        "same_subject_tfpr": 0.03,
+        "protected_kl": 0.09,
+        "paired_lower_bound_positive": True,
+    }
+    assert "B" not in success_classes(candidate, baseline)
+    candidate["protected_kl"] = 0.08
     assert "B" in success_classes(candidate, baseline)
 
 

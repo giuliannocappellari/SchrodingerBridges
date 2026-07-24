@@ -286,6 +286,130 @@ def denoising_loss(
     return output
 
 
+def _retention_mask_states(
+    tokenizer: Any,
+    rows: Sequence[Mapping[str, Any]],
+    mask_id: int,
+    *,
+    mask_ratios: Sequence[float] = (0.25, 0.5, 1.0),
+    maximum: int = 64,
+) -> list[dict[str, Any]]:
+    states = []
+    for row in list(rows[:maximum]):
+        text = str(row["rewrite_prompt"]).rstrip() + " " + str(row["target_true"]).strip()
+        original = list(map(int, tokenizer(text, add_special_tokens=False)["input_ids"]))
+        for ratio in mask_ratios:
+            count = max(1, int(round(len(original) * ratio)))
+            order = sorted(
+                range(len(original)),
+                key=lambda index: stable_hash(SEED, row["case_id"], ratio, index),
+            )
+            masked = sorted(order[:count])
+            masked_set = set(masked)
+            states.append(
+                {
+                    "case_id": str(row["case_id"]),
+                    "mask_ratio": float(ratio),
+                    "input_ids": [
+                        int(mask_id) if index in masked_set else token
+                        for index, token in enumerate(original)
+                    ],
+                    "masked_positions": masked,
+                }
+            )
+    return states
+
+
+def build_retention_sparse_kl_cache(
+    model: Any,
+    tokenizer: Any,
+    rows: Sequence[Mapping[str, Any]],
+    *,
+    top_k: int = 32,
+    batch_size: int = 8,
+) -> list[dict[str, Any]]:
+    import torch
+    import torch.nn.functional as F
+
+    states = _retention_mask_states(tokenizer, rows, infer_mask_id(model))
+    pad_id = int(tokenizer.pad_token_id)
+    output = []
+    for start in range(0, len(states), batch_size):
+        members = states[start : start + batch_size]
+        width = max(len(item["input_ids"]) for item in members)
+        ids = torch.full((len(members), width), pad_id, dtype=torch.long, device="cuda")
+        attention = torch.zeros_like(ids)
+        offsets = []
+        for index, item in enumerate(members):
+            values = torch.tensor(item["input_ids"], dtype=torch.long, device="cuda")
+            offset = width - values.numel()
+            ids[index, offset:] = values
+            attention[index, offset:] = 1
+            offsets.append(offset)
+        with torch.no_grad():
+            logits = model(input_ids=ids, attention_mask=attention).logits.float()
+        for index, (item, offset) in enumerate(zip(members, offsets)):
+            support_ids = []
+            support_log_probs = []
+            for position in item["masked_positions"]:
+                values, indices = torch.topk(logits[index, offset + int(position)], k=top_k)
+                support_ids.append(indices.detach().cpu().tolist())
+                support_log_probs.append(F.log_softmax(values, dim=-1).detach().cpu().tolist())
+            output.append(
+                {
+                    **item,
+                    "support_ids": support_ids,
+                    "base_support_log_probs": support_log_probs,
+                }
+            )
+    return output
+
+
+def retention_sparse_kl(
+    model: Any,
+    tokenizer: Any,
+    cache: Sequence[Mapping[str, Any]],
+    *,
+    batch_size: int = 8,
+) -> float:
+    import torch
+    import torch.nn.functional as F
+
+    pad_id = int(tokenizer.pad_token_id)
+    terms = []
+    for start in range(0, len(cache), batch_size):
+        members = cache[start : start + batch_size]
+        width = max(len(item["input_ids"]) for item in members)
+        ids = torch.full((len(members), width), pad_id, dtype=torch.long, device="cuda")
+        attention = torch.zeros_like(ids)
+        offsets = []
+        for index, item in enumerate(members):
+            values = torch.tensor(item["input_ids"], dtype=torch.long, device="cuda")
+            offset = width - values.numel()
+            ids[index, offset:] = values
+            attention[index, offset:] = 1
+            offsets.append(offset)
+        with torch.no_grad():
+            logits = model(input_ids=ids, attention_mask=attention).logits.float()
+        for index, (item, offset) in enumerate(zip(members, offsets)):
+            for position, support, base_values in zip(
+                item["masked_positions"], item["support_ids"], item["base_support_log_probs"]
+            ):
+                support_tensor = torch.tensor(support, dtype=torch.long, device="cuda")
+                base_log_probs = torch.tensor(base_values, dtype=torch.float32, device="cuda")
+                edited_log_probs = F.log_softmax(
+                    logits[index, offset + int(position)].index_select(0, support_tensor),
+                    dim=-1,
+                )
+                terms.append((base_log_probs.exp() * (base_log_probs - edited_log_probs)).sum())
+    if not terms:
+        raise RuntimeError("Protected sparse-KL cache has no masked positions")
+    result = float(torch.stack(terms).mean())
+    if not math.isfinite(result) or result < -1e-7:
+        raise FloatingPointError(f"Invalid protected sparse KL: {result}")
+    return max(0.0, result)
+
+
 def summarize_prompt_rows(rows: Sequence[Mapping[str, Any]]) -> dict[str, dict[str, float]]:
     groups: dict[str, list[Mapping[str, Any]]] = defaultdict(list)
     for row in rows:
@@ -381,6 +505,7 @@ def main() -> None:
         decode_batch_size=args.decode_batch_size, steps=args.decode_steps or None,
     )
     base_losses = denoising_loss(model, tokenizer, retention)
+    base_sparse_kl_cache = build_retention_sparse_kl_cache(model, tokenizer, retention)
     pre_edit_target_new_rate = sum(
         bool(row["target_new_hit"]) for row in base_prompt_rows if row["bucket"] == "rewrite"
     ) / len(stream)
@@ -528,6 +653,7 @@ def main() -> None:
         )
         edited_retention = align_base(base_retention_rows, edited_retention)
         losses = denoising_loss(model, tokenizer, retention)
+        protected_kl = retention_sparse_kl(model, tokenizer, base_sparse_kl_cache)
         loss_fraction = sum(
             max(0.0, losses[key] - base_losses[key]) / max(base_losses[key], 1e-12)
             for key in base_losses
@@ -559,6 +685,7 @@ def main() -> None:
                 "base_retention_exact": sum(bool(row["expected_hit"]) for row in edited_retention) / len(edited_retention),
                 "base_retention_agreement": sum(bool(row["base_agreement"]) for row in edited_retention) / len(edited_retention),
                 "base_retention_loss_fraction": loss_fraction,
+                "protected_kl": protected_kl,
             }
         )
 
@@ -620,6 +747,7 @@ def main() -> None:
         "exact_method_claim_eligible": exact_method_claim_eligible,
         "analysis_500_used": False,
         "final_test_used": False,
+        "protected_kl_metric": "base_support_top32_conditional_kl",
     }
     write_json(args.output_dir / "run_config.json", run_config)
     write_csv(args.output_dir / "block_metrics.csv", block_rows)
@@ -657,6 +785,7 @@ def main() -> None:
         "base_retention_exact": float(final_block["base_retention_exact"]),
         "base_retention_agreement": float(final_block["base_retention_agreement"]),
         "base_retention_loss_fraction": float(final_block["base_retention_loss_fraction"]),
+        "protected_kl": float(final_block["protected_kl"]),
         "partial_state_consistency": 1.0 - min(
             1.0, max(0.0, float(final_block["base_retention_loss_fraction"]))
         ),
@@ -672,6 +801,7 @@ def main() -> None:
             for value in (
                 mean_current_rewrite, mean_current_para, metrics["average_retention"],
                 metrics["average_forgetting"], pre_edit_target_new_rate, malformed,
+                final_block["protected_kl"],
             )
         ),
         "fake_model": False,

@@ -535,8 +535,8 @@ def success_classes(candidate: Mapping[str, Any], baseline: Mapping[str, Any]) -
     kl_reduction = (base_kl - protected_kl) / base_kl if base_kl > 0 else 0.0
     if matched and (
         forgetting_reduction >= 0.30
-        or retention - base_retention >= 0.10
-        or kl_reduction >= 0.20
+        and retention - base_retention >= 0.10
+        and kl_reduction >= 0.20
     ) and same_tfpr <= float(baseline.get("same_subject_tfpr", 1.0)) and bool(
         candidate.get("paired_lower_bound_positive", False)
     ):
