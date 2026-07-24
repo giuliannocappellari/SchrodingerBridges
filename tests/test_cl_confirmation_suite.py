@@ -2,7 +2,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from scripts.run_cl_confirmation_suite import confirmation_acceptance, frozen_editor_command
+from scripts.run_cl_confirmation_suite import (
+    _csv_truthy,
+    confirmation_acceptance,
+    frozen_editor_command,
+)
 
 
 def test_confirmation_requires_same_class_and_frozen_safety() -> None:
@@ -73,3 +77,9 @@ def test_frozen_confirmation_command_uses_pilot_hyperparameters(tmp_path: Path) 
     assert "--relation_overlap_threshold 0.35" in joined
     assert "analysis_500" not in joined.casefold()
     assert "final_test" not in joined.casefold()
+
+
+def test_csv_truth_parser_does_not_treat_false_text_as_true() -> None:
+    assert _csv_truthy(True)
+    assert _csv_truthy("True")
+    assert not _csv_truthy("False")

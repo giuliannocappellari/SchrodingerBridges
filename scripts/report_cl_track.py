@@ -289,6 +289,10 @@ def main() -> None:
         "num_confirmation_eligible": len(eligible),
         "num_mechanism_signals": len(mechanism_only),
         "selected_candidate": selected["method"] if selected else None,
+        "selected_report_path": selected["report_path"] if selected else None,
+        "selected_implementation_equivalence_class": (
+            selected["implementation_equivalence_class"] if selected else None
+        ),
         "selected_success_classes": selected["success_classes"].split(",") if selected else [],
         "status": status,
         "analysis_500_used": False,

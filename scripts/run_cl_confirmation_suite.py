@@ -38,7 +38,49 @@ from scripts.run_cl_track_suite import (
 
 
 PILOT_ROOT = CAMPAIGN_ROOT / "D_breadth_first_pilots_v1"
+RESCUE_ROOT = CAMPAIGN_ROOT / "D_bounded_rescues_v1"
 DEFAULT_OUTPUT = CAMPAIGN_ROOT / "F_fresh_confirmation_v1"
+
+
+def eligible_pilot_registry() -> list[dict[str, str]]:
+    registry = []
+    for row in read_csv(PILOT_ROOT / "track_results.csv"):
+        method = str(row.get("selected_candidate") or "")
+        if not method:
+            continue
+        track = str(row["track_id"])
+        registry.append(
+            {
+                "track_id": track,
+                "method": method,
+                "pilot_dir": str(method_run_dir(PILOT_ROOT, method, "pilot100")),
+                "pilot_report_dir": str(
+                    PILOT_ROOT / "track_reports" / f"{track}_pilot_v1"
+                ),
+                "source": "initial_pilot",
+            }
+        )
+    rescue_summary = RESCUE_ROOT / "report_summary.json"
+    if rescue_summary.is_file():
+        for row in read_csv(RESCUE_ROOT / "rescued_candidates.csv"):
+            if not _csv_truthy(row.get("rescue_pass")):
+                continue
+            track = str(row["track_id"])
+            registry = [item for item in registry if item["track_id"] != track]
+            registry.append(
+                {
+                    "track_id": track,
+                    "method": str(row["method"]),
+                    "pilot_dir": str(ROOT / row["pilot_dir"]),
+                    "pilot_report_dir": str(ROOT / row["pilot_report_dir"]),
+                    "source": "bounded_rescue",
+                }
+            )
+    return sorted(registry, key=lambda row: row["track_id"])
+
+
+def _csv_truthy(value: Any) -> bool:
+    return value is True or str(value).casefold() == "true"
 
 
 def frozen_editor_command(
@@ -192,8 +234,7 @@ def main() -> None:
     pilot_summary = read_json(PILOT_ROOT / "report_summary.json")
     if not pilot_summary.get("all_mandatory_tracks_terminal"):
         raise RuntimeError("All mandatory pilots must be terminal before confirmation")
-    track_rows = read_csv(PILOT_ROOT / "track_results.csv")
-    eligible = [row for row in track_rows if row.get("selected_candidate")]
+    eligible = eligible_pilot_registry()
     started = time.monotonic()
     started_at = now_utc()
     log_root = ROOT / "logs" / CAMPAIGN_ID / "F_fresh_confirmation_v1"
@@ -212,7 +253,7 @@ def main() -> None:
     for pilot_row in eligible:
         track = str(pilot_row["track_id"])
         method = str(pilot_row["selected_candidate"])
-        pilot_dir = method_run_dir(PILOT_ROOT, method, "pilot100")
+        pilot_dir = Path(str(pilot_row["pilot_dir"]))
         candidate_output = args.output_dir / "method_runs" / f"{track}_{method}_cf_confirmation200"
         ensure_confirmation_run(
             name=f"{track.lower()}_{method}_cf_confirmation200",
@@ -264,7 +305,7 @@ def main() -> None:
         confirmation_candidates = read_csv(report_dir / "candidate_results.csv")
         if len(confirmation_candidates) != 1:
             raise RuntimeError(f"Expected one confirmation candidate for {track}")
-        pilot_report = read_json(PILOT_ROOT / "track_reports" / f"{track}_pilot_v1" / "report_summary.json")
+        pilot_report = read_json(Path(str(pilot_row["pilot_report_dir"])) / "report_summary.json")
         passed, reasons = confirmation_acceptance(
             list(pilot_report.get("selected_success_classes") or []),
             confirmation_candidates[0],
@@ -296,6 +337,7 @@ def main() -> None:
                 "pilot_success_classes": ",".join(pilot_report.get("selected_success_classes") or []),
                 "confirmation_success_classes": confirmation_candidates[0]["success_classes"],
                 "report_path": str((report_dir / "report_summary.json").relative_to(ROOT)),
+                "pilot_source": pilot_row["source"],
                 "kamel_confirmation_status": "not_run_no_multi_token_claim_preselected",
             }
         )
