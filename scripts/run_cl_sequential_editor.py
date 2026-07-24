@@ -140,11 +140,24 @@ def rank_truncate(update, rank: int):
     import torch
 
     value = update.float()
-    u, singular, vh = torch.linalg.svd(value, full_matrices=False)
-    effective = min(int(rank), int(singular.numel()))
-    truncated = (u[:, :effective] * singular[:effective]) @ vh[:effective]
-    explained = float(singular[:effective].square().sum() / singular.square().sum().clamp_min(1e-12))
-    return truncated, {"rank": effective, "explained_update_energy": explained}
+    effective = min(int(rank), min(value.shape))
+    if min(value.shape) > 1024:
+        q = min(effective + 4, min(value.shape))
+        u, singular, v = torch.svd_lowrank(value, q=q, niter=2)
+        truncated = (u[:, :effective] * singular[:effective]) @ v[:, :effective].T
+        decomposition = "randomized_lowrank_q_plus_4_niter_2"
+        total_energy = value.square().sum()
+    else:
+        u, singular, vh = torch.linalg.svd(value, full_matrices=False)
+        truncated = (u[:, :effective] * singular[:effective]) @ vh[:effective]
+        decomposition = "exact_svd"
+        total_energy = singular.square().sum()
+    explained = float(singular[:effective].square().sum() / total_energy.clamp_min(1e-12))
+    return truncated, {
+        "rank": effective,
+        "explained_update_energy": explained,
+        "decomposition": decomposition,
+    }
 
 
 def _pad_training_batch(rows: Sequence[Mapping[str, Any]], tokenizer: Any, model: Any):
@@ -743,6 +756,7 @@ def main() -> None:
         ),
         "teacher_only_runtime_inputs": False,
         "evaluation_bucket_runtime_input": False,
+        "inference_overhead_measured": args.method == "base",
         "implementation_status": implementation_status,
         "exact_method_claim_eligible": exact_method_claim_eligible,
         "analysis_500_used": False,
@@ -791,7 +805,7 @@ def main() -> None:
         ),
         "storage_bytes": storage_bytes,
         "storage_mb_per_edit": storage_bytes / 1_000_000 / len(stream),
-        "inference_overhead_fraction": 0.0,
+        **({"inference_overhead_fraction": 0.0} if args.method == "base" else {}),
         "runtime_seconds": runtime,
         "edit_runtime_seconds": time.monotonic() - edit_start,
         "gpu_minutes_per_edit": runtime / 60.0 / len(stream),

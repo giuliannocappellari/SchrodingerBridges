@@ -86,6 +86,14 @@ def test_pareto_class_requires_every_frozen_improvement() -> None:
     assert "B" in success_classes(candidate, baseline)
 
 
+def test_efficiency_class_requires_measured_inference_overhead() -> None:
+    baseline = {"past_retention": 0.70}
+    candidate = {"past_retention": 0.70, "storage_mb_per_edit": 0.5}
+    assert "D" not in success_classes(candidate, baseline)
+    candidate["inference_overhead_fraction"] = 0.20
+    assert "D" in success_classes(candidate, baseline)
+
+
 def test_successful_stage_rerun_clears_current_failure_marker(tmp_path, monkeypatch) -> None:
     state_root = tmp_path / "state"
     output_dir = tmp_path / "output"

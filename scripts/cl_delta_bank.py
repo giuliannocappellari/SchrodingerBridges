@@ -142,11 +142,19 @@ class DeltaBranchBank:
                 for weight, branch in zip(normalized, self.branches)
                 if layer in branch.deltas
             )
-            u, singular, vh = torch.linalg.svd(value.float(), full_matrices=False)
-            effective = min(int(rank), int(singular.numel()))
-            compressed = (u[:, :effective] * singular[:effective]) @ vh[:effective]
+            value = value.float()
+            effective = min(int(rank), min(value.shape))
+            if min(value.shape) > 1024:
+                q = min(effective + 4, min(value.shape))
+                u, singular, v = torch.svd_lowrank(value, q=q, niter=2)
+                compressed = (u[:, :effective] * singular[:effective]) @ v[:, :effective].T
+                denominator = value.square().sum()
+            else:
+                u, singular, vh = torch.linalg.svd(value, full_matrices=False)
+                compressed = (u[:, :effective] * singular[:effective]) @ vh[:effective]
+                denominator = singular.square().sum()
             merged[layer] = compressed
-            energy.append(float(singular[:effective].square().sum() / singular.square().sum().clamp_min(1e-12)))
+            energy.append(float(singular[:effective].square().sum() / denominator.clamp_min(1e-12)))
         subjects = tuple(dict.fromkeys(item for branch in self.branches for item in branch.subject_token_sequences))
         relations = tuple(dict.fromkeys(item for branch in self.branches for item in branch.relation_token_sets))
         count = len(self.branches)

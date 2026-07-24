@@ -59,6 +59,7 @@ def test_rank_truncate_obeys_rank_and_is_finite() -> None:
     assert torch.linalg.matrix_rank(truncated, atol=1e-5) <= 2
     assert torch.isfinite(truncated).all()
     assert report["rank"] == 2
+    assert report["decomposition"] == "exact_svd"
     assert 0.0 < report["explained_update_energy"] <= 1.0
 
 
